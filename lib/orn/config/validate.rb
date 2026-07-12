@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Orn
-  module Config
+  class Config
     # Validation for user-supplied config values: session names, sandbox
     # names, and port ranges. Each method raises Orn::Error on an invalid
     # value and returns nil otherwise.
