@@ -52,6 +52,14 @@ module GitHelpers
     git("remote", "add", "origin", remote, chdir: project)
   end
 
+  # Initializes a standard (non-bare) git repo at `path` with a committer
+  # identity, for tests that need a working tree with git available.
+  def init_git_repo(path)
+    git("init", chdir: path)
+    git("config", "user.email", "t@t.com", chdir: path)
+    git("config", "user.name", "T", chdir: path)
+  end
+
   # A Project rooted at `root` with the given .orn/config.yaml written and
   # loaded (project config only, no global layer, for hermetic tests).
   def make_project(root, config_yaml = "")

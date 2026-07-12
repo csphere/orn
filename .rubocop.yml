@@ -64,6 +64,10 @@ Metrics/ClassLength:
   Exclude:
     - "lib/orn/config/**/*"
 
+# Deep single-responsibility modules (e.g. Symlink) run long.
+Metrics/ModuleLength:
+  Max: 150
+
 # A single behavior often asserts several closely related facts about one
 # result (e.g. the fields of a parsed config); fragmenting those into separate
 # examples hurts readability. Larger groups use `:aggregate_failures`.
