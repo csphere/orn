@@ -1,0 +1,15 @@
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+*.gem
+
+# RSpec example-status persistence
+.rspec_status
+
+# This is a library gem: the resolved lockfile is not committed.
+/Gemfile.lock

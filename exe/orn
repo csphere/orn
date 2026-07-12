@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "orn"
+
+begin
+  Orn::Shim.new(ARGV.dup).run
+rescue Orn::Error => e
+  warn "orn: #{e.message}"
+  exit 1
+end

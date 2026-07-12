@@ -1,0 +1,54 @@
+plugins:
+  - rubocop-rake
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "bin/**/*"
+    - "vendor/**/*"
+    - "tmp/**/*"
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# Indentation: continuation lines step in one level (2 spaces) rather than
+# aligning under the first argument, chained receiver, or opening delimiter.
+# Rationale: renaming a method/variable then causes the smallest possible
+# diff (no re-alignment of the lines below it), and there are fewer distinct
+# indentation columns to track visually.
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/ParameterAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/FirstArgumentIndentation:
+  EnforcedStyle: consistent
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+# Class-level documentation is not mandatory; we comment where the intent
+# is not obvious from the code.
+Style/Documentation:
+  Enabled: false
+
+# Specs are long, readable example blocks; the gemspec is a manifest.
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "*.gemspec"
+
+Metrics/MethodLength:
+  Max: 20
+
+# A single behavior sometimes asserts a couple of closely related facts about
+# one result; fragmenting those into separate examples hurts readability.
+RSpec/MultipleExpectations:
+  Max: 3

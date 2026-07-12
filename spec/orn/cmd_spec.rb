@@ -1,0 +1,66 @@
+# frozen_string_literal: true
+
+RSpec.describe Orn::Cmd do
+  subject(:cmd) { described_class.new(output_mode: Orn::OutputMode.default) }
+
+  describe "#run" do
+    context "when the command succeeds" do
+      it "returns the captured output" do
+        result = cmd.run("echo", "hello")
+
+        expect(result).to be_success
+        expect(result.stdout.strip).to eq("hello")
+      end
+    end
+
+    context "when the command exits nonzero" do
+      it "raises with the stderr text" do
+        expect { cmd.run("sh", "-c", "echo bad >&2; exit 1") }
+          .to raise_error(Orn::Error, /bad/)
+      end
+
+      it "names the program when stderr is empty" do
+        expect { cmd.run("sh", "-c", "exit 1") }
+          .to raise_error(Orn::Error, /sh/)
+      end
+
+      it "reports the exit code when stderr is empty" do
+        expect { cmd.run("sh", "-c", "exit 42") }
+          .to raise_error(Orn::Error, /42/)
+      end
+    end
+
+    context "when the program does not exist" do
+      it "raises naming the missing program" do
+        expect { cmd.run("nonexistent-binary-xyz") }
+          .to raise_error(Orn::Error, /nonexistent-binary-xyz/)
+      end
+    end
+  end
+
+  describe "#exec" do
+    context "when the command succeeds" do
+      it "returns nil" do
+        expect(cmd.exec("true")).to be_nil
+      end
+    end
+
+    context "when the command fails" do
+      it "raises with the stderr text" do
+        expect { cmd.exec("sh", "-c", "echo oops >&2; exit 1") }
+          .to raise_error(Orn::Error, /oops/)
+      end
+    end
+  end
+
+  describe "#output" do
+    context "when the command exits nonzero" do
+      it "returns the result instead of raising" do
+        result = cmd.output("sh", "-c", "exit 3")
+
+        expect(result).not_to be_success
+        expect(result.status).to eq(3)
+      end
+    end
+  end
+end
