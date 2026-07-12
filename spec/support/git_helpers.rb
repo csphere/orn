@@ -52,6 +52,14 @@ module GitHelpers
     git("remote", "add", "origin", remote, chdir: project)
   end
 
+  # A Project rooted at `root` with the given .orn/config.yaml written and
+  # loaded (project config only, no global layer, for hermetic tests).
+  def make_project(root, config_yaml = "")
+    FileUtils.mkdir_p(File.join(root, ".orn"))
+    File.write(File.join(root, ".orn/config.yaml"), config_yaml)
+    Orn::Git::Project.new(root: root, config: Orn::Config.load_from(root, nil))
+  end
+
   def git(*args, chdir: nil)
     options = { out: File::NULL, err: File::NULL }
     options[:chdir] = chdir if chdir

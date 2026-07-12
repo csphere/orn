@@ -104,11 +104,37 @@ RSpec.describe Orn::Git::Project do
     end
   end
 
+  def project_at(root)
+    described_class.new(root: root, config: Orn::Config.load_from("/nonexistent", nil))
+  end
+
   describe "#worktree_path" do
     it "is a direct child of the project root" do
-      project = described_class.new(root: "/home/user/dev/my-project")
+      project = project_at("/home/user/dev/my-project")
 
       expect(project.worktree_path("feature/ABC-1234")).to eq("/home/user/dev/my-project/feature/ABC-1234")
+    end
+  end
+
+  describe "#sandbox_name" do
+    it "combines the session (directory) name and the branch" do
+      expect(project_at("/home/user/dev/my-project").sandbox_name("main")).to eq("my-project-main")
+    end
+
+    it "sanitizes slashes in the branch" do
+      project = project_at("/home/user/dev/my-project")
+
+      expect(project.sandbox_name("feature/ABC-123")).to eq("my-project-feature-ABC-123")
+    end
+
+    it "sanitizes other special characters" do
+      expect(project_at("/home/user/dev/my-project").sandbox_name("issues/21")).to eq("my-project-issues-21")
+    end
+
+    it "uses the configured session name" do
+      project = make_project(make_bare_project, "tmux:\n  session: custom\n")
+
+      expect(project.sandbox_name("feature/x")).to eq("custom-feature-x")
     end
   end
 end

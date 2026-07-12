@@ -2,12 +2,24 @@
 
 module Orn
   module Git
-    # Locates the orn project root (a bare-worktree directory) by following
-    # the nearest `.git` pointer file, and derives per-project paths.
-    #
-    # Config-dependent behavior (loading .orn/config.yaml, sandbox_name) is
-    # added once the config layer exists.
+    # An orn project: the bare-worktree root directory plus its loaded config.
+    # Located by following the nearest `.git` pointer file from the current
+    # directory.
     class Project
+      attr_reader :root, :config
+
+      def initialize(root:, config:)
+        @root = root
+        @config = config
+      end
+
+      # Locates the project root from the current directory and loads its
+      # config.
+      def self.discover
+        root = discover_root
+        new(root: root, config: Orn::Config.load(root))
+      end
+
       # Resolves the project root from the current directory, requiring a
       # `.bare` directory (the orn project marker).
       def self.discover_root
@@ -34,16 +46,26 @@ module Orn
           "Use 'orn clone <url> --base <branch>' to set up a new project"
       end
 
-      def initialize(root:)
-        @root = root
-      end
-
-      attr_reader :root
-
       # The on-disk path for `branch`'s worktree: a direct child of the
       # project root, so slashes in the branch name become subdirectories.
       def worktree_path(branch)
         File.join(@root, branch)
+      end
+
+      # Sanitizes the session-and-branch combination into a valid sandbox name
+      # and re-validates the result.
+      def sandbox_name(branch)
+        name = "#{sanitize(Orn::Session.session_name(self))}-#{sanitize(branch)}"
+        name = name.gsub(/\A-+|-+\z/, "")
+        Orn::Config::Validate.sandbox_name!(name)
+        name
+      end
+
+      private
+
+      # Keeps [a-zA-Z0-9-], replacing every other character with a hyphen.
+      def sanitize(string)
+        string.chars.map { |character| character.match?(/[a-zA-Z0-9-]/) ? character : "-" }.join
       end
 
       # Resolves the project root from a `gitdir: <path>` pointer, or nil when
