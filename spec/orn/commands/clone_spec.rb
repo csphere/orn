@@ -37,13 +37,4 @@ RSpec.describe Orn::Commands::Clone do
       end
     end
   end
-
-  # Points the global config at a fresh dir with an existing default.yaml, so
-  # scaffolding's global-config bootstrap skips (no interactive prompt).
-  def isolate_global_config
-    xdg = register_temp_dir(Dir.mktmpdir("orn-xdg"))
-    FileUtils.mkdir_p(File.join(xdg, "orn"))
-    File.write(File.join(xdg, "orn/default.yaml"), "")
-    ENV["XDG_CONFIG_HOME"] = xdg
-  end
 end

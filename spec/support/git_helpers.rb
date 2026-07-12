@@ -60,6 +60,16 @@ module GitHelpers
     git("config", "user.name", "T", chdir: path)
   end
 
+  # Points the global config at a fresh dir holding an existing default.yaml, so
+  # project scaffolding's global-config bootstrap skips (no interactive prompt).
+  # ENV is restored per example by the env-isolation hook.
+  def isolate_global_config
+    xdg = register_temp_dir(Dir.mktmpdir("orn-xdg"))
+    FileUtils.mkdir_p(File.join(xdg, "orn"))
+    File.write(File.join(xdg, "orn/default.yaml"), "")
+    ENV["XDG_CONFIG_HOME"] = xdg
+  end
+
   # A Project rooted at `root` with the given .orn/config.yaml written and
   # loaded (project config only, no global layer, for hermetic tests).
   def make_project(root, config_yaml = "")

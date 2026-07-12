@@ -63,6 +63,12 @@ module Orn
       Orn::Commands::Clone.new(output_mode: Orn::OutputMode.from_options(options)).run(url, options[:base])
     end
 
+    desc "init", "Initialize a new bare-worktree project in the current directory"
+    option :base, default: "main", desc: "Base branch for the project"
+    def init
+      Orn::Commands::Init.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])
+    end
+
     # `subcommand` registers a nested Thor class as a command group, so
     # `orn config <cmd>` dispatches into Orn::Commands::Config::CLI.
     desc "config SUBCOMMAND", "Inspect and manage configuration"
