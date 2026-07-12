@@ -1,9 +1,19 @@
 # frozen_string_literal: true
 
+require "pathname"
+
 module Orn
   # Filesystem utilities: empty-directory pruning and home/XDG directory
   # resolution.
   module Fs
+    # Whether `path` is `ancestor` or a path inside it, comparing whole
+    # components so a sibling like "orn-other" does not match "orn".
+    def self.within?(path, ancestor)
+      path_parts = Pathname.new(path).each_filename.to_a
+      ancestor_parts = Pathname.new(ancestor).each_filename.to_a
+      path_parts[0, ancestor_parts.length] == ancestor_parts
+    end
+
     # Removes direct children of `root` whose subtrees contain no files,
     # skipping dot-directories (.bare, .orn, ...). Cleans up branch-prefix
     # directories (e.g. feature/) left behind after worktree removal.

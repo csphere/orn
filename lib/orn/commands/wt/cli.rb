@@ -26,6 +26,16 @@ module Orn
         def list
           List.new(output_mode: Orn::OutputMode.from_options(options)).run
         end
+
+        desc "remove BRANCH [BRANCH ...]", "Remove worktrees (with --prune, also their branches)"
+        option :prune, type: :boolean, default: false, desc: "Also delete the local and remote branches"
+        option :force, type: :boolean, default: false, desc: "Skip the confirmation prompt"
+        def remove(*branches)
+          raise Orn::Error, "wt remove requires at least one branch" if branches.empty?
+
+          Remove.new(output_mode: Orn::OutputMode.from_options(options))
+            .run(branches, prune: options[:prune], force: options[:force])
+        end
       end
     end
   end

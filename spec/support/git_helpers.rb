@@ -52,6 +52,21 @@ module GitHelpers
     git("remote", "add", "origin", remote, chdir: project)
   end
 
+  # Pushes a new `branch` (with a distinct commit) to an existing `remote`, via
+  # a throwaway clone.
+  def push_branch(remote, branch)
+    workspace = register_temp_dir(Dir.mktmpdir("orn-push"))
+    git("clone", remote, workspace)
+    git("config", "user.email", "t@t.com", chdir: workspace)
+    git("config", "user.name", "T", chdir: workspace)
+    git("checkout", "-b", branch, chdir: workspace)
+    File.write(File.join(workspace, "#{branch.tr("/", "-")}.txt"), "x")
+    git("add", ".", chdir: workspace)
+    git("commit", "-m", branch, chdir: workspace)
+    git("push", "origin", branch, chdir: workspace)
+    nil
+  end
+
   # Initializes a standard (non-bare) git repo at `path` with a committer
   # identity, for tests that need a working tree with git available.
   def init_git_repo(path)

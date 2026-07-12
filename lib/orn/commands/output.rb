@@ -11,6 +11,32 @@ module Orn
         puts JSON.pretty_generate(data)
       end
 
+      # Runs the given block for each branch, printing each success immediately
+      # (unless json mode) via `printer` and collecting failures instead of
+      # aborting the batch. Returns [results, errors].
+      def self.run_multi_branch(output_mode, branches, printer)
+        results = []
+        errors = []
+        branches.each do |branch|
+          result = yield(branch)
+          printer.call(result) unless output_mode.json
+          results << result
+        rescue Orn::Error => e
+          warn "error: #{branch}: #{e.message}"
+          errors << "#{branch}: #{e.message}"
+        end
+        [results, errors]
+      end
+
+      # Prints the JSON array (in json mode) and raises with a failure count
+      # when any branch in the batch errored.
+      def self.finish_multi_branch(output_mode, json_results, errors, total)
+        print_json(json_results) if output_mode.json
+        return if errors.empty?
+
+        raise Orn::Error, "failed to remove #{errors.length} of #{total} worktrees"
+      end
+
       # Renders worktree `rows` (each an array of cell strings) as a table
       # headed by the repo name, or a "No worktrees found" notice when empty.
       def self.worktree_table(repo, headers, rows)
