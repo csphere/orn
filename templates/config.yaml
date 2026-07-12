@@ -1,0 +1,50 @@
+# Session name defaults to the project directory name.
+# Pane layout: define columns OR rows, not both. Each pane is a shell command
+# (an empty string is a plain shell). Default: two side-by-side empty panes.
+#
+# tmux:
+#   session: my-project
+#   columns:
+#     - panes: ["vim"]
+#     - panes: [""]
+#
+# Rows layout, with optional nested columns:
+#
+# tmux:
+#   rows:
+#     - panes: ["editor"]
+#     - columns:
+#         - panes: ["bin/dev"]
+#         - panes: [""]
+
+# Symlink files from the base worktree, or directories/files from the repo
+# root, into every new worktree.
+#
+# symlinks:
+#   base:
+#     - ".env.local"
+#     - ".claude/settings.local.json"
+#   root:
+#     - source: "_shared/data"
+#       dest: "data"            # optional; defaults to the basename of source
+
+# Sandbox (Docker container) for isolated dev environments.
+# Requires Docker and sbx.
+#
+# sbx:
+#   agent_type: claude          # agent to run (claude, codex, copilot, ...)
+#   template: "my-image:tag"    # custom image (optional; agent default if omitted)
+#   kits: ["rust", "gh-cli"]    # composable toolchain layers
+#   setup: "bin/setup"          # string or array; runs once after creation
+#   start: "bin/dev"            # shell command run as a background service
+#   cpus: 4
+#   memory: "8g"
+#   ports:
+#     - container: 3000
+#       host_range: [3001, 3100]
+#   env:
+#     DATABASE_URL: "postgres://postgres:postgres@localhost:5432/app_dev"
+#     REDIS_URL: "redis://localhost:6379"
+#   columns:
+#     - panes: [""]
+#     - panes: ["sbx run {{sandbox}}"]

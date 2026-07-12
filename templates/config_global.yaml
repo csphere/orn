@@ -1,0 +1,21 @@
+# Pane layout: define columns OR rows, not both. Each pane is a shell command
+# (an empty string is a plain shell). Default: two side-by-side empty panes.
+#
+# tmux:
+#   columns:
+#     - panes: ["vim"]
+#     - panes: [""]
+#
+# tmux:
+#   rows:
+#     - panes: ["editor"]
+#     - columns:
+#         - panes: ["bin/dev"]
+#         - panes: [""]
+
+# TUI dashboard settings (orn tui).
+#
+# tui:
+#   session: orn
+#   scan_roots: ["/home/user/dev", "/home/user/work"]
+#   scan_depth: 3

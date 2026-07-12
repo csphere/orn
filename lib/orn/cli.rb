@@ -55,6 +55,14 @@ module Orn
       puts "orn #{Orn::VERSION}"
     end
 
+    # `option` (Thor's method-level option) declares an option scoped to the
+    # single command that follows. `required: true` makes `--base` mandatory.
+    desc "clone URL", "Clone a remote repository into a new bare-worktree project"
+    option :base, required: true, desc: "Base branch for the project"
+    def clone(url)
+      Orn::Commands::Clone.new(output_mode: Orn::OutputMode.from_options(options)).run(url, options[:base])
+    end
+
     # `subcommand` registers a nested Thor class as a command group, so
     # `orn config <cmd>` dispatches into Orn::Commands::Config::CLI.
     desc "config SUBCOMMAND", "Inspect and manage configuration"
