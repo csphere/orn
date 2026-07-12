@@ -59,5 +59,8 @@ module Orn
     # `orn config <cmd>` dispatches into Orn::Commands::Config::CLI.
     desc "config SUBCOMMAND", "Inspect and manage configuration"
     subcommand "config", Orn::Commands::Config::CLI
+
+    desc "wt SUBCOMMAND", "Manage git worktrees"
+    subcommand "wt", Orn::Commands::Wt::CLI
   end
 end

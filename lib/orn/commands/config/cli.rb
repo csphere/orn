@@ -25,13 +25,7 @@ module Orn
 
         desc "show", "Print the effective configuration with per-value sources"
         def show
-          Show.new(output_mode: output_mode).run
-        end
-
-        no_commands do
-          def output_mode
-            Orn::OutputMode.new(verbose: options[:verbose] || false, json: options[:json] || false)
-          end
+          Show.new(output_mode: Orn::OutputMode.from_options(options)).run
         end
       end
     end

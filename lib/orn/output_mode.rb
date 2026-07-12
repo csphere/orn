@@ -16,6 +16,11 @@ module Orn
       new(verbose: false, json: true)
     end
 
+    # Builds a mode from a Thor options hash (as passed to a command).
+    def self.from_options(options)
+      new(verbose: options[:verbose] || false, json: options[:json] || false)
+    end
+
     # Prints a status line to stderr unless in json mode.
     def status(message)
       warn(message) unless json
