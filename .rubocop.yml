@@ -47,8 +47,31 @@ Metrics/BlockLength:
 
 Metrics/MethodLength:
   Max: 20
+  Exclude:
+    - "spec/**/*"
+
+# Test setup (helpers, integration arrange steps) is naturally call-heavy;
+# these metrics target production code.
+Metrics/AbcSize:
+  Exclude:
+    - "spec/**/*"
 
 # A single behavior sometimes asserts a couple of closely related facts about
 # one result; fragmenting those into separate examples hurts readability.
 RSpec/MultipleExpectations:
   Max: 3
+
+# Integration examples arrange real git repos; a handful of setup lines is
+# expected.
+RSpec/ExampleLength:
+  Max: 15
+
+# Prefer explicitly named splat arguments (*args) over anonymous forwarding.
+Style/ArgumentsForwarding:
+  Enabled: false
+
+# Action methods (delete_branch, delete_remote_branch, ...) intentionally
+# return the underlying git success boolean; they are commands, not queries,
+# so they are not named with a trailing '?'.
+Naming/PredicateMethod:
+  Enabled: false
