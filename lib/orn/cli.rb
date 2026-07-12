@@ -69,6 +69,12 @@ module Orn
       Orn::Commands::Init.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])
     end
 
+    desc "convert", "Convert a standard git repo into a bare-worktree project in place"
+    option :base, desc: "Base branch (defaults to the current branch)"
+    def convert
+      Orn::Commands::Convert.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])
+    end
+
     # `subcommand` registers a nested Thor class as a command group, so
     # `orn config <cmd>` dispatches into Orn::Commands::Config::CLI.
     desc "config SUBCOMMAND", "Inspect and manage configuration"

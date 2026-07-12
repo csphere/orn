@@ -60,6 +60,40 @@ module GitHelpers
     git("config", "user.name", "T", chdir: path)
   end
 
+  # A standard (non-bare) repo on `main` with a committed file, pushed to an
+  # origin remote that is then deleted, so its origin URL dangles: conversion
+  # guards (which read local refs) pass, but a re-clone from origin fails.
+  def make_standard_repo
+    dir = register_temp_dir(Dir.mktmpdir("orn-std"))
+    seed_standard_repo(dir)
+    dir
+  end
+
+  # Like make_standard_repo, but also records refs/remotes/origin/HEAD -> main.
+  def make_repo_with_remote_head
+    dir = register_temp_dir(Dir.mktmpdir("orn-std"))
+    seed_standard_repo(dir) do
+      git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main", chdir: dir)
+    end
+    dir
+  end
+
+  def seed_standard_repo(dir)
+    remote = Dir.mktmpdir("orn-std-remote")
+    git("init", "--bare", remote)
+    git("init", "-b", "main", chdir: dir)
+    git("config", "user.email", "t@t.com", chdir: dir)
+    git("config", "user.name", "T", chdir: dir)
+    git("remote", "add", "origin", remote, chdir: dir)
+    File.write(File.join(dir, "file.txt"), "content")
+    git("add", ".", chdir: dir)
+    git("commit", "-m", "init", chdir: dir)
+    git("push", "-u", "origin", "main", chdir: dir)
+    yield if block_given?
+    FileUtils.remove_entry(remote)
+    nil
+  end
+
   # Points the global config at a fresh dir holding an existing default.yaml, so
   # project scaffolding's global-config bootstrap skips (no interactive prompt).
   # ENV is restored per example by the env-isolation hook.
