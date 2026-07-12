@@ -36,6 +36,11 @@ module Orn
           Remove.new(output_mode: Orn::OutputMode.from_options(options))
             .run(branches, prune: options[:prune], force: options[:force])
         end
+
+        desc "link", "Apply the configured symlinks to the current worktree"
+        def link
+          Link.new(output_mode: Orn::OutputMode.from_options(options)).run
+        end
       end
     end
   end
