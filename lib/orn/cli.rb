@@ -54,5 +54,10 @@ module Orn
     def version
       puts "orn #{Orn::VERSION}"
     end
+
+    # `subcommand` registers a nested Thor class as a command group, so
+    # `orn config <cmd>` dispatches into Orn::Commands::Config::CLI.
+    desc "config SUBCOMMAND", "Inspect and manage configuration"
+    subcommand "config", Orn::Commands::Config::CLI
   end
 end

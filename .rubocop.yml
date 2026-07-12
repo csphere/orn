@@ -57,9 +57,10 @@ Metrics/AbcSize:
   Exclude:
     - "spec/**/*"
 
-# The Config class is a deliberately deep namespace (value types, validation,
-# normalization, loading) split across several files.
+# Detailed formatters and command classes run long; the deep Config namespace
+# (value types, validation, normalization, loading) is exempt entirely.
 Metrics/ClassLength:
+  Max: 150
   Exclude:
     - "lib/orn/config/**/*"
 
