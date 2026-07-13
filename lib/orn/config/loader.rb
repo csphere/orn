@@ -24,14 +24,14 @@ module Orn
       @sbx = sbx
     end
 
-    # Like `sbx`, but raises when the config has no [sbx] section.
+    # Like `sbx`, but raises when the config has no sbx section.
     def require_sbx!
       return sbx if sbx
 
-      raise Orn::Error, "No [sbx] section in .orn/config.yaml"
+      raise Orn::Error, "No sbx section in .orn/config.yaml"
     end
 
-    # The [[sbx.columns]] layout, or nil when [sbx] is absent or defines no
+    # The sbx.columns layout, or nil when sbx is absent or defines no
     # columns.
     def sbx_layout
       return nil if sbx.nil? || sbx.columns.empty?
@@ -39,7 +39,7 @@ module Orn
       Layout.of_columns(sbx.columns)
     end
 
-    # Layout for sandbox windows: the [[sbx.columns]] layout when defined
+    # Layout for sandbox windows: the sbx.columns layout when defined
     # (always project-sourced), otherwise the regular layout and its source.
     # Returns [layout, source].
     def effective_sbx_layout

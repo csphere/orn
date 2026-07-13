@@ -374,7 +374,7 @@ RSpec.describe Orn::Config do
       project = project_with("git:\n  base: main\n")
 
       expect { described_class.load_from(project, nil).require_sbx! }
-        .to raise_error(Orn::Error, /\[sbx\]/)
+        .to raise_error(Orn::Error, /No sbx section/)
     end
   end
 

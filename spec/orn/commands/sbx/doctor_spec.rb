@@ -11,7 +11,7 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
     it "fails without an [sbx] section" do
       project = project_with("git:\n  base: main\n")
 
-      expect { described_class.run_inner(mode, project) }.to raise_error(Orn::Error, /\[sbx\]/)
+      expect { described_class.run_inner(mode, project) }.to raise_error(Orn::Error, /No sbx section/)
     end
 
     it "returns the standard checks for a minimal config" do

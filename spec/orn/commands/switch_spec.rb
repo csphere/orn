@@ -79,7 +79,7 @@ RSpec.describe Orn::Commands::Switch do
       project = sbx_project("feature/other", "git:\n  base: main\n")
 
       expect { described_class.perform(Orn::OutputMode.quiet, project, "feature/new", nil, true) }
-        .to raise_error(Orn::Error, /\[sbx\].*config\.yaml/m)
+        .to raise_error(Orn::Error, /No sbx section.*config\.yaml/m)
     end
 
     it "fails when [sbx] has no agent_type" do
@@ -93,7 +93,7 @@ RSpec.describe Orn::Commands::Switch do
       project = make_project(register_temp_dir(Dir.mktmpdir("orn-switch")), "git:\n  base: main\n")
 
       expect { described_class.perform(Orn::OutputMode.quiet, project, "feature/new", nil, false) }
-        .to raise_error(Orn::Error) { |error| expect(error.message).not_to include("[sbx]") }
+        .to raise_error(Orn::Error) { |error| expect(error.message).not_to include("sbx") }
     end
   end
 

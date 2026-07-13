@@ -375,7 +375,7 @@ module Orn
       checks
     end
 
-    # Template, kits, and build inputs derived from the [sbx] config.
+    # Template, kits, and build inputs derived from the sbx config.
     def self.config_checks(output_mode, config)
       checks = []
       checks << template_check(output_mode, config.template) if config.template

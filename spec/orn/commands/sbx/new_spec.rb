@@ -14,7 +14,7 @@ RSpec.describe Orn::Commands::Sbx::New do
       project = project_with("git:\n  base: main\n")
 
       expect { described_class.run_inner(mode, project, "feature/x") }
-        .to raise_error(Orn::Error, /\[sbx\]/)
+        .to raise_error(Orn::Error, /No sbx section/)
     end
 
     it "fails without an agent_type" do

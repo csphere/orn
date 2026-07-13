@@ -25,7 +25,7 @@ module Orn
                 "type" => "string"
               },
               "sbx" => {
-                "description" => "Also create a sandbox with port publishing and services when creating a new branch. Requires [sbx] config. Ignored if the branch already exists.",
+                "description" => "Also create a sandbox with port publishing and services when creating a new branch. Requires sbx config. Ignored if the branch already exists.",
                 "type" => "boolean"
               }
             },

@@ -46,7 +46,7 @@ module Orn
       end
     end
 
-    # One [[symlinks.root]] entry: a project-root path linked into each
+    # One symlinks.root entry: a project-root path linked into each
     # worktree.
     RootSymlink = Data.define(:source, :dest) do
       # Link name in the worktree: `dest` when set, otherwise the basename of
@@ -87,13 +87,13 @@ module Orn
         return agent_type if agent_type
 
         raise Orn::Error,
-          "No agent_type configured in [sbx]\n  " \
+          "No agent_type configured in sbx\n  " \
           "Set agent_type to the agent to run (e.g. agent_type: claude)"
       end
 
       def require_build!
-        raise Orn::Error, "No [sbx.build] section in .orn/config.yaml" if build.nil?
-        raise Orn::Error, "No template configured in [sbx]" if template.nil?
+        raise Orn::Error, "No sbx.build section in .orn/config.yaml" if build.nil?
+        raise Orn::Error, "No template configured in sbx" if template.nil?
 
         [build, template]
       end
@@ -103,7 +103,7 @@ module Orn
     # symbol).
     Sourced = Data.define(:value, :source)
 
-    # Resolved [tui] values (each a Sourced), read from the global config only.
+    # Resolved tui values (each a Sourced), read from the global config only.
     TuiInfo = Data.define(:session, :scan_roots, :scan_depth)
 
     # One config file's values as parsed and normalized, before merging.
@@ -138,7 +138,7 @@ module Orn
     def self.section(hash, key)
       value = hash[key]
       return {} if value.nil?
-      raise InvalidConfig, "[#{key}] must be a mapping" unless value.is_a?(Hash)
+      raise InvalidConfig, "#{key} must be a mapping" unless value.is_a?(Hash)
 
       value
     end
@@ -196,7 +196,7 @@ module Orn
     end
 
     def self.row_from(entry)
-      raise InvalidConfig, "row must be a table" unless entry.is_a?(Hash)
+      raise InvalidConfig, "row must be a mapping" unless entry.is_a?(Hash)
 
       panes = entry.fetch("panes", [])
       raise InvalidConfig, "row panes must be a list of strings" unless string_list?(panes)
@@ -212,7 +212,7 @@ module Orn
     end
 
     def self.symlinks_from(raw)
-      raise InvalidConfig, "[symlinks] must be a mapping" unless raw.is_a?(Hash)
+      raise InvalidConfig, "symlinks must be a mapping" unless raw.is_a?(Hash)
 
       root_raw = raw.fetch("root", [])
       raise InvalidConfig, "symlinks.root must be a list" unless root_raw.is_a?(Array)
@@ -224,7 +224,7 @@ module Orn
     end
 
     def self.root_symlink_from(entry)
-      raise InvalidConfig, "symlinks.root entry must be a table" unless entry.is_a?(Hash)
+      raise InvalidConfig, "symlinks.root entry must be a mapping" unless entry.is_a?(Hash)
 
       source = entry["source"]
       raise InvalidConfig, "symlinks.root source must be a string" unless source.is_a?(String)
@@ -236,7 +236,7 @@ module Orn
     end
 
     def self.sbx_from(raw)
-      raise InvalidConfig, "[sbx] must be a mapping" unless raw.is_a?(Hash)
+      raise InvalidConfig, "sbx must be a mapping" unless raw.is_a?(Hash)
 
       SbxConfig.new(
         template: optional_string(raw, "template", "sbx.template"),
@@ -255,7 +255,7 @@ module Orn
     end
 
     def self.sbx_build_from(raw)
-      raise InvalidConfig, "[sbx.build] must be a mapping" unless raw.is_a?(Hash)
+      raise InvalidConfig, "sbx.build must be a mapping" unless raw.is_a?(Hash)
 
       SbxBuild.new(
         dockerfile: optional_string(raw, "dockerfile", "sbx.build.dockerfile"),
@@ -274,7 +274,7 @@ module Orn
     def self.env_from(value)
       return {} if value.nil?
       unless value.is_a?(Hash) && value.all? { |key, val| key.is_a?(String) && val.is_a?(String) }
-        raise InvalidConfig, "[sbx.env] must be a mapping of strings to strings"
+        raise InvalidConfig, "sbx.env must be a mapping of strings to strings"
       end
 
       value
@@ -286,11 +286,11 @@ module Orn
       return [port_from(value)] if value.is_a?(Hash)
       return value.map { |entry| port_from(entry) } if value.is_a?(Array)
 
-      raise InvalidConfig, "sbx.ports must be a table or a list of tables"
+      raise InvalidConfig, "sbx.ports must be a mapping or a list of mappings"
     end
 
     def self.port_from(raw)
-      raise InvalidConfig, "sbx port must be a table" unless raw.is_a?(Hash)
+      raise InvalidConfig, "sbx port must be a mapping" unless raw.is_a?(Hash)
 
       container = raw["container"]
       raise InvalidConfig, "sbx port container must be an integer" unless container.nil? || container.is_a?(Integer)

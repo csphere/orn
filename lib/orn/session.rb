@@ -6,7 +6,7 @@ module Orn
   # Tmux session naming for a project, including detection and resolution of
   # session-name collisions between projects.
   module Session
-    # The tmux session name for `project`: the configured [tmux] session value,
+    # The tmux session name for `project`: the configured tmux session value,
     # falling back to the project directory name.
     def self.session_name(project)
       configured = project.config.session

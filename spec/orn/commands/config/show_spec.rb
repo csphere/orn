@@ -26,24 +26,27 @@ RSpec.describe Orn::Commands::Config::Show do
     it "annotates a project-sourced base branch" do
       info = Orn::Config.info_from(project_with("git:\n  base: develop\n"), nil)
 
-      expect(command.render(info)).to match(/\[git\] base = "develop"\s+\(project\)/)
+      expect(command.render(info)).to match(/^git:\n  base: develop\s+\(project\)/)
     end
 
     it "annotates the default base as default-sourced" do
       info = Orn::Config.info_from(empty_project, nil)
 
-      expect(command.render(info)).to match(/\[git\] base = "main"\s+\(default\)/)
+      expect(command.render(info)).to match(/  base: main\s+\(default\)/)
     end
 
-    it "annotates a global-sourced layout" do
+    it "annotates a global-sourced layout as a yaml sequence" do
       info = Orn::Config.info_from(empty_project, global_with("tmux:\n  columns:\n    - panes: [\"vim\"]\n"))
 
       rendered = command.render(info)
-      expect(rendered).to match(/\[\[tmux\.columns\]\]\s+\(global\)/)
-      expect(rendered).to include('panes = ["vim"]')
+      aggregate_failures do
+        expect(rendered).to include("tmux:")
+        expect(rendered).to include("  columns:")
+        expect(rendered).to match(/    - panes: \["vim"\]\s+\(global\)/)
+      end
     end
 
-    it "renders a rows layout with nested columns" do
+    it "renders a rows layout with nested columns in yaml" do
       info = Orn::Config.info_from(project_with(<<~YAML), nil)
         tmux:
           rows:
@@ -53,16 +56,36 @@ RSpec.describe Orn::Commands::Config::Show do
       YAML
 
       rendered = command.render(info)
-      expect(rendered).to include("[[tmux.rows]]")
-      expect(rendered).to include("[[tmux.rows.columns]]")
-      expect(rendered).to include('panes = ["a", "b"]')
+      aggregate_failures do
+        expect(rendered).to include("  rows:")
+        expect(rendered).to include("    - panes: [\"editor\"]")
+        expect(rendered).to include("    - columns:")
+        expect(rendered).to include("        - panes: [\"a\", \"b\"]")
+      end
     end
 
-    it "renders the tui defaults" do
+    it "renders scalar strings unquoted and empty panes quoted" do
       rendered = command.render(Orn::Config.info_from(empty_project, nil))
 
-      expect(rendered).to match(/\[tui\] session = "orn"\s+\(default\)/)
-      expect(rendered).to match(/\[tui\] scan_depth = 3\s+\(default\)/)
+      aggregate_failures do
+        # scalar strings render plain
+        expect(rendered).to match(/  base: main\b/)
+        # sequence elements (empty panes) render quoted
+        expect(rendered).to include('    - panes: [""]')
+        # no `[section]` headers or `key = value` assignments leak through
+        expect(rendered).not_to include("[[")
+        expect(rendered).not_to include("= ")
+      end
+    end
+
+    it "renders the tui defaults in yaml" do
+      rendered = command.render(Orn::Config.info_from(empty_project, nil))
+
+      aggregate_failures do
+        expect(rendered).to include("tui:")
+        expect(rendered).to match(/  session: orn\s+\(default\)/)
+        expect(rendered).to match(/  scan_depth: 3\s+\(default\)/)
+      end
     end
 
     it "marks a missing project config as not found" do

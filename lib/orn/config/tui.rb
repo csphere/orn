@@ -2,7 +2,7 @@
 
 module Orn
   class Config
-    # Resolved [tui] settings, read from the global config only (there is no
+    # Resolved tui settings, read from the global config only (there is no
     # per-project TUI config). Unlike ConfigInfo's TuiInfo, these are plain
     # resolved values without source provenance, for the TUI to consume.
     GlobalTuiConfig = Data.define(:session, :scan_roots, :scan_depth) do

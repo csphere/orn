@@ -11,13 +11,13 @@ RSpec.describe Orn::Commands::Sbx::Build do
     it "fails without an [sbx] section" do
       project = project_with("git:\n  base: main\n")
 
-      expect { described_class.run_inner(mode, project) }.to raise_error(Orn::Error, /\[sbx\]/)
+      expect { described_class.run_inner(mode, project) }.to raise_error(Orn::Error, /No sbx section/)
     end
 
     it "fails without an [sbx.build] section" do
       project = project_with("sbx:\n  template: img:1\n")
 
-      expect { described_class.run_inner(mode, project) }.to raise_error(Orn::Error, /\[sbx\.build\]/)
+      expect { described_class.run_inner(mode, project) }.to raise_error(Orn::Error, /No sbx\.build section/)
     end
 
     it "fails without a template" do

@@ -25,13 +25,18 @@ module Orn
           Orn::Config.info(Orn::Git::Project.discover_root)
         end
 
-        # Human-readable rendering with a "(project/global/default)" annotation
-        # on each resolved value.
+        # A string that renders as a plain (unquoted) YAML scalar; anything else
+        # is double-quoted so the output stays valid, copy-pasteable YAML.
+        PLAIN_SCALAR = %r{\A[A-Za-z0-9_][\w./-]*\z}
+
+        # Human-readable YAML rendering with a "(project/global/default)"
+        # annotation on each resolved value. The shape mirrors the YAML config
+        # file so a user can copy sections straight into `.orn/config.yaml`.
         def render(info)
-          lines = [project_config_line(info), global_config_line(info), ""]
-          append_scalars(lines, info)
+          lines = [project_config_line(info), global_config_line(info)]
+          append_git(lines, info)
+          append_tmux(lines, info)
           append_symlinks(lines, info.symlinks)
-          append_layout(lines, info.layout)
           append_tui(lines, info.tui)
           lines.join("\n")
         end
@@ -42,11 +47,17 @@ module Orn
 
         private
 
-        def append_scalars(lines, info)
-          lines << annotate("[git] base = #{info.base.value.inspect}", info.base.source)
-          return unless info.session
+        def append_git(lines, info)
+          lines << ""
+          lines << "git:"
+          lines << annotate("  base: #{yaml_scalar(info.base.value)}", info.base.source)
+        end
 
-          lines << annotate("[tmux] session = #{info.session.value.inspect}", info.session.source)
+        def append_tmux(lines, info)
+          lines << ""
+          lines << "tmux:"
+          lines << annotate("  session: #{yaml_scalar(info.session.value)}", info.session.source) if info.session
+          append_layout(lines, info.layout)
         end
 
         def project_config_line(info)
@@ -73,61 +84,59 @@ module Orn
           return if value.base.empty? && value.root.empty?
 
           lines << ""
-          lines << annotate("[symlinks]", symlinks.source)
-          lines << "base = [#{join_inspected(value.base)}]" unless value.base.empty?
+          lines << annotate("symlinks:", symlinks.source)
+          lines << "  base: #{seq(value.base)}" unless value.base.empty?
+          return if value.root.empty?
+
+          lines << "  root:"
           value.root.each { |entry| append_root_symlink(lines, entry) }
         end
 
         def append_root_symlink(lines, entry)
-          lines << ""
-          lines << "[[symlinks.root]]"
-          lines << "source = #{entry.source.inspect}"
-          lines << "dest = #{entry.dest.inspect}" if entry.dest
+          lines << "    - source: #{yaml_scalar(entry.source)}"
+          lines << "      dest: #{yaml_scalar(entry.dest)}" if entry.dest
         end
 
         def append_layout(lines, layout)
           if layout.value.columns?
-            layout.value.columns.each { |column| append_columns_entry(lines, column, layout.source) }
+            lines << "  columns:"
+            layout.value.columns.each { |column| lines << annotate("    - panes: #{seq(column.panes)}", layout.source) }
           else
-            layout.value.rows.each { |row| append_rows_entry(lines, row, layout.source) }
+            lines << "  rows:"
+            layout.value.rows.each { |row| append_row(lines, row, layout.source) }
           end
         end
 
-        def append_columns_entry(lines, column, source)
-          lines << ""
-          lines << annotate("[[tmux.columns]]", source)
-          lines << panes_line(column.panes)
-        end
-
-        def append_rows_entry(lines, row, source)
-          lines << ""
-          lines << annotate("[[tmux.rows]]", source)
+        def append_row(lines, row, source)
           if row.columns?
-            row.columns.each { |column| append_nested_columns(lines, column) }
+            lines << annotate("    - columns:", source)
+            row.columns.each { |column| lines << "        - panes: #{seq(column.panes)}" }
           else
-            lines << panes_line(row.panes)
+            lines << annotate("    - panes: #{seq(row.panes)}", source)
           end
-        end
-
-        def append_nested_columns(lines, column)
-          lines << ""
-          lines << "[[tmux.rows.columns]]"
-          lines << panes_line(column.panes)
         end
 
         def append_tui(lines, tui)
           lines << ""
-          lines << annotate("[tui] session = #{tui.session.value.inspect}", tui.session.source)
-          lines << annotate("[tui] scan_roots = [#{join_inspected(tui.scan_roots.value)}]", tui.scan_roots.source)
-          lines << annotate("[tui] scan_depth = #{tui.scan_depth.value}", tui.scan_depth.source)
+          lines << "tui:"
+          lines << annotate("  session: #{yaml_scalar(tui.session.value)}", tui.session.source)
+          lines << annotate("  scan_roots: #{seq(tui.scan_roots.value)}", tui.scan_roots.source)
+          lines << annotate("  scan_depth: #{yaml_scalar(tui.scan_depth.value)}", tui.scan_depth.source)
         end
 
-        def panes_line(panes)
-          "panes = [#{join_inspected(panes)}]"
+        # A YAML flow sequence, e.g. ["a", "b"]. Sequence string elements
+        # (pane commands, symlink/scan-root paths) are always quoted, matching
+        # the config template, since they are commonly commands or paths.
+        def seq(values)
+          "[#{values.map { |value| value.is_a?(String) ? value.inspect : value.to_s }.join(", ")}]"
         end
 
-        def join_inspected(values)
-          values.map(&:inspect).join(", ")
+        # A scalar value: simple strings plain, anything unsafe double-quoted,
+        # non-strings as-is.
+        def yaml_scalar(value)
+          return value.to_s unless value.is_a?(String)
+
+          value.match?(PLAIN_SCALAR) ? value : value.inspect
         end
 
         def info_hash(info)

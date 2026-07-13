@@ -5,7 +5,7 @@ require "fileutils"
 
 module Orn
   # Trust approval for commands defined in project config: tmux pane commands
-  # and [sbx] lifecycle commands. Approvals are content fingerprints stored per
+  # and sbx lifecycle commands. Approvals are content fingerprints stored per
   # project under the XDG data dir, so any change to the commands requires
   # re-approval. Global and default config is implicitly trusted.
   #
@@ -117,7 +117,7 @@ module Orn
 
     # --- Sandbox command trust ---
 
-    # Gates [sbx] setup and start commands, build args, and env vars behind user
+    # Gates sbx setup and start commands, build args, and env vars behind user
     # approval. Unlike pane commands there is no degrade path: declining or
     # running unapproved non-interactively is an error.
     def self.check_sbx_trust(project_root, sbx)
@@ -139,7 +139,7 @@ module Orn
                             "#{items.join("\n  ")}\n  Run interactively to review and approve them"
       approved = check_trust_flow(
         sbx_fingerprint(sbx), sbx_approval_path(data_dir, project_root), items,
-        header: "The [sbx] config will run these commands:",
+        header: "The sbx config will run these commands:",
         prompt: "Approve? [y/N] ",
         non_interactive_msg: non_interactive_msg,
         interactive: interactive
@@ -149,7 +149,7 @@ module Orn
       nil
     end
 
-    # Whether the [sbx] config contains anything that needs approval.
+    # Whether the sbx config contains anything that needs approval.
     def self.sbx_commands?(sbx)
       !sbx.setup.empty? ||
         !sbx.start.nil? ||
@@ -157,7 +157,7 @@ module Orn
         !sbx.env.empty?
     end
 
-    # SHA256 hex digest over the trust-relevant [sbx] fields, each prefixed with
+    # SHA256 hex digest over the trust-relevant sbx fields, each prefixed with
     # a domain label so values cannot shift between fields undetected.
     def self.sbx_fingerprint(sbx)
       digest = Digest::SHA256.new
