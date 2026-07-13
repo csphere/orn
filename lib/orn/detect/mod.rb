@@ -159,8 +159,63 @@ module Orn
       in_window.find { |pane| identify_agent(pane.pane_current_command) } || first
     end
 
+    # --- Pane detection ---
+
+    # Which agent runs in a pane: by the pane's current command, then its
+    # foreground job, then the sbx agent type when the command is a container
+    # runtime.
+    def self.resolve_agent(pane, sbx_agent_type)
+      direct = identify_agent(pane.pane_current_command)
+      return direct if direct
+
+      job = Platform.foreground_job(pane.pane_pid)
+      wrapped = job && identify_agent_in_job(job)
+      return wrapped.first if wrapped
+
+      return sbx_agent_type if container_runtime?(pane.pane_current_command)
+
+      nil
+    end
+
+    # True when OSC-title detection alone settles the state, so capturing the
+    # pane's screen is unnecessary. Idle is not definitive: a stale title can
+    # mask a blocker that only shows on screen.
+    def self.osc_definitive?(result)
+      %i[working blocked].include?(result.state)
+    end
+
+    # Detect the agent and state for a single pane. Evaluates the cheap OSC
+    # title first and only captures the pane's screen when that is not
+    # definitive.
+    def self.detect_pane(output_mode, pane, sbx_agent_type)
+      agent = resolve_agent(pane, sbx_agent_type)
+      return PaneAgentState.new(agent: nil, state: :unknown) if agent.nil?
+
+      osc_result = Manifest.detect(agent,
+        Manifest::DetectionInput.new(screen: "", osc_title: pane.pane_title, osc_progress: ""))
+      return PaneAgentState.new(agent: agent, state: osc_result.state) if osc_definitive?(osc_result)
+
+      screen = Orn::Tmux.capture_pane(output_mode, pane.pane_id) || ""
+      full = Manifest.detect(agent,
+        Manifest::DetectionInput.new(screen: screen, osc_title: pane.pane_title, osc_progress: ""))
+      PaneAgentState.new(agent: agent, state: full.state)
+    end
+
+    # Detect agent state per window, keyed by window name. The first pane with
+    # an identified agent wins its window; an agent-less result is replaced if a
+    # later pane in the same window yields one.
+    def self.detect_all_panes(output_mode, panes, sbx_agent_type)
+      results = {}
+      panes.each do |pane|
+        next if results[pane.window_name]&.agent
+
+        results[pane.window_name] = detect_pane(output_mode, pane, sbx_agent_type)
+      end
+      results
+    end
+
     private_class_method :normalize_process_name, :agent_from_name, :generic_runtime?,
       :container_runtime?, :identify_wrapped_agent, :match_leader, :match_other_process,
-      :match_wrapped_process
+      :match_wrapped_process, :resolve_agent, :osc_definitive?
   end
 end

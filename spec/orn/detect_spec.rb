@@ -131,6 +131,70 @@ RSpec.describe Orn::Detect do
     end
   end
 
+  describe ".detect_pane" do
+    let(:mode) { Orn::OutputMode.quiet }
+
+    it "identifies claude from the pane command" do
+      result = described_class.detect_pane(mode, pane(window: "w", command: "claude", pane_id: "%99"), nil)
+
+      expect(result.agent).to eq(:claude)
+    end
+
+    it "falls through to no agent for a shell" do
+      result = described_class.detect_pane(mode, pane(window: "w", command: "bash", pane_id: "%99"), nil)
+
+      expect(result).to have_attributes(agent: nil, state: :unknown)
+    end
+
+    it "uses the sbx agent type when the command is a container runtime" do
+      result = described_class.detect_pane(mode, pane(window: "w", command: "docker", pane_id: "%99"), :claude)
+
+      expect(result.agent).to eq(:claude)
+    end
+
+    it "reports no agent for a container runtime without an sbx agent type" do
+      result = described_class.detect_pane(mode, pane(window: "w", command: "docker", pane_id: "%99"), nil)
+
+      expect(result).to have_attributes(agent: nil, state: :unknown)
+    end
+
+    it "skips the screen capture when the osc title is definitive" do
+      result = described_class.detect_pane(mode,
+        pane(window: "w", command: "claude", title: "\u{2802} project", pane_id: "%99"), nil)
+
+      expect(result).to have_attributes(agent: :claude, state: :working)
+    end
+  end
+
+  describe ".detect_all_panes" do
+    let(:mode) { Orn::OutputMode.quiet }
+
+    it "lets the first pane with an agent win its window" do
+      panes = [
+        pane(window: "win", command: "bash", pane_id: "%0"),
+        pane(window: "win", command: "claude", title: "\u{2802} project", pane_id: "%1"),
+        pane(window: "win", command: "codex", pane_id: "%2")
+      ]
+
+      expect(described_class.detect_all_panes(mode, panes, nil)["win"].agent).to eq(:claude)
+    end
+
+    it "detects each window separately" do
+      panes = [
+        pane(window: "main", command: "claude", pane_id: "%0"),
+        pane(window: "feature", command: "bash", pane_id: "%1")
+      ]
+
+      results = described_class.detect_all_panes(mode, panes, nil)
+
+      aggregate_failures do
+        expect(results.length).to eq(2)
+        expect(results["main"].agent).to eq(:claude)
+        expect(results["feature"].agent).to be_nil
+      end
+    end
+  end
+
   describe Orn::Detect::Platform::Linux do
     describe ".parse_tpgid" do
       it "reads the foreground pgid from a stat line" do
