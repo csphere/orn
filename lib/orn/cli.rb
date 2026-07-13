@@ -130,5 +130,10 @@ module Orn
     def mcp
       Orn::Mcp::Server.serve
     end
+
+    desc "setup", "Register the orn MCP server in Claude Code (~/.claude.json)"
+    def setup
+      Orn::Mcp::Setup.register
+    end
   end
 end
