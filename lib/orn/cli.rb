@@ -23,6 +23,12 @@ module Orn
       true
     end
 
+    # Thor derives the program name shown in help/usage from the class name
+    # (`c_l_i`); override it so help reads `orn`.
+    def self.basename
+      "orn"
+    end
+
     # `class_option` declares an option available to *every* command on this
     # class (Thor's inherited/"global" options), unlike `method_option`, which
     # scopes an option to the single command defined immediately after it.

@@ -1,0 +1,36 @@
+name: Test
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.8"
+          bundler-cache: true
+      # Some specs create temporary git repositories and commit to them.
+      - run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@test"
+      - run: bundle exec rspec
+
+  system-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: taiki-e/install-action@just
+      # Without these secrets (e.g. fork PRs) the sandbox system tests are
+      # skipped; the rest of the suite still runs in the container.
+      - run: just system-test
+        env:
+          DOCKER_SBX_USERNAME: ${{ secrets.DOCKER_SBX_USERNAME }}
+          DOCKER_SBX_TOKEN: ${{ secrets.DOCKER_SBX_TOKEN }}

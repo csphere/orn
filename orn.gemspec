@@ -11,7 +11,8 @@ Gem::Specification.new do |spec|
   spec.summary = "Git worktree and tmux workspace manager."
   spec.description = "orn manages git bare-worktree projects and their tmux " \
                      "windows, sandboxes, and agent coordination."
-  spec.homepage = "TODO"
+  spec.homepage = "https://github.com/seaseducation/orn"
+  spec.license = "MIT"
   spec.required_ruby_version = ">= 3.3"
 
   spec.metadata["homepage_uri"] = spec.homepage

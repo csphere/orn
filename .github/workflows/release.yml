@@ -1,0 +1,43 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.8"
+          bundler-cache: true
+      - run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@test"
+      - run: bundle exec rspec
+
+  # A gem is a single platform-independent artifact, so the build matrix
+  # collapses to one build + publish step. The built .gem is
+  # attached to the GitHub Release; no external RubyGems/Packages account needed.
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.8"
+          bundler-cache: true
+      - run: gem build orn.gemspec
+      - run: gh release create ${{ github.ref_name }} orn-*.gem --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
