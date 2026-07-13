@@ -78,11 +78,14 @@ Metrics/AbcSize:
     - "spec/**/*"
 
 # Detailed formatters and command classes run long; the deep Config namespace
-# (value types, validation, normalization, loading) is exempt entirely.
+# (value types, validation, normalization, loading) is exempt entirely, as are
+# the TUI app classes, which are large single state/action classes.
 Metrics/ClassLength:
   Max: 150
   Exclude:
     - "lib/orn/config/**/*"
+    - "lib/orn/tui/app.rb"
+    - "lib/orn/tui/global_app.rb"
 
 # Deep single-responsibility modules (e.g. Symlink) run long. Sandbox is a
 # single large module (lifecycle, ports, build, doctor) and is exempt
@@ -95,6 +98,25 @@ Metrics/ModuleLength:
     - "lib/orn/detect/manifest.rb"
     - "lib/orn/detect/manifests.rb"
     - "lib/orn/mcp/tools.rb"
+    # The tmux bootstrap plus both event loops as one entry point.
+    - "lib/orn/tui/bootstrap.rb"
+    - "spec/**/*"
+
+# x/y are the conventional names for cell coordinates in the TUI buffer, and
+# fg/bg for its foreground/background colours, on top of the cop's built-in
+# short-name allowances.
+Naming/MethodParameterName:
+  AllowedNames:
+    - x
+    - y
+    - fg
+    - bg
+    - io
+    - id
+    - to
+    - by
+    - "on"
+    - fn
 
 # A single behavior often asserts several closely related facts about one
 # result (e.g. the fields of a parsed config); fragmenting those into separate
