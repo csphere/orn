@@ -72,9 +72,13 @@ Metrics/ClassLength:
   Exclude:
     - "lib/orn/config/**/*"
 
-# Deep single-responsibility modules (e.g. Symlink) run long.
+# Deep single-responsibility modules (e.g. Symlink) run long. Sandbox is a
+# single large module (lifecycle, ports, build, doctor) and is exempt
+# entirely, like the Config namespace.
 Metrics/ModuleLength:
   Max: 150
+  Exclude:
+    - "lib/orn/sandbox.rb"
 
 # A single behavior often asserts several closely related facts about one
 # result (e.g. the fields of a parsed config); fragmenting those into separate

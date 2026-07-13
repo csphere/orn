@@ -122,5 +122,8 @@ module Orn
 
     desc "wt SUBCOMMAND", "Manage git worktrees"
     subcommand "wt", Orn::Commands::Wt::CLI
+
+    desc "sbx SUBCOMMAND", "Manage sandboxes (dev containers) for worktrees"
+    subcommand "sbx", Orn::Commands::Sbx::CLI
   end
 end

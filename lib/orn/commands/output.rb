@@ -50,7 +50,8 @@ module Orn
       end
 
       # A rounded-border table (single source; a richer renderer can replace it
-      # later without changing callers).
+      # later without changing callers). Public so commands with their own
+      # headers (e.g. `sbx list`) can render without the worktree framing.
       def self.render_table(headers, rows)
         widths = column_widths(headers, rows)
         [
@@ -78,7 +79,7 @@ module Orn
         "│#{padded.join("│")}│"
       end
 
-      private_class_method :render_table, :column_widths, :border, :row_line
+      private_class_method :column_widths, :border, :row_line
     end
   end
 end
