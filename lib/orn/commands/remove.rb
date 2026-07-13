@@ -24,9 +24,36 @@ module Orn
         end
       end
 
+      # Removes one branch's sandbox (with its ports file) and tmux window,
+      # then delegates worktree and branch removal to Wt::Remove. Shared by the
+      # CLI batch path and the MCP `worktree_remove` tool.
+      def self.run_inner_with_remote(output_mode, project, branch, prune, prune_remote)
+        session = Orn::Session.session_name(project)
+        sandbox_removed = teardown_sandbox(output_mode, project, branch)
+        window_closed = close_window(output_mode, session, branch)
+        wt_result = Wt::Remove.new(output_mode: output_mode)
+          .run_inner_with_remote(project, branch, prune, prune_remote)
+        Result.new(sandbox_removed: sandbox_removed, window_closed: window_closed, wt: wt_result)
+      end
+
+      # Best-effort sandbox teardown: `try_remove` returns false when no sandbox
+      # (or no sbx CLI) exists; the ports file is deleted only on a real removal.
+      def self.teardown_sandbox(output_mode, project, branch)
+        sbx_name = project.sandbox_name(branch)
+        removed = Orn::Sandbox.try_remove(output_mode, sbx_name)
+        Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), sbx_name) if removed
+        removed
+      end
+
+      def self.close_window(output_mode, session, branch)
+        return false unless Orn::Tmux.window_exists?(output_mode, session, branch)
+
+        Orn::Tmux.kill_window(output_mode, session, branch)
+        true
+      end
+
       def initialize(output_mode:)
         @output_mode = output_mode
-        @wt_remove = Wt::Remove.new(output_mode: output_mode)
       end
 
       def run(branches, prune:, force:)
@@ -42,28 +69,10 @@ module Orn
       private
 
       def remove_multiple(project, branches, prune)
-        session = Orn::Session.session_name(project)
         printer = lambda(&:print_summary)
         Commands::Output.run_multi_branch(@output_mode, branches, printer) do |branch|
-          remove_one(project, session, branch, prune)
+          self.class.run_inner_with_remote(@output_mode, project, branch, prune, prune)
         end
-      end
-
-      def remove_one(project, session, branch, prune)
-        has_window = Orn::Tmux.window_exists?(@output_mode, session, branch)
-        sandbox_removed = remove_sandbox(project, branch)
-        Orn::Tmux.kill_window(@output_mode, session, branch) if has_window
-        wt_result = @wt_remove.run_inner_with_remote(project, branch, prune, prune)
-        Result.new(sandbox_removed: sandbox_removed, window_closed: has_window, wt: wt_result)
-      end
-
-      # Best-effort sandbox teardown: `try_remove` returns false when no sandbox
-      # (or no sbx CLI) exists; the ports file is deleted only on a real removal.
-      def remove_sandbox(project, branch)
-        sbx_name = project.sandbox_name(branch)
-        removed = Orn::Sandbox.try_remove(@output_mode, sbx_name)
-        Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), sbx_name) if removed
-        removed
       end
 
       def confirm_prunes(project, branches)

@@ -125,5 +125,10 @@ module Orn
 
     desc "sbx SUBCOMMAND", "Manage sandboxes (dev containers) for worktrees"
     subcommand "sbx", Orn::Commands::Sbx::CLI
+
+    desc "mcp", "Run the MCP server (JSON-RPC over stdio)"
+    def mcp
+      Orn::Mcp::Server.serve
+    end
   end
 end
