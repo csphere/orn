@@ -135,5 +135,18 @@ module Orn
     def setup
       Orn::Mcp::Setup.register
     end
+
+    desc "completions SHELL", "Print a shell completion script (bash, zsh, or fish)"
+    def completions(shell)
+      puts Orn::Completions.script(shell)
+    end
+
+    # Hidden candidate lister for the completion scripts. `exe/orn` short-
+    # circuits `orn complete` before loading Thor for speed; this arm is the
+    # fallback when it is reached through the full CLI.
+    desc "complete", "List dynamic completion candidates", hide: true
+    def complete(*)
+      Orn::Complete.print_candidates
+    end
   end
 end
