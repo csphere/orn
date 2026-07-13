@@ -61,6 +61,7 @@ require_relative "orn/mcp/setup"
 require_relative "orn/complete"
 require_relative "orn/completions"
 require_relative "orn/tui"
+require_relative "orn/tui/state"
 require_relative "orn/cli"
 require_relative "orn/shim"
 
