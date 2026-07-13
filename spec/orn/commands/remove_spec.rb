@@ -16,6 +16,27 @@ RSpec.describe Orn::Commands::Remove do
     Orn::Git::Project.new(root: root, config: Orn::Config.load_from(root, nil))
   end
 
+  def result(branch:, sandbox_removed:, window_closed:)
+    wt = Orn::Commands::Wt::Remove::Result.new(
+      branch: branch, worktree_removed: true, branch_deleted: false, remote_branch_deleted: false
+    )
+    described_class::Result.new(sandbox_removed: sandbox_removed, window_closed: window_closed, wt: wt)
+  end
+
+  describe "result JSON shape" do
+    it "flattens the worktree fields alongside the sandbox and window flags" do
+      json = result(branch: "feature/x", sandbox_removed: true, window_closed: true).to_json_hash
+
+      expect(json).to include("sandbox_removed" => true, "window_closed" => true, "branch" => "feature/x")
+    end
+
+    it "reports sandbox_removed false when no sandbox was torn down" do
+      json = result(branch: "feature/y", sandbox_removed: false, window_closed: false).to_json_hash
+
+      expect(json["sandbox_removed"]).to be(false)
+    end
+  end
+
   context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 

@@ -2,10 +2,10 @@
 
 module Orn
   module Commands
-    # `orn remove`: tear down a branch's tmux window and worktree, optionally
-    # pruning the local and remote branches. Sandbox teardown is a follow-up
-    # (sandbox_removed stays false); the TUI hub pane-return is a follow-up.
-    # Batch: one branch's failure is reported but does not stop the rest.
+    # `orn remove`: tear down a branch's sandbox, tmux window, and worktree,
+    # optionally pruning the local and remote branches. The TUI hub pane-return
+    # is a follow-up. Batch: one branch's failure is reported but does not
+    # stop the rest.
     class Remove
       Result = Data.define(:sandbox_removed, :window_closed, :wt) do
         def branch
@@ -50,16 +50,20 @@ module Orn
       end
 
       def remove_one(project, session, branch, prune)
-        window_closed = close_window(session, branch)
+        has_window = Orn::Tmux.window_exists?(@output_mode, session, branch)
+        sandbox_removed = remove_sandbox(project, branch)
+        Orn::Tmux.kill_window(@output_mode, session, branch) if has_window
         wt_result = @wt_remove.run_inner_with_remote(project, branch, prune, prune)
-        Result.new(sandbox_removed: false, window_closed: window_closed, wt: wt_result)
+        Result.new(sandbox_removed: sandbox_removed, window_closed: has_window, wt: wt_result)
       end
 
-      def close_window(session, branch)
-        return false unless Orn::Tmux.window_exists?(@output_mode, session, branch)
-
-        Orn::Tmux.kill_window(@output_mode, session, branch)
-        true
+      # Best-effort sandbox teardown: `try_remove` returns false when no sandbox
+      # (or no sbx CLI) exists; the ports file is deleted only on a real removal.
+      def remove_sandbox(project, branch)
+        sbx_name = project.sandbox_name(branch)
+        removed = Orn::Sandbox.try_remove(@output_mode, sbx_name)
+        Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), sbx_name) if removed
+        removed
       end
 
       def confirm_prunes(project, branches)
