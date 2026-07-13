@@ -54,6 +54,21 @@ Layout/FirstHashElementIndentation:
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented
 
+# Enforce that module inclusions (include/extend/prepend) and constants are
+# declared at the top of a class/module body, before its methods, so constants
+# are never buried mid-class. Class methods (`def self.x`) and the initializer
+# are intentionally omitted from the order: this codebase groups class methods
+# by role (factories near the top, pure free-function helpers near the bottom),
+# so only the constants-first rule is enforced, leaving method grouping free.
+Layout/ClassStructure:
+  Enabled: true
+  ExpectedOrder:
+    - module_inclusion
+    - constants
+    - public_methods
+    - protected_methods
+    - private_methods
+
 # Class-level documentation is not mandatory; we comment where the intent
 # is not obvious from the code.
 Style/Documentation:

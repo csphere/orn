@@ -11,6 +11,10 @@ module Orn
         # Column the "(source)" annotation is padded to.
         SOURCE_COLUMN = 42
 
+        # A string that renders as a plain (unquoted) YAML scalar; anything else
+        # is double-quoted so the output stays valid, copy-pasteable YAML.
+        PLAIN_SCALAR = %r{\A[A-Za-z0-9_][\w./-]*\z}
+
         def initialize(output_mode:)
           @output_mode = output_mode
         end
@@ -24,10 +28,6 @@ module Orn
         def run_inner
           Orn::Config.info(Orn::Git::Project.discover_root)
         end
-
-        # A string that renders as a plain (unquoted) YAML scalar; anything else
-        # is double-quoted so the output stays valid, copy-pasteable YAML.
-        PLAIN_SCALAR = %r{\A[A-Za-z0-9_][\w./-]*\z}
 
         # Human-readable YAML rendering with a "(project/global/default)"
         # annotation on each resolved value. The shape mirrors the YAML config
