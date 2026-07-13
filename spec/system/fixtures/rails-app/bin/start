@@ -1,0 +1,9 @@
+#!/bin/sh
+# Starts the app processes in the background. Invoked detached by orn via
+# the [sbx] start command; the nohup'd children outlive this script.
+set -eu
+cd "$(dirname "$0")/.."
+
+mkdir -p log
+nohup bin/rails server >> log/rails.log 2>&1 &
+nohup bin/sidekiq >> log/sidekiq.log 2>&1 &

@@ -22,6 +22,17 @@ module Orn
           type: :boolean,
           desc: "Emit machine-readable JSON output"
 
+        desc "new BRANCH", "Create a worktree for a branch (no tmux window)"
+        option :base, desc: "Base branch (defaults to config or 'main')"
+        def new(branch)
+          New.new(output_mode: Orn::OutputMode.from_options(options)).run(branch, base_override: options[:base])
+        end
+
+        desc "open BRANCH", "Resolve a branch to its worktree, creating it from the remote if needed"
+        def open(branch)
+          Open.new(output_mode: Orn::OutputMode.from_options(options)).run(branch)
+        end
+
         desc "list", "List the project's worktrees"
         def list
           List.new(output_mode: Orn::OutputMode.from_options(options)).run

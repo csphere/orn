@@ -35,10 +35,16 @@ module Orn
       @argv.intersect?(ROOT_ONLY_FLAGS)
     end
 
-    # The root-only flag is meaningless once a subcommand is present (Thor
-    # does not know it), so strip it before dispatching.
+    # Strip the root-only flag only from the leading run before the subcommand:
+    # a `--global` there is the meaningless TUI flag, but once the subcommand
+    # token appears everything after belongs to it (e.g. `config migrate
+    # --global` is the subcommand's own flag and must reach Thor).
     def cli_argv
-      @argv.reject { |arg| ROOT_ONLY_FLAGS.include?(arg) }
+      subcommand_index = @argv.index { |arg| !GLOBAL_FLAGS.include?(arg) }
+      return @argv.reject { |arg| ROOT_ONLY_FLAGS.include?(arg) } if subcommand_index.nil?
+
+      leading = @argv[0...subcommand_index].reject { |arg| ROOT_ONLY_FLAGS.include?(arg) }
+      leading + @argv[subcommand_index..]
     end
   end
 end

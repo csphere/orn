@@ -10,6 +10,8 @@ AllCops:
     - "bin/**/*"
     - "vendor/**/*"
     - "tmp/**/*"
+    # Dummy app used only as a sandbox system-test fixture, not orn source.
+    - "spec/system/fixtures/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

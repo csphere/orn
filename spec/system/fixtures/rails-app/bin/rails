@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+# Dummy Rails CLI: just enough surface for the orn sandbox system test.
+#
+#   bin/rails server            serve GET /up health checks on $PORT
+#   bin/rails jobs:enqueue NAME push a job onto the sidekiq queue
+#   bin/rails jobs:count        count jobs the worker has processed
+
+require "json"
+require "socket"
+
+Dir.chdir(File.expand_path("..", __dir__))
+require_relative "../lib/dummy_app"
+
+def health
+  {
+    rails: "ok",
+    postgres: DummyApp.psql("SELECT 1") == "1" ? "ok" : "error",
+    redis: DummyApp.redis("ping") == "PONG" ? "ok" : "error",
+  }
+rescue StandardError => e
+  { rails: "ok", error: e.message }
+end
+
+def serve
+  port = Integer(ENV.fetch("PORT", "3000"))
+  server = TCPServer.new("0.0.0.0", port)
+  puts "dummy rails server listening on #{port}"
+  loop do
+    client = server.accept
+    begin
+      request_line = client.gets.to_s
+      nil while (line = client.gets) && line != "\r\n"
+      status = request_line.start_with?("GET /up") ? "200 OK" : "404 Not Found"
+      body = JSON.generate(health)
+      client.write(
+        "HTTP/1.1 #{status}\r\n" \
+        "Content-Type: application/json\r\n" \
+        "Content-Length: #{body.bytesize}\r\n" \
+        "Connection: close\r\n\r\n#{body}",
+      )
+    rescue StandardError
+      # Keep serving; the health check is best-effort per connection.
+    ensure
+      client.close
+    end
+  end
+end
+
+case ARGV[0]
+when "server"
+  serve
+when "jobs:enqueue"
+  name = ARGV.fetch(1)
+  DummyApp.redis("lpush", "queue:default", name)
+when "jobs:count"
+  puts DummyApp.psql("SELECT count(*) FROM jobs")
+else
+  warn "usage: bin/rails server | jobs:enqueue NAME | jobs:count"
+  exit 1
+end

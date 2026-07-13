@@ -39,12 +39,20 @@ RSpec.describe Orn::Shim do
         expect(Orn::CLI).to have_received(:start).with(["--json", "list", "-v"])
       end
 
-      it "strips the root-only global flag before dispatching" do
+      it "strips the leading root-only global flag before dispatching" do
         allow(Orn::CLI).to receive(:start)
 
         described_class.new(["-g", "list"]).run
 
         expect(Orn::CLI).to have_received(:start).with(["list"])
+      end
+
+      it "keeps a subcommand's own --global flag" do
+        allow(Orn::CLI).to receive(:start)
+
+        described_class.new(["config", "migrate", "--global"]).run
+
+        expect(Orn::CLI).to have_received(:start).with(["config", "migrate", "--global"])
       end
     end
   end

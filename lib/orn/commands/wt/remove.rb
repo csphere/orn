@@ -17,6 +17,14 @@ module Orn
               "remote_branch_deleted" => remote_branch_deleted
             }
           end
+
+          # The human-readable removal summary; shared with the top-level
+          # `orn remove`, which layers window/sandbox lines on top.
+          def print_summary
+            puts(worktree_removed ? "Removed worktree: #{branch}" : "No worktree found for #{branch}")
+            puts "Deleted branch: #{branch}" if branch_deleted
+            puts "Deleted remote branch: #{branch}" if remote_branch_deleted
+          end
         end
 
         def initialize(output_mode:)
@@ -34,7 +42,7 @@ module Orn
         end
 
         def remove_multiple(project, branches, prune, prune_remote)
-          printer = ->(result) { print_result(result) }
+          printer = lambda(&:print_summary)
           Commands::Output.run_multi_branch(@output_mode, branches, printer) do |branch|
             run_inner_with_remote(project, branch, prune, prune_remote)
           end
@@ -97,18 +105,6 @@ module Orn
 
         def confirm_prunes(project, branches)
           branches.each { |branch| Orn::Confirm.prune_interactive(project.root, branch) }
-        end
-
-        def print_result(result)
-          puts worktree_message(result)
-          puts "Deleted branch: #{result.branch}" if result.branch_deleted
-          puts "Deleted remote branch: #{result.branch}" if result.remote_branch_deleted
-        end
-
-        def worktree_message(result)
-          return "Removed worktree: #{result.branch}" if result.worktree_removed
-
-          "No worktree found for #{result.branch}"
         end
       end
     end

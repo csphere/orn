@@ -75,6 +75,46 @@ module Orn
       Orn::Commands::Convert.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])
     end
 
+    desc "switch BRANCH", "Switch to a branch's tmux window, creating the worktree if needed"
+    option :base, desc: "Base branch (defaults to config or 'main')"
+    option :sbx, type: :boolean, default: false, desc: "Also create a sandbox with port publishing and services"
+    def switch(branch)
+      Orn::Commands::Switch.new(output_mode: Orn::OutputMode.from_options(options))
+        .run(branch, base_override: options[:base], sbx: options[:sbx])
+    end
+
+    # `hide` keeps these deprecated aliases out of help; both warn and delegate
+    # to `switch`. `open` takes no base/sandbox options (matching the original).
+    desc "new BRANCH", "Deprecated: use `orn switch` instead", hide: true
+    option :base, desc: "Base branch (defaults to config or 'main')"
+    option :sbx, type: :boolean, default: false
+    def new(branch)
+      warn "warning: `orn new` is deprecated, use `orn switch` instead"
+      Orn::Commands::Switch.new(output_mode: Orn::OutputMode.from_options(options))
+        .run(branch, base_override: options[:base], sbx: options[:sbx])
+    end
+
+    desc "open BRANCH", "Deprecated: use `orn switch` instead", hide: true
+    def open(branch)
+      warn "warning: `orn open` is deprecated, use `orn switch` instead"
+      Orn::Commands::Switch.new(output_mode: Orn::OutputMode.from_options(options)).run(branch)
+    end
+
+    desc "list", "List all worktrees and whether each has an open tmux window"
+    def list
+      Orn::Commands::List.new(output_mode: Orn::OutputMode.from_options(options)).run
+    end
+
+    desc "remove BRANCH [BRANCH ...]", "Remove worktrees and their tmux windows (with --prune, also their branches)"
+    option :prune, type: :boolean, default: false, desc: "Also delete the local and remote branches"
+    option :force, type: :boolean, default: false, desc: "Skip the confirmation prompt when pruning"
+    def remove(*branches)
+      raise Orn::Error, "remove requires at least one branch" if branches.empty?
+
+      Orn::Commands::Remove.new(output_mode: Orn::OutputMode.from_options(options))
+        .run(branches, prune: options[:prune], force: options[:force])
+    end
+
     # `subcommand` registers a nested Thor class as a command group, so
     # `orn config <cmd>` dispatches into Orn::Commands::Config::CLI.
     desc "config SUBCOMMAND", "Inspect and manage configuration"

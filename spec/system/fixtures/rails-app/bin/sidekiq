@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# Dummy sidekiq worker: pops jobs from the redis queue and records them in
+# postgres, mimicking sidekiq's redis -> worker -> database flow.
+
+Dir.chdir(File.expand_path("..", __dir__))
+require_relative "../lib/dummy_app"
+
+puts "dummy sidekiq worker polling queue:default"
+loop do
+  out = DummyApp.redis("brpop", "queue:default", "5")
+  next if out.empty?
+
+  # brpop output is "queue:default\n<name>"; job names in this fixture are
+  # test-controlled identifiers, safe to inline.
+  name = out.lines.last.strip
+  DummyApp.psql("INSERT INTO jobs (name) VALUES ('#{name}')")
+  puts "processed #{name}"
+end

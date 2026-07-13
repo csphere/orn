@@ -27,6 +27,31 @@ module Orn
         def show
           Show.new(output_mode: Orn::OutputMode.from_options(options)).run
         end
+
+        desc "migrate", "Upgrade config files to the current schema version"
+        method_option :dry_run,
+          type: :boolean,
+          desc: "Preview changes without writing"
+        method_option :yes,
+          type: :boolean,
+          desc: "Non-interactive: keep customized values, accept new defaults"
+        method_option :global,
+          type: :boolean,
+          desc: "Migrate only the global config (~/.config/orn/default.yaml)"
+        method_option :project,
+          type: :boolean,
+          desc: "Migrate only the project config (.orn/config.yaml)"
+        def migrate
+          # Thor has no conflicts_with, so enforce the mutual exclusion by hand.
+          raise Orn::Error, "--global and --project cannot be used together" if options[:global] && options[:project]
+
+          Migrate.new(
+            output_mode: Orn::OutputMode.from_options(options),
+            dry_run: options[:dry_run] || false,
+            global_only: options[:global] || false,
+            project_only: options[:project] || false
+          ).run
+        end
       end
     end
   end

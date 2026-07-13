@@ -78,6 +78,6 @@ module Orn
       File.join("~", *path_parts[home_parts.length..])
     end
 
-    private_class_method :read_yes_no, :with_stdin_stderr, :display_path
+    private_class_method :display_path
   end
 end
