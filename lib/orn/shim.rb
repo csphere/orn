@@ -35,16 +35,28 @@ module Orn
       @argv.intersect?(ROOT_ONLY_FLAGS)
     end
 
-    # Strip the root-only flag only from the leading run before the subcommand:
-    # a `--global` there is the meaningless TUI flag, but once the subcommand
-    # token appears everything after belongs to it (e.g. `config migrate
-    # --global` is the subcommand's own flag and must reach Thor).
+    # Normalize the leading run of flags before the subcommand token. Two
+    # things happen there:
+    #
+    # - Root-only flags (`-g`/`--global`) are the meaningless-to-Thor TUI flags
+    #   and are dropped.
+    # - The remaining global flags (`-v`/`--json`) are relocated to the end of
+    #   the argv. Thor treats a leading `-`-prefixed token as "no command
+    #   given" and prints help instead of dispatching, so a global flag placed
+    #   before the subcommand must move past it. Appending (rather than
+    #   inserting right after the subcommand) also clears the same hazard for
+    #   subcommand groups, whose nested Thor class would likewise choke on a
+    #   flag sitting before its own command (`config --json show`).
+    #
+    # Once the subcommand token appears, everything after it belongs to that
+    # command and is left untouched (e.g. `config migrate --global` is the
+    # subcommand's own flag and must reach Thor as written).
     def cli_argv
       subcommand_index = @argv.index { |arg| !GLOBAL_FLAGS.include?(arg) }
       return @argv.reject { |arg| ROOT_ONLY_FLAGS.include?(arg) } if subcommand_index.nil?
 
-      leading = @argv[0...subcommand_index].reject { |arg| ROOT_ONLY_FLAGS.include?(arg) }
-      leading + @argv[subcommand_index..]
+      leading_globals = @argv[0...subcommand_index].reject { |arg| ROOT_ONLY_FLAGS.include?(arg) }
+      @argv[subcommand_index..] + leading_globals
     end
   end
 end
