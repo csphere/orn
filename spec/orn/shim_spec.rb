@@ -79,5 +79,59 @@ RSpec.describe Orn::Shim do
         expect(Orn::CLI).to have_received(:start).with(["config", "migrate", "--global"])
       end
     end
+
+    context "with config-version enforcement" do
+      before { allow(Orn::CLI).to receive(:start) }
+
+      it "enforces config versions once a project is discovered" do
+        allow(Orn::Git::Project).to receive(:discover_root).and_return("/proj")
+        allow(Orn::Config::Migrate).to receive(:enforce_project_versions)
+
+        described_class.new(["list"]).run
+
+        expect(Orn::Config::Migrate).to have_received(:enforce_project_versions).with("/proj")
+      end
+
+      it "refuses to dispatch when a config is behind the running orn" do
+        allow(Orn::Git::Project).to receive(:discover_root).and_return("/proj")
+        allow(Orn::Config::Migrate).to receive(:enforce_project_versions)
+          .and_raise(Orn::Error, "config version is behind orn")
+
+        expect { described_class.new(["list"]).run }
+          .to raise_error(Orn::Error, "config version is behind orn")
+        expect(Orn::CLI).not_to have_received(:start)
+      end
+
+      it "dispatches normally when no project is found" do
+        allow(Orn::Git::Project).to receive(:discover_root)
+          .and_raise(Orn::Error, "Not an orn project")
+        allow(Orn::Config::Migrate).to receive(:enforce_project_versions)
+
+        described_class.new(["list"]).run
+
+        expect(Orn::Config::Migrate).not_to have_received(:enforce_project_versions)
+        expect(Orn::CLI).to have_received(:start).with(["list"])
+      end
+
+      %w[version help complete].each do |command|
+        it "skips enforcement for the #{command} command" do
+          allow(Orn::Git::Project).to receive(:discover_root)
+
+          described_class.new([command]).run
+
+          expect(Orn::Git::Project).not_to have_received(:discover_root)
+        end
+      end
+
+      %w[--version -V --help -h].each do |flag|
+        it "skips enforcement for the #{flag} flag" do
+          allow(Orn::Git::Project).to receive(:discover_root)
+
+          described_class.new([flag]).run
+
+          expect(Orn::Git::Project).not_to have_received(:discover_root)
+        end
+      end
+    end
   end
 end

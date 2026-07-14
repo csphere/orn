@@ -12,20 +12,66 @@ module Orn
     GLOBAL_FLAGS = %w[-v --verbose --json -g --global].freeze
     ROOT_ONLY_FLAGS = %w[-g --global].freeze
 
+    # Commands that run without a project, so the startup config-version gate
+    # is skipped for them: printing the version, showing help, and listing
+    # completion candidates. `complete` also has a faster short-circuit in
+    # `exe/orn`; this covers the slower path through the full CLI.
+    VERSIONLESS_COMMANDS = %w[version help complete].freeze
+
+    # Flags that ask for the version or help instead of running a command.
+    # None of orn's own options use these spellings, so their presence always
+    # means "just print version/help", which needs no project.
+    VERSIONLESS_FLAGS = %w[--version -V --help -h].freeze
+
     def initialize(argv)
       @argv = argv
     end
 
     def run
+      return Orn::TUI.launch(global: global_requested?) unless subcommand?
+
+      # A config newer than the running orn must be refused before the command
+      # touches it. Do this here, once the project is known, so every command
+      # is covered in one place rather than each command re-checking.
+      enforce_config_versions
+
       # `Thor.start` is Thor's entry point: it parses the argv it is given
       # (the CLI's own ARGV, minus the root-only flag), selects the matching
       # command, and invokes it.
-      return Orn::CLI.start(cli_argv) if subcommand?
-
-      Orn::TUI.launch(global: global_requested?)
+      Orn::CLI.start(cli_argv)
     end
 
     private
+
+    # Runs the startup config-version gate for commands that need a project.
+    # When the command needs no project, or the current directory is not an
+    # orn project, there is nothing to enforce and dispatch proceeds. A config
+    # that is behind the binary raises here and stops dispatch.
+    def enforce_config_versions
+      return if versionless_command?
+
+      project_root = discover_project_root
+      return unless project_root
+
+      Orn::Config::Migrate.enforce_project_versions(project_root)
+    end
+
+    # The project root, or nil when the current directory is not an orn
+    # project. Only discovery failures are swallowed; the command itself
+    # re-discovers and reports the same error later if it truly needs a
+    # project.
+    def discover_project_root
+      Orn::Git::Project.discover_root
+    rescue Orn::Error
+      nil
+    end
+
+    # True when the invocation only prints the version or help, or lists
+    # completion candidates, none of which read a project config.
+    def versionless_command?
+      command = cli_argv.first
+      VERSIONLESS_COMMANDS.include?(command) || cli_argv.intersect?(VERSIONLESS_FLAGS)
+    end
 
     def subcommand?
       @argv.any? { |arg| !GLOBAL_FLAGS.include?(arg) }
