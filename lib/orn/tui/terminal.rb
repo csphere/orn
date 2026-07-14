@@ -41,21 +41,44 @@ module Orn
       def poll(timeout)
         @backend.poll(timeout)
       end
+
+      # The current drawable area, re-read each tick so the event loop can
+      # notice a terminal resize.
+      def area
+        @backend.area
+      end
+
+      # Blank the whole screen. The event loop calls this on resize so a
+      # shrunk terminal keeps no stale rows from the taller layout.
+      def clear
+        @backend.clear
+      end
     end
 
     # In-memory backend for tests: keeps the last flushed buffer and replays a
     # scripted queue of key events. No terminal is touched.
     class TestBackend
-      attr_reader :area, :buffer
+      # A scripted terminal resize: when `poll` reaches one it changes the
+      # reported area and returns nil, standing in for a size-change wakeup
+      # that carries no key press.
+      Resize = Data.define(:width, :height)
+
+      attr_reader :area, :buffer, :clears
 
       def initialize(width, height)
         @area = Rect.new(x: 0, y: 0, width: width, height: height)
         @buffer = Buffer.new(@area)
         @events = []
+        @clears = 0
       end
 
       def flush(buffer)
         @buffer = buffer
+      end
+
+      # Count clear calls so tests can assert a resize triggered a full redraw.
+      def clear
+        @clears += 1
       end
 
       # Queue key events for `poll` to return, in order.
@@ -63,8 +86,18 @@ module Orn
         @events.concat(events)
       end
 
+      # Queue a resize into the same stream as `feed`, so tests can script a
+      # size change between key presses.
+      def feed_resize(width, height)
+        @events << Resize.new(width: width, height: height)
+      end
+
       def poll(_timeout)
-        @events.shift
+        event = @events.shift
+        return event unless event.is_a?(Resize)
+
+        @area = Rect.new(x: 0, y: 0, width: event.width, height: event.height)
+        nil
       end
     end
 
@@ -124,6 +157,13 @@ module Orn
 
       def flush(buffer)
         @output.write("\e[H#{render(buffer)}")
+        @output.flush
+      end
+
+      # Blank the whole screen. Used on resize so a shrunk terminal keeps no
+      # stale rows below the new layout.
+      def clear
+        @output.write("\e[2J")
         @output.flush
       end
 

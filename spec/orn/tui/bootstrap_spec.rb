@@ -93,6 +93,28 @@ module Orn
 
           expect(backend.buffer.to_s).to include("orn")
         end
+
+        it "does not clear the screen without a resize" do
+          backend = TestBackend.new(40, 8)
+          backend.feed(char("q"))
+          terminal = Terminal.new(backend)
+
+          described_class.run_loop(terminal, project_app)
+
+          expect(backend.clears).to eq(0)
+        end
+
+        it "clears and redraws at the new size when the terminal resizes" do
+          backend = TestBackend.new(40, 8)
+          backend.feed_resize(20, 8)
+          backend.feed(char("q"))
+          terminal = Terminal.new(backend)
+
+          described_class.run_loop(terminal, project_app)
+
+          expect(backend.clears).to eq(1)
+          expect(backend.buffer.area.width).to eq(20)
+        end
       end
 
       describe ".run_global_loop" do
@@ -104,6 +126,32 @@ module Orn
           described_class.run_global_loop(terminal, global_app)
 
           expect(backend.buffer.to_s).to include("No orn repos found")
+        end
+
+        it "re-applies the layout and clears when the terminal resizes" do
+          backend = TestBackend.new(40, 8)
+          backend.feed_resize(20, 8)
+          backend.feed(char("q"))
+          terminal = Terminal.new(backend)
+          app = global_app
+          allow(app).to receive(:enforce_layout)
+
+          described_class.run_global_loop(terminal, app)
+
+          expect(app).to have_received(:enforce_layout)
+          expect(backend.clears).to eq(1)
+        end
+
+        it "does not re-apply the layout without a resize" do
+          backend = TestBackend.new(40, 8)
+          backend.feed(char("q"))
+          terminal = Terminal.new(backend)
+          app = global_app
+          allow(app).to receive(:enforce_layout)
+
+          described_class.run_global_loop(terminal, app)
+
+          expect(app).not_to have_received(:enforce_layout)
         end
       end
     end

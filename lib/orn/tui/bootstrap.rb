@@ -128,7 +128,9 @@ module Orn
       # Project TUI event loop: draw, dispatch key presses per input mode, tick
       # the spinner, and refresh on cadence.
       def run_loop(terminal, app)
+        last_area = nil
         loop do
+          last_area = redraw_on_resize(terminal, last_area)
           terminal.draw { |frame| Ui.draw(frame, app) }
           key = terminal.poll(app.poll_timeout)
           return if key && dispatch_project(app, key) == :quit
@@ -141,7 +143,9 @@ module Orn
       # Global TUI event loop: draw, dispatch, tick the spinner, poll agent
       # focus, and refresh on cadence.
       def run_global_loop(terminal, app)
+        last_area = nil
         loop do
+          last_area = redraw_on_resize(terminal, last_area) { app.enforce_layout }
           terminal.draw { |frame| GlobalUi.draw(frame, app) }
           key = terminal.poll(app.poll_timeout)
           return if key && dispatch_global(app, key) == :quit
@@ -150,6 +154,23 @@ module Orn
           app.poll_focus
           app.maybe_refresh
         end
+      end
+
+      # React to a terminal resize before the next draw. The size is re-read
+      # each tick (rather than trapping SIGWINCH, which cannot wake the poll
+      # early without a self-pipe), so a resize is picked up within one poll
+      # timeout. On a change, clear the screen so a shrunk terminal keeps no
+      # stale rows, and run the optional callback the global TUI uses to
+      # re-apply its sidebar split. Returns the current area for the next
+      # comparison. The redraw itself happens in the caller's `draw`, which
+      # reads the fresh size.
+      def redraw_on_resize(terminal, last_area)
+        area = terminal.area
+        if last_area && area != last_area
+          terminal.clear
+          yield if block_given?
+        end
+        area
       end
 
       # Dispatch a key press for the project TUI, per input mode. Returns :quit
