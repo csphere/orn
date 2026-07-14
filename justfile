@@ -16,7 +16,7 @@ fmt:
     bundle exec rubocop --autocorrect
 
 install:
-    gem build orn.gemspec && gem install ./orn-*.gem
+    gem build orn.gemspec && gem install --force ./orn-*.gem
 
 # Build the system-test image and run the full RSpec suite inside a privileged
 # Docker-in-Docker container (git, tmux, docker, sbx all isolated from the
