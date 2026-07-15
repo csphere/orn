@@ -19,11 +19,11 @@ RSpec.describe Orn::Commands::List do
   context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
-    describe ".run_inner" do
+    describe "#run_inner" do
       it "marks a worktree with no tmux window" do
         project = project_with_worktree("feature/listed")
 
-        result = described_class.run_inner(Orn::OutputMode.quiet, load_project(project))
+        result = described_class.new(output_mode: Orn::OutputMode.quiet).run_inner(load_project(project))
 
         entry = result.worktrees.find { |candidate| candidate.branch == "feature/listed" }
         aggregate_failures do
@@ -38,7 +38,7 @@ RSpec.describe Orn::Commands::List do
 
         result = Dir.chdir(project) do
           Orn::Tmux.open_window(Orn::OutputMode.quiet, loaded, "feature/listed")
-          described_class.run_inner(Orn::OutputMode.quiet, loaded)
+          described_class.new(output_mode: Orn::OutputMode.quiet).run_inner(loaded)
         end
 
         entry = result.worktrees.find { |candidate| candidate.branch == "feature/listed" }

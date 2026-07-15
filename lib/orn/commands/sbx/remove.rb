@@ -13,26 +13,26 @@ module Orn
           end
         end
 
-        def self.run_inner(output_mode, project, branch)
-          Orn::Sandbox.require_sbx_cli!(output_mode)
+        def initialize(output_mode:)
+          @output_mode = output_mode
+        end
+
+        def run_inner(project, branch)
+          Orn::Sandbox.require_sbx_cli!(@output_mode)
 
           name = project.sandbox_name(branch)
-          removed = Orn::Sandbox.try_remove(output_mode, name)
-          output_mode.status("Removed sandbox '#{name}'") if removed
+          removed = Orn::Sandbox.try_remove(@output_mode, name)
+          @output_mode.status("Removed sandbox '#{name}'") if removed
 
           Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), name)
 
           Result.new(name: name, branch: branch, removed: removed)
         end
 
-        def initialize(output_mode:)
-          @output_mode = output_mode
-        end
-
         def run(branch)
           Orn::Git::BranchName.new(branch).validate!
           project = Orn::Git::Project.discover
-          result = self.class.run_inner(@output_mode, project, branch)
+          result = run_inner(project, branch)
           emit(result)
         end
 

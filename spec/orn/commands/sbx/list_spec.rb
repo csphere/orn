@@ -6,10 +6,11 @@ RSpec.describe Orn::Commands::Sbx::List do
   end
 
   def find_branch(project, branches, name)
-    described_class.send(:find_branch_for_sandbox, project, branches, name)
+    command = described_class.new(output_mode: Orn::OutputMode.quiet)
+    command.send(:find_branch_for_sandbox, project, branches, name)
   end
 
-  describe ".find_branch_for_sandbox" do
+  describe "#find_branch_for_sandbox" do
     it "matches a sandbox back to its branch by name" do
       project = project_with
       branch = "feature/x"

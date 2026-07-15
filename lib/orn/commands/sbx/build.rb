@@ -14,44 +14,44 @@ module Orn
           end
         end
 
-        def self.run_inner(output_mode, project)
+        def initialize(output_mode:)
+          @output_mode = output_mode
+        end
+
+        def run_inner(project)
           sbx_config = project.config.require_sbx!
           build, template = sbx_config.require_build!
 
           dockerfile = build.dockerfile || "Dockerfile"
           raise Orn::Error, "Dockerfile not found: #{dockerfile}" unless File.exist?(dockerfile)
 
-          Orn::Sandbox.require_docker!(output_mode)
-          Orn::Sandbox.require_sbx_cli!(output_mode)
+          Orn::Sandbox.require_docker!(@output_mode)
+          Orn::Sandbox.require_sbx_cli!(@output_mode)
           Orn::Trust.check_sbx_trust(project.root, sbx_config)
 
-          announce(output_mode, template, dockerfile, build.build_args)
-          Orn::Sandbox.build(output_mode, dockerfile, template, build.build_args, ".")
+          announce(template, dockerfile, build.build_args)
+          Orn::Sandbox.build(@output_mode, dockerfile, template, build.build_args, ".")
 
           Result.new(template: template, dockerfile: dockerfile)
         end
 
-        def self.announce(output_mode, template, dockerfile, build_args)
-          if build_args.empty?
-            output_mode.status("Building template '#{template}' from #{dockerfile}...")
-          else
-            output_mode.status(
-              "Building template '#{template}' from #{dockerfile} (build args: #{build_args.join(", ")})"
-            )
-          end
-        end
-
-        def initialize(output_mode:)
-          @output_mode = output_mode
-        end
-
         def run
           project = Orn::Git::Project.discover
-          result = self.class.run_inner(@output_mode, project)
+          result = run_inner(project)
           emit(result)
         end
 
         private
+
+        def announce(template, dockerfile, build_args)
+          if build_args.empty?
+            @output_mode.status("Building template '#{template}' from #{dockerfile}...")
+          else
+            @output_mode.status(
+              "Building template '#{template}' from #{dockerfile} (build args: #{build_args.join(", ")})"
+            )
+          end
+        end
 
         def emit(result)
           return Commands::Output.print_json(result.to_json_hash) if @output_mode.json
@@ -59,8 +59,6 @@ module Orn
           puts "Built template: #{result.template}"
           puts "Dockerfile: #{result.dockerfile}"
         end
-
-        private_class_method :announce
       end
     end
   end

@@ -26,65 +26,42 @@ module Orn
         end
       end
 
+      def initialize(output_mode:)
+        @output_mode = output_mode
+      end
+
       # Resolves the branch through four escalating cases (window exists,
       # worktree exists, remote branch exists, brand new). `sbx` only affects
       # case 4; an existing sandbox is reattached in case 2 regardless.
-      def self.perform(output_mode, project, branch, base_override, sbx)
+      def perform(project, branch, base_override, sbx)
         session = Orn::Session.session_name(project)
         wt_path = project.worktree_path(branch)
 
         # Case 1: tmux window exists, just switch to it.
-        if Orn::Tmux.window_exists?(output_mode, session, branch)
-          Orn::Tmux.select_window(output_mode, session, branch)
+        if Orn::Tmux.window_exists?(@output_mode, session, branch)
+          Orn::Tmux.select_window(@output_mode, session, branch)
           return Result.simple(branch, :switched)
         end
 
         # Case 2: worktree exists but window doesn't, reopen (reattaching the
         # branch's sandbox when one still exists).
-        return reopen(output_mode, project, branch) if File.exist?(wt_path)
+        return reopen(project, branch) if File.exist?(wt_path)
 
         # Case 3: branch exists on the remote, fetch and create.
-        output_mode.status("Checking remote for #{branch}...")
-        worktree = Orn::Git::Worktree.new(root: project.root, output_mode: output_mode)
+        @output_mode.status("Checking remote for #{branch}...")
+        worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
         if worktree.remote_branch_exists?("origin", branch)
-          Wt::New.create(output_mode, project, branch, nil)
-          Orn::Tmux.open_window(output_mode, project, branch)
+          Wt::New.create(@output_mode, project, branch, nil)
+          Orn::Tmux.open_window(@output_mode, project, branch)
           return Result.simple(branch, :fetched)
         end
 
         # Case 4: branch doesn't exist anywhere, create from base.
         if sbx
-          SwitchSandbox.create_with_sandbox(output_mode, project, branch, base_override)
+          SwitchSandbox.create_with_sandbox(@output_mode, project, branch, base_override)
         else
-          create_plain(output_mode, project, branch, base_override)
+          create_plain(project, branch, base_override)
         end
-      end
-
-      # Case 2: reopen the window. When the branch's sandbox still exists, reopen
-      # with the sbx layout, republish ports, and rerun the start command.
-      def self.reopen(output_mode, project, branch)
-        output_mode.status("Reopening window for #{branch}...")
-        sbx_name = project.sandbox_name(branch)
-        if Orn::Sandbox.exists?(output_mode, sbx_name)
-          return SwitchSandbox.reopen_with_sandbox(output_mode, project, branch, sbx_name)
-        end
-
-        Orn::Tmux.open_window(output_mode, project, branch)
-        Result.simple(branch, :reopened)
-      end
-
-      # Case 4 without a sandbox: new worktree from base plus a tmux window.
-      def self.create_plain(output_mode, project, branch, base_override)
-        wt_result = Wt::New.create(output_mode, project, branch, base_override)
-        Orn::Tmux.open_window(output_mode, project, branch)
-        Result.new(
-          branch: wt_result.branch, action: :created, base: wt_result.base,
-          worktree_path: wt_result.worktree_path, sandbox_name: nil, host_ports: []
-        )
-      end
-
-      def initialize(output_mode:)
-        @output_mode = output_mode
       end
 
       def run(branch, base_override: nil, sbx: false)
@@ -93,11 +70,34 @@ module Orn
 
         project = Orn::Git::Project.discover
         project = Orn::Session.check_collision(@output_mode, project)
-        result = self.class.perform(@output_mode, project, branch, base_override, sbx)
+        result = perform(project, branch, base_override, sbx)
         emit(result)
       end
 
       private
+
+      # Case 2: reopen the window. When the branch's sandbox still exists, reopen
+      # with the sbx layout, republish ports, and rerun the start command.
+      def reopen(project, branch)
+        @output_mode.status("Reopening window for #{branch}...")
+        sbx_name = project.sandbox_name(branch)
+        if Orn::Sandbox.exists?(@output_mode, sbx_name)
+          return SwitchSandbox.reopen_with_sandbox(@output_mode, project, branch, sbx_name)
+        end
+
+        Orn::Tmux.open_window(@output_mode, project, branch)
+        Result.simple(branch, :reopened)
+      end
+
+      # Case 4 without a sandbox: new worktree from base plus a tmux window.
+      def create_plain(project, branch, base_override)
+        wt_result = Wt::New.create(@output_mode, project, branch, base_override)
+        Orn::Tmux.open_window(@output_mode, project, branch)
+        Result.new(
+          branch: wt_result.branch, action: :created, base: wt_result.base,
+          worktree_path: wt_result.worktree_path, sandbox_name: nil, host_ports: []
+        )
+      end
 
       def emit(result)
         return Commands::Output.print_json(result.to_json_hash) if @output_mode.json

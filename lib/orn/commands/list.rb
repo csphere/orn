@@ -17,21 +17,21 @@ module Orn
         end
       end
 
-      # The resolved result: worktree branches joined with the tmux window list
-      # for the project session.
-      def self.run_inner(output_mode, project)
-        worktree = Orn::Git::Worktree.new(root: project.root, output_mode: output_mode)
-        windows = Orn::Tmux.list_windows(output_mode, Orn::Session.session_name(project))
-        entries = worktree.entries.map { |branch| Entry.new(branch: branch, has_window: windows.include?(branch)) }
-        Result.new(repo: File.basename(project.root), worktrees: entries)
-      end
-
       def initialize(output_mode:)
         @output_mode = output_mode
       end
 
+      # The resolved result: worktree branches joined with the tmux window list
+      # for the project session.
+      def run_inner(project)
+        worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
+        windows = Orn::Tmux.list_windows(@output_mode, Orn::Session.session_name(project))
+        entries = worktree.entries.map { |branch| Entry.new(branch: branch, has_window: windows.include?(branch)) }
+        Result.new(repo: File.basename(project.root), worktrees: entries)
+      end
+
       def run
-        result = self.class.run_inner(@output_mode, Orn::Git::Project.discover)
+        result = run_inner(Orn::Git::Project.discover)
         return Commands::Output.print_json(result.to_json_hash) if @output_mode.json
 
         rows = result.worktrees.map { |entry| [entry.branch, entry.has_window ? "window" : "no window"] }

@@ -19,12 +19,16 @@ module Orn
 
         Result = Data.define(:sandboxes)
 
-        def self.run_inner(output_mode, project)
-          Orn::Sandbox.require_sbx_cli!(output_mode)
+        def initialize(output_mode:)
+          @output_mode = output_mode
+        end
 
-          entries = Orn::Sandbox.list(output_mode)
+        def run_inner(project)
+          Orn::Sandbox.require_sbx_cli!(@output_mode)
+
+          entries = Orn::Sandbox.list(@output_mode)
           orn_dir = File.join(project.root, ".orn")
-          branches = worktree_branches(output_mode, project)
+          branches = worktree_branches(project)
 
           sandboxes = entries.map do |entry|
             ports = ports_for(orn_dir, entry.name)
@@ -34,13 +38,21 @@ module Orn
           Result.new(sandboxes: sandboxes)
         end
 
-        def self.worktree_branches(output_mode, project)
-          Orn::Git::Worktree.new(root: project.root, output_mode: output_mode).entries
+        def run
+          project = Orn::Git::Project.discover
+          result = run_inner(project)
+          emit(result)
+        end
+
+        private
+
+        def worktree_branches(project)
+          Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode).entries
         rescue Orn::Error
           []
         end
 
-        def self.ports_for(orn_dir, name)
+        def ports_for(orn_dir, name)
           Orn::Sandbox.read_ports(orn_dir, name)
         rescue Orn::Error
           []
@@ -48,25 +60,13 @@ module Orn
 
         # Reverse-maps a sandbox name to the worktree branch that would generate
         # it, since the branch-to-name derivation is not invertible.
-        def self.find_branch_for_sandbox(project, branches, sandbox_name)
+        def find_branch_for_sandbox(project, branches, sandbox_name)
           branches.find do |branch|
             project.sandbox_name(branch) == sandbox_name
           rescue Orn::Error
             false
           end
         end
-
-        def initialize(output_mode:)
-          @output_mode = output_mode
-        end
-
-        def run
-          project = Orn::Git::Project.discover
-          result = self.class.run_inner(@output_mode, project)
-          emit(result)
-        end
-
-        private
 
         def emit(result)
           return Commands::Output.print_json("sandboxes" => result.sandboxes.map(&:to_json_hash)) if @output_mode.json
@@ -82,8 +82,6 @@ module Orn
           puts "Sandboxes:\n\n"
           puts Commands::Output.render_table(%w[Name Branch Status Ports], rows)
         end
-
-        private_class_method :worktree_branches, :ports_for, :find_branch_for_sandbox
       end
     end
   end

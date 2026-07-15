@@ -19,8 +19,12 @@ module Orn
           end
         end
 
-        # Testable core: create the sandbox in an already-discovered `project`.
-        def self.run_inner(output_mode, project, branch)
+        def initialize(output_mode:)
+          @output_mode = output_mode
+        end
+
+        # Creates the sandbox in an already-discovered `project`.
+        def run_inner(project, branch)
           sbx_config = project.config.require_sbx!
           agent_type = sbx_config.require_agent_type!
 
@@ -30,15 +34,15 @@ module Orn
           end
 
           Orn::Trust.check_sbx_trust(project.root, sbx_config)
-          Orn::Sandbox.preflight(output_mode, sbx_config, project.root)
+          Orn::Sandbox.preflight(@output_mode, sbx_config, project.root)
 
           name = project.sandbox_name(branch)
-          raise Orn::Error, "Sandbox '#{name}' already exists" if Orn::Sandbox.exists?(output_mode, name)
+          raise Orn::Error, "Sandbox '#{name}' already exists" if Orn::Sandbox.exists?(@output_mode, name)
 
-          output_mode.status("Creating sandbox '#{name}'...")
-          Orn::Sandbox.create(output_mode, create_params(project, sbx_config, agent_type, name, wt_path))
-          run_setup(output_mode, sbx_config, name)
-          host_ports = publish_ports(output_mode, project, sbx_config, name)
+          @output_mode.status("Creating sandbox '#{name}'...")
+          Orn::Sandbox.create(@output_mode, create_params(project, sbx_config, agent_type, name, wt_path))
+          run_setup(sbx_config, name)
+          host_ports = publish_ports(project, sbx_config, name)
 
           Result.new(
             name: name, branch: branch, agent_type: agent_type,
@@ -46,7 +50,16 @@ module Orn
           )
         end
 
-        def self.create_params(project, sbx_config, agent_type, name, wt_path)
+        def run(branch)
+          Orn::Git::BranchName.new(branch).validate!
+          project = Orn::Git::Project.discover
+          result = run_inner(project, branch)
+          emit(result)
+        end
+
+        private
+
+        def create_params(project, sbx_config, agent_type, name, wt_path)
           Orn::Sandbox::CreateParams.new(
             name: name, template: sbx_config.template, kits: sbx_config.all_kits,
             cpus: sbx_config.cpus, memory: sbx_config.memory, agent_type: agent_type,
@@ -54,30 +67,17 @@ module Orn
           )
         end
 
-        def self.run_setup(output_mode, sbx_config, name)
+        def run_setup(sbx_config, name)
           return if sbx_config.setup.empty?
 
-          Orn::Sandbox.run_setup(output_mode, name, sbx_config.setup, sbx_config.env)
+          Orn::Sandbox.run_setup(@output_mode, name, sbx_config.setup, sbx_config.env)
         end
 
-        def self.publish_ports(output_mode, project, sbx_config, name)
+        def publish_ports(project, sbx_config, name)
           return [] if sbx_config.ports.empty?
 
-          Orn::Sandbox.setup_ports(output_mode, name, sbx_config.ports, File.join(project.root, ".orn"))
+          Orn::Sandbox.setup_ports(@output_mode, name, sbx_config.ports, File.join(project.root, ".orn"))
         end
-
-        def initialize(output_mode:)
-          @output_mode = output_mode
-        end
-
-        def run(branch)
-          Orn::Git::BranchName.new(branch).validate!
-          project = Orn::Git::Project.discover
-          result = self.class.run_inner(@output_mode, project, branch)
-          emit(result)
-        end
-
-        private
 
         def emit(result)
           return Commands::Output.print_json(result.to_json_hash) if @output_mode.json
@@ -88,8 +88,6 @@ module Orn
           puts "Template: #{result.template}" if result.template
           result.host_ports.each { |mapping| puts "Port: #{mapping}" }
         end
-
-        private_class_method :create_params, :run_setup, :publish_ports
       end
     end
   end

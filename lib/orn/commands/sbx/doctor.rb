@@ -13,19 +13,19 @@ module Orn
           end
         end
 
-        def self.run_inner(output_mode, project)
-          sbx_config = project.config.require_sbx!
-          checks = Orn::Sandbox.doctor(output_mode, sbx_config, project.root)
-          Result.new(checks: checks, all_passed: checks.all?(&:passed))
-        end
-
         def initialize(output_mode:)
           @output_mode = output_mode
         end
 
+        def run_inner(project)
+          sbx_config = project.config.require_sbx!
+          checks = Orn::Sandbox.doctor(@output_mode, sbx_config, project.root)
+          Result.new(checks: checks, all_passed: checks.all?(&:passed))
+        end
+
         def run
           project = Orn::Git::Project.discover
-          result = self.class.run_inner(@output_mode, project)
+          result = run_inner(project)
           emit(result)
         end
 

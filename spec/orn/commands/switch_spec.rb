@@ -3,6 +3,8 @@
 require "tmpdir"
 
 RSpec.describe Orn::Commands::Switch do
+  let(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
+
   def standard_project(seed_branch)
     remote = make_remote_with_branch(seed_branch)
     project = make_bare_project
@@ -74,25 +76,25 @@ RSpec.describe Orn::Commands::Switch do
     end
   end
 
-  describe ".perform with --sbx" do
+  describe "#perform with --sbx" do
     it "fails when there is no [sbx] section" do
       project = sbx_project("feature/other", "git:\n  base: main\n")
 
-      expect { described_class.perform(Orn::OutputMode.quiet, project, "feature/new", nil, true) }
+      expect { command.perform(project, "feature/new", nil, true) }
         .to raise_error(Orn::Error, /No sbx section.*config\.yaml/m)
     end
 
     it "fails when [sbx] has no agent_type" do
       project = sbx_project("feature/other", "sbx: {}\n")
 
-      expect { described_class.perform(Orn::OutputMode.quiet, project, "feature/new", nil, true) }
+      expect { command.perform(project, "feature/new", nil, true) }
         .to raise_error(Orn::Error, /agent_type/)
     end
 
     it "does not require [sbx] config in plain mode" do
       project = make_project(register_temp_dir(Dir.mktmpdir("orn-switch")), "git:\n  base: main\n")
 
-      expect { described_class.perform(Orn::OutputMode.quiet, project, "feature/new", nil, false) }
+      expect { command.perform(project, "feature/new", nil, false) }
         .to raise_error(Orn::Error) { |error| expect(error.message).not_to include("sbx") }
     end
   end
@@ -104,7 +106,7 @@ RSpec.describe Orn::Commands::Switch do
       root = standard_project("feature/other")
       project = load_project(root)
 
-      result = described_class.perform(Orn::OutputMode.quiet, project, "feature/fresh", nil, false)
+      result = command.perform(project, "feature/fresh", nil, false)
       session = Orn::Session.session_name(project)
 
       aggregate_failures do
@@ -117,9 +119,9 @@ RSpec.describe Orn::Commands::Switch do
     it "just selects the window when it already exists" do
       root = standard_project("feature/other")
       project = load_project(root)
-      described_class.perform(Orn::OutputMode.quiet, project, "feature/fresh", nil, false)
+      command.perform(project, "feature/fresh", nil, false)
 
-      result = described_class.perform(Orn::OutputMode.quiet, project, "feature/fresh", nil, false)
+      result = command.perform(project, "feature/fresh", nil, false)
 
       expect(result.action).to eq(:switched)
     end
