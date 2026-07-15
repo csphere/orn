@@ -15,19 +15,19 @@ RSpec.describe Orn::Commands::Wt::Remove do
     worktree
   end
 
-  describe "#run_inner_with_remote" do
+  describe "#run_inner" do
     context "when the branch is the base branch" do
       it "refuses to prune it" do
         %w[main develop].each do |base|
           project = project_on(base)
 
-          expect { command.run_inner_with_remote(project, base, true, true) }
+          expect { command.run_inner(project, base, true) }
             .to raise_error(Orn::Error, /Cannot prune the base branch/)
         end
       end
 
       it "allows removal without prune (no-op when no worktree)" do
-        result = command.run_inner_with_remote(project_on("main"), "main", false, false)
+        result = command.run_inner(project_on("main"), "main", false)
 
         expect(result.worktree_removed).to be(false)
         expect(result.branch_deleted).to be(false)
@@ -39,22 +39,11 @@ RSpec.describe Orn::Commands::Wt::Remove do
         project = project_on
         add_worktree(project, "feature/both", make_remote_with_branch("feature/both"))
 
-        result = command.run_inner_with_remote(project, "feature/both", true, true)
+        result = command.run_inner(project, "feature/both", true)
 
         expect(result.worktree_removed).to be(true)
         expect(result.branch_deleted).to be(true)
         expect(result.remote_branch_deleted).to be(true)
-      end
-
-      it "leaves the remote branch alone when prune_remote is false" do
-        project = project_on
-        worktree = add_worktree(project, "feature/local", make_remote_with_branch("feature/local"))
-
-        result = command.run_inner_with_remote(project, "feature/local", true, false)
-
-        expect(result.branch_deleted).to be(true)
-        expect(result.remote_branch_deleted).to be(false)
-        expect(worktree.remote_branch_exists?("origin", "feature/local")).to be(true)
       end
     end
 
@@ -64,7 +53,7 @@ RSpec.describe Orn::Commands::Wt::Remove do
         add_worktree(project, "issues/52", make_remote_with_branch("issues/52"))
         Orn::Blackboard.create_entry(project.root, "issues/52")
 
-        command.run_inner_with_remote(project, "issues/52", false, false)
+        command.run_inner(project, "issues/52", false)
 
         expect(File.exist?(File.join(project.root, ".orn/blackboard/issues/52"))).to be(false)
       end
@@ -83,7 +72,7 @@ RSpec.describe Orn::Commands::Wt::Remove do
         worktree.add(project.worktree_path(branch), branch, "origin/#{branch}")
       end
 
-      results, errors = command.remove_multiple(project, %w[feature/multi-a feature/multi-b], false, false)
+      results, errors = command.remove_multiple(project, %w[feature/multi-a feature/multi-b], false)
 
       expect(results.length).to eq(2)
       expect(errors).to be_empty
@@ -94,7 +83,7 @@ RSpec.describe Orn::Commands::Wt::Remove do
       project = project_on("main")
       add_worktree(project, "feature/survive", make_remote_with_branch("feature/survive"))
 
-      results, errors = command.remove_multiple(project, %w[main feature/survive], true, true)
+      results, errors = command.remove_multiple(project, %w[main feature/survive], true)
 
       expect(results.length).to eq(1)
       expect(results.first.worktree_removed).to be(true)

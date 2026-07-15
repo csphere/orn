@@ -36,31 +36,31 @@ module Orn
           project = Orn::Git::Project.discover
           confirm_prunes(project, branches) if prune && !force && !@output_mode.json
 
-          results, errors = remove_multiple(project, branches, prune, prune)
+          results, errors = remove_multiple(project, branches, prune)
           json = results.map(&:to_json_hash)
           Commands::Output.finish_multi_branch(@output_mode, json, errors, branches.length)
         end
 
-        def remove_multiple(project, branches, prune, prune_remote)
+        def remove_multiple(project, branches, prune)
           printer = lambda(&:print_summary)
           Commands::Output.run_multi_branch(@output_mode, branches, printer) do |branch|
-            run_inner_with_remote(project, branch, prune, prune_remote)
+            run_inner(project, branch, prune)
           end
         end
 
-        # Removes one branch's worktree, then optionally its local (prune) and
-        # remote (prune_remote) branches, plus its blackboard entry and any
-        # now-empty parent directories. Refuses to prune the base branch or to
-        # run from inside the worktree being removed; a missing worktree is not
-        # an error, so prune-only invocations work.
-        def run_inner_with_remote(project, branch, prune, prune_remote)
-          reject_base_prune!(project, branch, prune, prune_remote)
+        # Removes one branch's worktree, then with prune its local and remote
+        # branches, plus its blackboard entry and any now-empty parent
+        # directories. Refuses to prune the base branch or to run from inside
+        # the worktree being removed; a missing worktree is not an error, so
+        # prune-only invocations work.
+        def run_inner(project, branch, prune)
+          reject_base_prune!(project, branch, prune)
           reject_inside_worktree!(project, branch)
 
           worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
           worktree_removed = remove_worktree(worktree, project.worktree_path(branch))
           branch_deleted = prune ? worktree.delete_branch(branch) : false
-          remote_branch_deleted = prune_remote ? worktree.delete_remote_branch(branch) : false
+          remote_branch_deleted = prune ? worktree.delete_remote_branch(branch) : false
 
           Orn::Blackboard.remove_entry(project.root, branch)
           Orn::Fs.prune_empty_dirs(project.root)
@@ -75,8 +75,8 @@ module Orn
 
         private
 
-        def reject_base_prune!(project, branch, prune, prune_remote)
-          return unless (prune || prune_remote) && branch == project.config.base
+        def reject_base_prune!(project, branch, prune)
+          return unless prune && branch == project.config.base
 
           raise Orn::Error, "Cannot prune the base branch '#{branch}'"
         end

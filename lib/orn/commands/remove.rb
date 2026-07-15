@@ -27,12 +27,12 @@ module Orn
       # Removes one branch's sandbox (with its ports file) and tmux window,
       # then delegates worktree and branch removal to Wt::Remove. Called once
       # per branch by the CLI batch path.
-      def self.run_inner_with_remote(output_mode, project, branch, prune, prune_remote)
+      def self.run_inner(output_mode, project, branch, prune)
         session = Orn::Session.session_name(project)
         sandbox_removed = teardown_sandbox(output_mode, project, branch)
         window_closed = close_window(output_mode, session, branch)
         wt_result = Wt::Remove.new(output_mode: output_mode)
-          .run_inner_with_remote(project, branch, prune, prune_remote)
+          .run_inner(project, branch, prune)
         Result.new(sandbox_removed: sandbox_removed, window_closed: window_closed, wt: wt_result)
       end
 
@@ -71,7 +71,7 @@ module Orn
       def remove_multiple(project, branches, prune)
         printer = lambda(&:print_summary)
         Commands::Output.run_multi_branch(@output_mode, branches, printer) do |branch|
-          self.class.run_inner_with_remote(@output_mode, project, branch, prune, prune)
+          self.class.run_inner(@output_mode, project, branch, prune)
         end
       end
 
