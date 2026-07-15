@@ -56,6 +56,40 @@ RSpec.describe Orn::Sandbox do
     end
   end
 
+  describe ".template_listed?" do
+    let(:listing) do
+      <<~LISTING
+        REPOSITORY                           TAG      IMAGE ID       FLAVOR   CREATED
+        docker.io/library/orn-system-rails   latest   0464b62418c6            Less than a minute ago
+        registry.example.com/team/base       2026.1   9f3a11aa0b2c            2 days ago
+      LISTING
+    end
+
+    it "matches a bare repo name against its registry-qualified listing" do
+      expect(described_class.template_listed?(listing, "orn-system-rails:latest")).to be(true)
+    end
+
+    it "matches a fully qualified template as written" do
+      expect(described_class.template_listed?(listing, "registry.example.com/team/base:2026.1")).to be(true)
+    end
+
+    it "matches on repo alone when the template has no tag" do
+      expect(described_class.template_listed?(listing, "orn-system-rails")).to be(true)
+    end
+
+    it "rejects a matching repo with the wrong tag" do
+      expect(described_class.template_listed?(listing, "orn-system-rails:v2")).to be(false)
+    end
+
+    it "rejects a repo that only shares a suffix" do
+      expect(described_class.template_listed?(listing, "system-rails:latest")).to be(false)
+    end
+
+    it "rejects anything against an empty listing" do
+      expect(described_class.template_listed?("No template images found\n", "orn-system-rails:latest")).to be(false)
+    end
+  end
+
   describe ".reserve_port" do
     it "finds a free port in the range" do
       expect(described_class.reserve_port([49_152, 49_252])).to be_between(49_152, 49_252)

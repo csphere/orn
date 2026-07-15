@@ -226,10 +226,20 @@ module Orn
       result = run_template_ls(output_mode)
       return false unless result.success?
 
+      template_listed?(result.stdout, template)
+    end
+
+    # Whether an `sbx template ls` listing contains the template. The listing
+    # prints repositories registry-qualified (`docker.io/library/<name>` for a
+    # bare name), so a configured repo also matches any `<registry>/` prefix.
+    def self.template_listed?(listing, template)
       repo, tag = template.split(":", 2)
-      result.stdout.each_line.any? do |line|
+      listing.each_line.any? do |line|
         cols = line.split
-        matches_repo = cols[0] == repo
+        listed_repo = cols[0]
+        next false if listed_repo.nil?
+
+        matches_repo = listed_repo == repo || listed_repo.end_with?("/#{repo}")
         matches_tag = tag.nil? || cols[1] == tag
         matches_repo && matches_tag
       end
