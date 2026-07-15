@@ -32,6 +32,14 @@ fi
 mkdir -p /bundle
 chown -R testuser:testuser /bundle 2>/dev/null || true
 
+# --- Open /dev/kvm for the test user ---
+#
+# Docker Sandboxes runs each sandbox in a microVM, so sbx needs /dev/kvm.
+# The privileged container exposes it root-owned with a host group id; the
+# chmod affects only this container's /dev, never the host's node.
+
+[ -e /dev/kvm ] && chmod 666 /dev/kvm
+
 # --- Configure git identity for testuser ---
 
 su -l testuser -c 'git config --global user.name "System Test"'
@@ -59,6 +67,10 @@ system_test_env=""
 if [ -n "${DOCKER_SBX_USERNAME:-}" ] && [ -n "${DOCKER_SBX_TOKEN:-}" ]; then
     printf '%s' "$DOCKER_SBX_TOKEN" \
         | su testuser -c "sbx login --username '$DOCKER_SBX_USERNAME' --password-stdin"
+    # sbx refuses to create sandboxes until a global network policy exists
+    # (initializing it also starts the per-user sandboxd daemon). The
+    # container is throwaway and isolated, so allow-all is fine here.
+    su testuser -c "sbx policy init allow-all"
     system_test_env="ORN_SYSTEM_TEST=1"
 else
     echo "WARNING: DOCKER_SBX_USERNAME/DOCKER_SBX_TOKEN not set;" >&2
