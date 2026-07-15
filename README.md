@@ -2,8 +2,7 @@
 
 A git worktree and tmux workspace manager. `orn` gives every branch its own
 worktree directory and a dedicated tmux window laid out from config, with
-optional dev-container sandboxes, agent detection, and an MCP server. Config
-is YAML.
+optional dev-container sandboxes and agent detection. Config is YAML.
 
 ## What it does
 
@@ -97,15 +96,7 @@ orn config migrate      # upgrade config files to the current schema version
 - `orn wt <new|open|list|remove|link>` — worktree-only operations (no tmux)
 - `orn sbx <new|remove|list|build|doctor>` — sandbox (dev container) lifecycle
 - `orn config <show|migrate>` — inspect and migrate configuration
-- `orn mcp` / `orn setup` — MCP server over stdio, and registration in Claude Code
 - `orn completions <bash|zsh|fish>` — print a shell completion script
-
-## MCP
-
-`orn mcp` exposes the worktree and sandbox commands as MCP tools over
-line-delimited JSON-RPC on stdio (protocol `2024-11-05`). Register it in Claude
-Code with `orn setup`, which adds an `orn` entry under `mcpServers` in
-`~/.claude.json`.
 
 ## Development
 

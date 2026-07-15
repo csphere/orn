@@ -3,7 +3,7 @@
 
 # Fast path: per-keystroke shell completion runs `orn complete` constantly, so
 # short-circuit it here with a minimal require rather than loading Thor, the
-# TUI, MCP, detection, and the sandbox layer.
+# TUI, detection, and the sandbox layer.
 if ARGV.first == "complete"
   require_relative "../lib/orn/complete"
   Orn::Complete.print_candidates

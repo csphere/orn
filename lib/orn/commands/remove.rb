@@ -25,8 +25,8 @@ module Orn
       end
 
       # Removes one branch's sandbox (with its ports file) and tmux window,
-      # then delegates worktree and branch removal to Wt::Remove. Shared by the
-      # CLI batch path and the MCP `worktree_remove` tool.
+      # then delegates worktree and branch removal to Wt::Remove. Called once
+      # per branch by the CLI batch path.
       def self.run_inner_with_remote(output_mode, project, branch, prune, prune_remote)
         session = Orn::Session.session_name(project)
         sandbox_removed = teardown_sandbox(output_mode, project, branch)

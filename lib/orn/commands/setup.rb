@@ -7,8 +7,7 @@ module Orn
   module Commands
     # Shared scaffolding for the project-creating commands (clone, init,
     # convert): the .git pointer file, .orn/ config, blackboard, root CLAUDE.md,
-    # optional global-config bootstrap, and the base worktree. (Unrelated to
-    # `orn setup`, the MCP registration command.)
+    # optional global-config bootstrap, and the base worktree.
     module Setup
       # Writes the .git pointer file that makes the project root look like a
       # repo to git tooling while the real repo lives in .bare/.

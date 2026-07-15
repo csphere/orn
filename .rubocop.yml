@@ -20,13 +20,11 @@ Style/StringLiterals:
     # backslashes literal (double quotes would reinterpret \s, \d, \b, ...).
     - "lib/orn/detect/manifests.rb"
 
-# The bundled manifest data has long inline gate rows that do not wrap cleanly;
-# the MCP tool catalog carries verbatim tool descriptions (fixed wire-format data).
+# The bundled manifest data has long inline gate rows that do not wrap cleanly.
 Layout/LineLength:
   Max: 120
   Exclude:
     - "lib/orn/detect/manifests.rb"
-    - "lib/orn/mcp/tools.rb"
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
@@ -112,7 +110,6 @@ Metrics/ModuleLength:
     - "lib/orn/sandbox.rb"
     - "lib/orn/detect/manifest.rb"
     - "lib/orn/detect/manifests.rb"
-    - "lib/orn/mcp/tools.rb"
     # The tmux bootstrap plus both event loops as one entry point.
     - "lib/orn/tui/bootstrap.rb"
     - "spec/**/*"

@@ -9,7 +9,7 @@ module Orn
     SHELLS = %w[bash zsh fish].freeze
 
     # Top-level commands and subcommand groups, shared across the scripts.
-    TOP_COMMANDS = %w[clone init convert switch list remove config wt sbx mcp setup completions help].freeze
+    TOP_COMMANDS = %w[clone init convert switch list remove config wt sbx completions help].freeze
     WT_SUBCOMMANDS = %w[new open list remove link].freeze
     SBX_SUBCOMMANDS = %w[new remove list build doctor].freeze
     CONFIG_SUBCOMMANDS = %w[show migrate].freeze

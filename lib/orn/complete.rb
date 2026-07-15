@@ -2,7 +2,7 @@
 
 # Fast-path completion candidate provider. This file requires only the minimal
 # chain needed to discover the project and list its worktree branches, so a
-# per-keystroke `orn complete` invocation avoids loading Thor, the TUI, MCP,
+# per-keystroke `orn complete` invocation avoids loading Thor, the TUI,
 # detection, and the sandbox layer.
 require_relative "error"
 require_relative "output_mode"

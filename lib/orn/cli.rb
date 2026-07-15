@@ -132,16 +132,6 @@ module Orn
     desc "sbx SUBCOMMAND", "Manage sandboxes (dev containers) for worktrees"
     subcommand "sbx", Orn::Commands::Sbx::CLI
 
-    desc "mcp", "Run the MCP server (JSON-RPC over stdio)"
-    def mcp
-      Orn::Mcp::Server.serve
-    end
-
-    desc "setup", "Register the orn MCP server in Claude Code (~/.claude.json)"
-    def setup
-      Orn::Mcp::Setup.register
-    end
-
     desc "completions SHELL", "Print a shell completion script (bash, zsh, or fish)"
     def completions(shell)
       puts Orn::Completions.script(shell)
