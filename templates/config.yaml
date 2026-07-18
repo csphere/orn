@@ -34,7 +34,7 @@
 # sbx:
 #   agent_type: claude          # agent to run (claude, codex, copilot, ...)
 #   template: "my-image:tag"    # custom image (optional; agent default if omitted)
-#   kits: ["rust", "gh-cli"]    # composable toolchain layers
+#   kits: ["ruby", "gh-cli"]    # composable toolchain layers
 #   setup: "bin/setup"          # string or array; runs once after creation
 #   start: "bin/dev"            # shell command run as a background service
 #   cpus: 4

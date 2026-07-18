@@ -10,8 +10,8 @@ Each branch gets a blackboard at `.orn/blackboard/<branch-path>/blackboard.md`, 
 
 - **Status**: current state of work on this branch
 - **Files Modified**: files created, changed, or deleted
-- **Interface Changes**: public API surface changes (structs, traits, functions, CLI flags)
-- **Dependencies**: crate/package changes, feature flags
+- **Interface Changes**: public API surface changes (types, functions, CLI flags)
+- **Dependencies**: package changes, feature flags
 - **Decisions**: architectural choices and rationale
 - **Warnings**: merge conflict risks, contradictions, hazards for other agents
 

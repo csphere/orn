@@ -46,15 +46,15 @@ RSpec.describe Orn::Trust do
     end
 
     it "collects non-empty commands in column order" do
-      layout = columns_layout(col("vim", "cargo test"), col("htop"))
+      layout = columns_layout(col("vim", "rake test"), col("htop"))
 
-      expect(described_class.extract_commands(layout)).to eq(["vim", "cargo test", "htop"])
+      expect(described_class.extract_commands(layout)).to eq(["vim", "rake test", "htop"])
     end
 
     it "skips empty panes" do
-      layout = columns_layout(col("vim", ""), col("", "cargo test"))
+      layout = columns_layout(col("vim", ""), col("", "rake test"))
 
-      expect(described_class.extract_commands(layout)).to eq(["vim", "cargo test"])
+      expect(described_class.extract_commands(layout)).to eq(["vim", "rake test"])
     end
 
     it "returns nothing when every pane is empty" do
@@ -76,7 +76,7 @@ RSpec.describe Orn::Trust do
 
   describe ".strip_commands" do
     it "clears every column command while preserving structure" do
-      layout = columns_layout(col("vim", "cargo test"), col("htop"))
+      layout = columns_layout(col("vim", "rake test"), col("htop"))
 
       stripped = described_class.strip_commands(layout)
 
@@ -94,8 +94,8 @@ RSpec.describe Orn::Trust do
 
   describe ".commands_fingerprint" do
     it "is deterministic for the same commands" do
-      first = described_class.commands_fingerprint(["vim", "cargo test"])
-      second = described_class.commands_fingerprint(["vim", "cargo test"])
+      first = described_class.commands_fingerprint(["vim", "rake test"])
+      second = described_class.commands_fingerprint(["vim", "rake test"])
 
       expect(first).to eq(second)
     end
@@ -105,8 +105,8 @@ RSpec.describe Orn::Trust do
     end
 
     it "is sensitive to command order" do
-      expect(described_class.commands_fingerprint(["vim", "cargo test"]))
-        .not_to eq(described_class.commands_fingerprint(["cargo test", "vim"]))
+      expect(described_class.commands_fingerprint(["vim", "rake test"]))
+        .not_to eq(described_class.commands_fingerprint(["rake test", "vim"]))
     end
 
     it "is sensitive to command boundaries" do
@@ -160,7 +160,7 @@ RSpec.describe Orn::Trust do
 
     it "is approved after saving the same fingerprint" do
       path = File.join(dir, "approval")
-      fingerprint = described_class.commands_fingerprint(["vim", "cargo test"])
+      fingerprint = described_class.commands_fingerprint(["vim", "rake test"])
       described_class.save_approval(path, fingerprint)
 
       expect(described_class.approved?(path, fingerprint)).to be(true)

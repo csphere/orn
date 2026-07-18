@@ -89,9 +89,9 @@ RSpec.describe Orn::Tmux::Layout do
     end
 
     it "queues only non-empty commands" do
-      plan = described_class.plan_columns([col("vim", ""), col("", "cargo test")])
+      plan = described_class.plan_columns([col("vim", ""), col("", "rake test")])
 
-      expect(plan.commands).to eq([pane_command(0, "vim"), pane_command(3, "cargo test")])
+      expect(plan.commands).to eq([pane_command(0, "vim"), pane_command(3, "rake test")])
     end
   end
 
@@ -165,7 +165,7 @@ RSpec.describe Orn::Tmux::Layout do
       expect(described_class.substitute_template_vars("echo {{branch}} in {{sandbox}}", vars))
         .to eq("echo feature/x in my-sbx")
       expect(described_class.substitute_template_vars("run {{unknown}}", vars)).to eq("run {{unknown}}")
-      expect(described_class.substitute_template_vars("cargo test", vars)).to eq("cargo test")
+      expect(described_class.substitute_template_vars("rake test", vars)).to eq("rake test")
     end
 
     it "replaces every occurrence of a placeholder" do

@@ -348,11 +348,11 @@ RSpec.describe Orn::Config do
       end
 
       it "merges the legacy singular kit into kits, de-duplicated" do
-        merged = project_with("sbx:\n  agent_type: claude\n  kit: legacy-kit\n  kits: [rust]\n")
-        deduped = project_with("sbx:\n  agent_type: claude\n  kit: rust\n  kits: [rust, gh-cli]\n")
+        merged = project_with("sbx:\n  agent_type: claude\n  kit: legacy-kit\n  kits: [ruby]\n")
+        deduped = project_with("sbx:\n  agent_type: claude\n  kit: ruby\n  kits: [ruby, gh-cli]\n")
 
-        expect(described_class.load_from(merged, nil).sbx.all_kits).to eq(%w[legacy-kit rust])
-        expect(described_class.load_from(deduped, nil).sbx.all_kits).to eq(%w[rust gh-cli])
+        expect(described_class.load_from(merged, nil).sbx.all_kits).to eq(%w[legacy-kit ruby])
+        expect(described_class.load_from(deduped, nil).sbx.all_kits).to eq(%w[ruby gh-cli])
       end
 
       it "tolerates and ignores unknown top-level keys" do

@@ -346,7 +346,7 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "reads a completed block as idle" do
-      expect(det(:codex, screen: "✓ Updated file.rs 2s\nChanges applied.\n"))
+      expect(det(:codex, screen: "✓ Updated file.rb 2s\nChanges applied.\n"))
         .to have_attributes(state: :idle, visible_idle: true)
     end
 
