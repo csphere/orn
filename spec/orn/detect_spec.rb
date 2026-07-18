@@ -19,14 +19,10 @@ RSpec.describe Orn::Detect do
   def pane(window:, command:, pane_id:, title: "")
     Orn::Tmux::PaneMetadata.new(
       session_name: nil,
-
       window_name: window,
-
       pane_pid: 99_999,
       pane_title: title,
-
       pane_current_command: command,
-
       pane_id: pane_id
     )
   end
@@ -35,26 +31,17 @@ RSpec.describe Orn::Detect do
     it "matches known agents and their aliases" do
       cases = {
         "claude" => :claude,
-
         "claude-code" => :claude,
-
         "pi" => :pi,
-
         "codex" => :codex,
         "gemini" => :gemini,
-
         "cursor" => :cursor,
-
         "cursor-agent" => :cursor,
         "devin" => :devin,
-
         "devin-cli" => :devin,
-
         "amp" => :amp,
-
         "amp-local" => :amp,
         "kiro" => :kiro,
-
         "kiro-cli" => :kiro
       }
 

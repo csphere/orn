@@ -427,7 +427,6 @@ RSpec.describe Orn::Sandbox do
         key,
         value,
         out: File::NULL,
-
         err: File::NULL
       )
     end

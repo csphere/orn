@@ -210,19 +210,13 @@ module Orn
       # invoke ("q" is handled separately as the quit signal).
       NORMAL_ACTIONS = {
         "r" => :refresh,
-
         :enter => :open_selected,
-
         "c" => :close_selected,
         "n" => :start_new_branch,
-
         "d" => :start_remove,
         "j" => :move_down,
-
         :down => :move_down,
-
         "k" => :move_up,
-
         :up => :move_up
       }.freeze
 
@@ -231,17 +225,12 @@ module Orn
       # take a direction).
       GLOBAL_ACTIONS = {
         "r" => :full_refresh,
-
         :enter => :enter_selected,
-
         " " => :toggle_expanded,
         "x" => :close_tab,
         "j" => :move_down,
-
         :down => :move_down,
-
         "k" => :move_up,
-
         :up => :move_up
       }.freeze
 

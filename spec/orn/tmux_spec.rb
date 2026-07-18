@@ -42,14 +42,10 @@ RSpec.describe Orn::Tmux do
         expect(panes.length).to eq(2)
         expect(panes[0]).to have_attributes(
           window_name: "main",
-
           pane_pid: 12_345,
-
           pane_current_command: "claude",
           pane_id: "%0",
-
           pane_title: "Claude Code",
-
           session_name: nil
         )
         expect(panes[1]).to have_attributes(
@@ -79,14 +75,10 @@ RSpec.describe Orn::Tmux do
 
       expect(panes.first).to have_attributes(
         session_name: "sess",
-
         window_name: "main",
-
         pane_pid: 12_345,
         pane_title: "Title",
-
         pane_current_command: "claude",
-
         pane_id: "%0"
       )
     end

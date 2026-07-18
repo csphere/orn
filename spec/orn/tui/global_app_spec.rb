@@ -344,22 +344,16 @@ module Orn
           repos = [
             RepoEntry.new(
               display_name: "orn",
-
               root: "/home/user/dev/orn",
-
               healthy: true,
               session_name: "orn",
-
               base_branch: "main"
             ),
             RepoEntry.new(
               display_name: "orn",
-
               root: "/home/user/work/orn",
-
               healthy: true,
               session_name: "orn",
-
               base_branch: "main"
             )
           ]
@@ -376,22 +370,16 @@ module Orn
           repos = [
             RepoEntry.new(
               display_name: "alpha",
-
               root: "/home/user/dev/alpha",
-
               healthy: true,
               session_name: "alpha",
-
               base_branch: "main"
             ),
             RepoEntry.new(
               display_name: "beta",
-
               root: "/home/user/work/beta",
-
               healthy: true,
               session_name: "beta",
-
               base_branch: "main"
             )
           ]

@@ -304,7 +304,6 @@ module Orn
           wt_path,
           Orn::Config::Layout.of_columns([]),
           template_vars: {},
-
           default_window_name: @base_branch
         )
       end

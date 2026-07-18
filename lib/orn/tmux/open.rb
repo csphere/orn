@@ -47,7 +47,6 @@ module Orn
         project.worktree_path(branch),
         layout,
         template_vars: template_vars,
-
         default_window_name: project.config.base
       )
       OpenWindowResult.new(

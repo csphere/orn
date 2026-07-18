@@ -44,26 +44,16 @@ RSpec.describe Orn::Trust do
     end
     Orn::Config::SbxConfig.new(
       template: nil,
-
       kit: nil,
-
       kits: [],
-
       cpus: nil,
-
       memory: nil,
-
       agent_type: nil,
       setup: setup,
-
       start: start,
-
       build: build,
-
       env: env,
-
       ports: [],
-
       columns: nil
     )
   end
@@ -243,9 +233,7 @@ RSpec.describe Orn::Trust do
         items,
         header: "Project config contains pane commands that will be executed:",
         prompt: "Trust these commands? [y/N] ",
-
         reader: StringIO.new(input),
-
         writer: writer
       )
       [result, writer.string]

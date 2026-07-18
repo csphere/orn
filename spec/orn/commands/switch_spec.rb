@@ -47,14 +47,10 @@ RSpec.describe Orn::Commands::Switch do
     it "includes base and path for a created branch" do
       result = described_class::Result.new(
         branch: "feature/x",
-
         action: :created,
-
         base: "main",
         worktree_path: "/path",
-
         sandbox_name: nil,
-
         host_ports: []
       )
 
@@ -68,14 +64,10 @@ RSpec.describe Orn::Commands::Switch do
     it "includes the sandbox name and published ports for a created sandbox" do
       result = described_class::Result.new(
         branch: "feature/x",
-
         action: :created,
-
         base: "main",
-
         worktree_path: "/path",
         sandbox_name: "proj-feature-x",
-
         host_ports: [Orn::Sandbox::PortMapping.new(
           host: 3042,
           container: 3000
@@ -98,14 +90,10 @@ RSpec.describe Orn::Commands::Switch do
     it "includes the sandbox name but omits empty ports for a reopened sandbox" do
       result = described_class::Result.new(
         branch: "feature/x",
-
         action: :reopened,
-
         base: nil,
         worktree_path: nil,
-
         sandbox_name: "proj-feature-x",
-
         host_ports: []
       )
 

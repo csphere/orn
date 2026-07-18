@@ -108,14 +108,10 @@ module Orn
         Orn::Tmux.open_window(@output_mode, project, branch)
         Result.new(
           branch: wt_result.branch,
-
           action: :created,
-
           base: wt_result.base,
           worktree_path: wt_result.worktree_path,
-
           sandbox_name: nil,
-
           host_ports: []
         )
       end

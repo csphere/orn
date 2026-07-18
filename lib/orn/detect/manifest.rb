@@ -25,11 +25,8 @@ module Orn
         def self.idle
           new(
             state: :idle,
-
             visible_idle: false,
-
             visible_blocker: false,
-
             visible_working: false,
             skip_state_update: false
           )
@@ -230,14 +227,10 @@ module Orn
 
         Rule.new(
           id: id,
-
           state: parse_state(raw["state"]),
-
           priority: parse_int(raw["priority"], 0, "priority"),
           region: region,
-
           gate: gate_from(raw),
-
           **rule_flags(raw)
         )
       end
@@ -263,12 +256,9 @@ module Orn
       def self.gate_from(raw)
         Gate.new(
           all: gate_list(raw["all"]),
-
           any: gate_list(raw["any"]),
-
           not_gate: gate_list(raw["not"]),
           contains: string_list(raw["contains"], "contains"),
-
           regex: string_list(raw["regex"], "regex"),
           line_regex: string_list(raw["line_regex"], "line_regex")
         )

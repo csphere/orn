@@ -50,12 +50,9 @@ module Orn
 
           Result.new(
             name: name,
-
             branch: branch,
-
             agent_type: agent_type,
             template: sbx_config.template,
-
             host_ports: host_ports
           )
         end
@@ -72,17 +69,12 @@ module Orn
         def create_params(project, sbx_config, agent_type, name, wt_path)
           Orn::Sandbox::CreateParams.new(
             name: name,
-
             template: sbx_config.template,
-
             kits: sbx_config.all_kits,
             cpus: sbx_config.cpus,
-
             memory: sbx_config.memory,
-
             agent_type: agent_type,
             worktree_path: wt_path,
-
             bare_path: File.join(project.root, ".bare")
           )
         end

@@ -301,14 +301,10 @@ module Orn
       def self.up_to_date_result(path, version, migration_plan)
         MigrateFileResult.new(
           path: path,
-
           from_version: version,
-
           to_version: migration_plan.to_version.to_s,
           changes: [],
-
           backup_path: nil,
-
           up_to_date: true
         )
       end
@@ -316,14 +312,10 @@ module Orn
       def self.dry_run_result(path, version, migration_plan)
         MigrateFileResult.new(
           path: path,
-
           from_version: version,
-
           to_version: migration_plan.to_version.to_s,
           changes: migration_plan.descriptions,
-
           backup_path: nil,
-
           up_to_date: false
         )
       end
@@ -331,14 +323,10 @@ module Orn
       def self.migrated_result(path, version, migration_plan, backup_path)
         MigrateFileResult.new(
           path: path,
-
           from_version: version,
-
           to_version: migration_plan.to_version.to_s,
           changes: migration_plan.descriptions,
-
           backup_path: backup_path,
-
           up_to_date: false
         )
       end

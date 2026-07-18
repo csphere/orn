@@ -26,12 +26,9 @@ module Orn
         wt_result = Wt::New.create(output_mode, project, branch, base_override)
         context = Context.new(
           output_mode: output_mode,
-
           project: project,
-
           branch: branch,
           sbx_config: sbx_config,
-
           agent_type: agent_type
         )
         build(context, wt_result)
@@ -48,14 +45,10 @@ module Orn
         host_ports = provision(context, state)
         Result.new(
           branch: wt_result.branch,
-
           action: :created,
-
           base: wt_result.base,
           worktree_path: wt_result.worktree_path,
-
           sandbox_name: state[:name],
-
           host_ports: host_ports
         )
       rescue StandardError => e
@@ -129,14 +122,10 @@ module Orn
 
         Result.new(
           branch: branch,
-
           action: :reopened,
-
           base: nil,
-
           worktree_path: nil,
           sandbox_name: sbx_name,
-
           host_ports: host_ports
         )
       end
@@ -145,14 +134,10 @@ module Orn
         sbx_config = context.sbx_config
         Orn::Sandbox::CreateParams.new(
           name: name,
-
           template: sbx_config.template,
-
           kits: sbx_config.all_kits,
           cpus: sbx_config.cpus,
-
           memory: sbx_config.memory,
-
           agent_type: context.agent_type,
           worktree_path: context.project.worktree_path(context.branch),
           bare_path: File.join(context.project.root, ".bare")

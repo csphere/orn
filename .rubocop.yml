@@ -4,6 +4,7 @@ plugins:
 
 require:
   - ./.rubocop/cop/orn/multi_pair_hash_line_breaks.rb
+  - ./.rubocop/cop/orn/empty_lines_between_collection_items.rb
 
 AllCops:
   TargetRubyVersion: 3.3
@@ -77,6 +78,15 @@ Layout/ClassStructure:
 # once a hash or call spans multiple lines.
 Orn/MultiPairHashLineBreaks:
   Enabled: true
+
+# A multiline hash, array, or keyword-argument list reads as one block:
+# no blank lines between its items. Comment lines between items are fine,
+# and blank lines inside heredoc items are untouched. The bundled manifest
+# data keeps its blank lines: they group each entry's fields.
+Orn/EmptyLinesBetweenCollectionItems:
+  Enabled: true
+  Exclude:
+    - "lib/orn/detect/manifests.rb"
 
 Layout/FirstHashElementLineBreak:
   Enabled: true

@@ -108,10 +108,8 @@ module Orn
             @next_pane += 1
             @splits << Split.new(
               direction: direction,
-
               target: previous,
               percentage: Layout.split_percentage(count - i),
-
               result: new_pane
             )
             panes << new_pane

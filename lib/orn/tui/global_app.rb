@@ -217,12 +217,9 @@ module Orn
         hub_location = hub_pane && Orn::Tmux.current_session_window(output_mode, hub_pane)
         app = new(
           output_mode: output_mode,
-
           config: config,
-
           mru_state: State.load,
           hub_pane: hub_pane,
-
           hub_location: hub_location
         )
         app.full_refresh
@@ -831,12 +828,9 @@ module Orn
         tab = Hub.open_tab(
           @output,
           root: entry.root,
-
           session: entry.session_name,
           base_branch: entry.base_branch,
-
           branch: branch,
-
           hub_pane: hub_pane
         )
         idx = @hub.push_tab(tab)
