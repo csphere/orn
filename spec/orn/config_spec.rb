@@ -135,7 +135,12 @@ RSpec.describe Orn::Config do
         config = described_class.load_from(project, nil)
         rows = config.layout.rows
 
-        expect(rows[0]).to eq(Orn::Config::Row.new(panes: ["main-command"], columns: []))
+        expect(rows[0]).to eq(
+          Orn::Config::Row.new(
+            panes: ["main-command"],
+            columns: []
+          )
+        )
         expect(rows[1].columns?).to be(true)
         expect(rows[1].columns.map(&:panes)).to eq([%w[cmd1 cmd2], %w[cmd3 cmd4]])
       end

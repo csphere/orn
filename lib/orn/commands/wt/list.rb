@@ -15,7 +15,10 @@ module Orn
         def run
           result = run_inner
           if @output_mode.json
-            Commands::Output.print_json("repo" => result.repo, "worktrees" => result.worktrees)
+            Commands::Output.print_json(
+              "repo" => result.repo,
+              "worktrees" => result.worktrees
+            )
           else
             Commands::Output.worktree_table(result.repo, ["Branch"], result.worktrees.map { |branch| [branch] })
           end
@@ -25,8 +28,14 @@ module Orn
         # value used for --json.
         def run_inner
           project = Orn::Git::Project.discover
-          worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
-          Result.new(repo: File.basename(project.root), worktrees: worktree.entries)
+          worktree = Orn::Git::Worktree.new(
+            root: project.root,
+            output_mode: @output_mode
+          )
+          Result.new(
+            repo: File.basename(project.root),
+            worktrees: worktree.entries
+          )
         end
       end
     end

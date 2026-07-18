@@ -8,7 +8,12 @@ module Orn
       end
 
       it "scrolls so a selection below the viewport stays visible" do
-        area = Rect.new(x: 0, y: 0, width: 20, height: 4)
+        area = Rect.new(
+          x: 0,
+          y: 0,
+          width: 20,
+          height: 4
+        )
         buffer = Buffer.new(area)
         state = ListState.new
         state.select(19)

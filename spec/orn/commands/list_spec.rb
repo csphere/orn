@@ -6,14 +6,20 @@ RSpec.describe Orn::Commands::List do
     project = make_bare_project
     add_origin(project, remote)
     File.write(File.join(project, ".orn", "config.yaml"), "git:\n  base: main\n")
-    worktree = Orn::Git::Worktree.new(root: project, output_mode: Orn::OutputMode.quiet)
+    worktree = Orn::Git::Worktree.new(
+      root: project,
+      output_mode: Orn::OutputMode.quiet
+    )
     worktree.fetch("origin", branch)
     worktree.add(File.join(project, branch), branch, "origin/#{branch}")
     project
   end
 
   def load_project(root)
-    Orn::Git::Project.new(root: root, config: Orn::Config.load_from(root, nil))
+    Orn::Git::Project.new(
+      root: root,
+      config: Orn::Config.load_from(root, nil)
+    )
   end
 
   context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do

@@ -30,11 +30,17 @@ module Orn
     # rows. Exactly one of `columns` / `rows` is non-nil.
     Layout = Data.define(:columns, :rows) do
       def self.of_columns(columns)
-        new(columns: columns, rows: nil)
+        new(
+          columns: columns,
+          rows: nil
+        )
       end
 
       def self.of_rows(rows)
-        new(columns: nil, rows: rows)
+        new(
+          columns: nil,
+          rows: rows
+        )
       end
 
       def columns?
@@ -61,7 +67,10 @@ module Orn
 
     SymlinksConfig = Data.define(:base, :root) do
       def self.empty
-        new(base: [], root: [])
+        new(
+          base: [],
+          root: []
+        )
       end
     end
 
@@ -72,8 +81,18 @@ module Orn
     SbxPorts = Data.define(:container, :host_range)
 
     SbxConfig = Data.define(
-      :template, :kit, :kits, :cpus, :memory, :agent_type,
-      :setup, :start, :build, :env, :ports, :columns
+      :template,
+      :kit,
+      :kits,
+      :cpus,
+      :memory,
+      :agent_type,
+      :setup,
+      :start,
+      :build,
+      :env,
+      :ports,
+      :columns
     ) do
       # All kits to install: `kits`, with the legacy singular `kit` prepended
       # when not already present.
@@ -111,8 +130,15 @@ module Orn
 
     # Full resolved configuration with per-value sources, for `orn config`.
     ConfigInfo = Data.define(
-      :project_path, :project_exists, :global_path, :global_exists,
-      :base, :session, :symlinks, :layout, :tui
+      :project_path,
+      :project_exists,
+      :global_path,
+      :global_exists,
+      :base,
+      :session,
+      :symlinks,
+      :layout,
+      :tui
     )
 
     # Normalizes a parsed YAML mapping into a RawConfig, raising InvalidConfig
@@ -206,9 +232,17 @@ module Orn
         raise InvalidConfig, "row cannot have both `panes` and `columns`; use one or the other"
       end
 
-      return Row.new(panes: [], columns: columns) unless columns.empty?
+      unless columns.empty?
+        return Row.new(
+          panes: [],
+          columns: columns
+        )
+      end
 
-      Row.new(panes: panes, columns: [])
+      Row.new(
+        panes: panes,
+        columns: []
+      )
     end
 
     def self.symlinks_from(raw)
@@ -232,7 +266,10 @@ module Orn
       dest = entry["dest"]
       raise InvalidConfig, "symlinks.root dest must be a string" unless dest.nil? || dest.is_a?(String)
 
-      RootSymlink.new(source: source, dest: dest)
+      RootSymlink.new(
+        source: source,
+        dest: dest
+      )
     end
 
     def self.sbx_from(raw)
@@ -298,17 +335,34 @@ module Orn
       host_range = raw["host_range"]
       raise InvalidConfig, "sbx port host_range must be [start, end]" unless port_range_shape?(host_range)
 
-      SbxPorts.new(container: container, host_range: host_range)
+      SbxPorts.new(
+        container: container,
+        host_range: host_range
+      )
     end
 
     def self.port_range_shape?(value)
       value.nil? || (value.is_a?(Array) && value.size == 2 && value.all?(Integer))
     end
 
-    private_class_method :raw_from_hash, :section, :optional_string, :optional_integer,
-      :string_list?, :string_list_field, :column_list, :column_from,
-      :row_list, :row_from, :symlinks_from, :root_symlink_from,
-      :sbx_from, :sbx_build_from, :string_or_array, :env_from,
-      :ports_from, :port_from, :port_range_shape?
+    private_class_method :raw_from_hash,
+      :section,
+      :optional_string,
+      :optional_integer,
+      :string_list?,
+      :string_list_field,
+      :column_list,
+      :column_from,
+      :row_list,
+      :row_from,
+      :symlinks_from,
+      :root_symlink_from,
+      :sbx_from,
+      :sbx_build_from,
+      :string_or_array,
+      :env_from,
+      :ports_from,
+      :port_from,
+      :port_range_shape?
   end
 end

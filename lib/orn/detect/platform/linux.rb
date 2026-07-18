@@ -23,7 +23,10 @@ module Orn
           processes = collect_group(child_pid, child_stat, tpgid)
           return nil if processes.empty?
 
-          Orn::Detect::ForegroundJob.new(process_group_id: tpgid, processes: processes)
+          Orn::Detect::ForegroundJob.new(
+            process_group_id: tpgid,
+            processes: processes
+          )
         end
 
         # Every process in `/proc` whose pgrp matches `tpgid`, reusing the
@@ -39,7 +42,11 @@ module Orn
             pgrp, comm = parsed
             next if pgrp != tpgid
 
-            Orn::Detect::ForegroundProcess.new(pid: pid, name: comm, argv: read_argv(pid))
+            Orn::Detect::ForegroundProcess.new(
+              pid: pid,
+              name: comm,
+              argv: read_argv(pid)
+            )
           end
         end
 

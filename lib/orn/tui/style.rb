@@ -50,15 +50,27 @@ module Orn
       end
 
       def fg(color)
-        self.class.new(foreground: color, background: @background, bold: @bold)
+        self.class.new(
+          foreground: color,
+          background: @background,
+          bold: @bold
+        )
       end
 
       def bg(color)
-        self.class.new(foreground: @foreground, background: color, bold: @bold)
+        self.class.new(
+          foreground: @foreground,
+          background: color,
+          bold: @bold
+        )
       end
 
       def bold
-        self.class.new(foreground: @foreground, background: @background, bold: true)
+        self.class.new(
+          foreground: @foreground,
+          background: @background,
+          bold: true
+        )
       end
 
       def ==(other)
@@ -77,11 +89,17 @@ module Orn
     # A run of text with one style. The atomic unit a `Line` is built from.
     Span = Data.define(:content, :style) do
       def self.raw(content)
-        new(content: content, style: Style.default)
+        new(
+          content: content,
+          style: Style.default
+        )
       end
 
       def self.styled(content, style)
-        new(content: content, style: style)
+        new(
+          content: content,
+          style: style
+        )
       end
     end
 

@@ -21,10 +21,14 @@ Gem::Specification.new do |spec|
 
   # Specify which files should be added to the gem when it is released.
   gemspec = File.basename(__FILE__)
-  spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
+  spec.files = IO.popen(
+    %w[git ls-files -z],
+    chdir: __dir__,
+    err: IO::NULL
+  ) do |ls|
     ls.readlines("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
-        f.start_with?(*%w[bin/ Gemfile .rspec spec/ .github/ .rubocop.yml])
+        f.start_with?(*%w[bin/ Gemfile .rspec spec/ .github/ .rubocop.yml .rubocop/])
     end
   end
   spec.bindir = "exe"

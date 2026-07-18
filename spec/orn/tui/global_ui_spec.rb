@@ -16,7 +16,11 @@ module Orn
       def app_with(entries)
         app = GlobalApp.new(
           output_mode: Orn::OutputMode.quiet,
-          config: Orn::Config::GlobalTuiConfig.new(session: "orn", scan_roots: [], scan_depth: 3),
+          config: Orn::Config::GlobalTuiConfig.new(
+            session: "orn",
+            scan_roots: [],
+            scan_depth: 3
+          ),
           entries: entries
         )
         app.sync_list_state

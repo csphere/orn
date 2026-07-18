@@ -25,8 +25,14 @@ module Orn
 
         wt_result = Wt::New.create(output_mode, project, branch, base_override)
         context = Context.new(
-          output_mode: output_mode, project: project, branch: branch,
-          sbx_config: sbx_config, agent_type: agent_type
+          output_mode: output_mode,
+
+          project: project,
+
+          branch: branch,
+          sbx_config: sbx_config,
+
+          agent_type: agent_type
         )
         build(context, wt_result)
       end
@@ -34,11 +40,23 @@ module Orn
       # Everything created after the worktree (sandbox, window, ports, services)
       # is torn down on any failure, then the error is re-raised.
       def build(context, wt_result)
-        state = { name: nil, session: nil, sandbox_created: false }
+        state = {
+          name: nil,
+          session: nil,
+          sandbox_created: false
+        }
         host_ports = provision(context, state)
         Result.new(
-          branch: wt_result.branch, action: :created, base: wt_result.base,
-          worktree_path: wt_result.worktree_path, sandbox_name: state[:name], host_ports: host_ports
+          branch: wt_result.branch,
+
+          action: :created,
+
+          base: wt_result.base,
+          worktree_path: wt_result.worktree_path,
+
+          sandbox_name: state[:name],
+
+          host_ports: host_ports
         )
       rescue StandardError => e
         rollback(context, state)
@@ -70,7 +88,11 @@ module Orn
       def open_window(context, name, state)
         layout, layout_source = context.project.config.effective_sbx_layout
         result = Orn::Tmux.open_window_with_layout(
-          context.output_mode, context.project, context.branch, layout, layout_source,
+          context.output_mode,
+          context.project,
+          context.branch,
+          layout,
+          layout_source,
           template_vars: { "sandbox" => name }
         )
         state[:session] = result.session
@@ -106,16 +128,32 @@ module Orn
         start_services(output_mode, sbx_config, sbx_name)
 
         Result.new(
-          branch: branch, action: :reopened, base: nil, worktree_path: nil,
-          sandbox_name: sbx_name, host_ports: host_ports
+          branch: branch,
+
+          action: :reopened,
+
+          base: nil,
+
+          worktree_path: nil,
+          sandbox_name: sbx_name,
+
+          host_ports: host_ports
         )
       end
 
       def sandbox_params(context, name)
         sbx_config = context.sbx_config
         Orn::Sandbox::CreateParams.new(
-          name: name, template: sbx_config.template, kits: sbx_config.all_kits,
-          cpus: sbx_config.cpus, memory: sbx_config.memory, agent_type: context.agent_type,
+          name: name,
+
+          template: sbx_config.template,
+
+          kits: sbx_config.all_kits,
+          cpus: sbx_config.cpus,
+
+          memory: sbx_config.memory,
+
+          agent_type: context.agent_type,
           worktree_path: context.project.worktree_path(context.branch),
           bare_path: File.join(context.project.root, ".bare")
         )
@@ -143,7 +181,10 @@ module Orn
       end
 
       def safe_remove_worktree(context)
-        Orn::Git::Worktree.new(root: context.project.root, output_mode: context.output_mode)
+        Orn::Git::Worktree.new(
+          root: context.project.root,
+          output_mode: context.output_mode
+        )
           .remove(context.project.worktree_path(context.branch))
       rescue Orn::Error
         nil

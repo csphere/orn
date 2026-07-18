@@ -29,7 +29,10 @@ module Orn
 
       def self.load_from(path)
         raw = JSON.parse(File.read(path))
-        new(mru: hash_or_empty(raw["mru"]), expanded: array_or_empty(raw["expanded"]))
+        new(
+          mru: hash_or_empty(raw["mru"]),
+          expanded: array_or_empty(raw["expanded"])
+        )
       rescue SystemCallError, JSON::ParserError
         new
       end
@@ -78,7 +81,10 @@ module Orn
       # Serialized shape (mru then expanded, contents sorted for stable,
       # comparable output).
       def to_h
-        { "mru" => @mru.sort.to_h, "expanded" => @expanded.sort }
+        {
+          "mru" => @mru.sort.to_h,
+          "expanded" => @expanded.sort
+        }
       end
 
       # `$XDG_STATE_HOME/orn/tui.json`, falling back to /tmp when no home dir

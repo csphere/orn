@@ -26,7 +26,10 @@ module Orn
 
       # String-keyed hash for `--json` output.
       def to_json_hash
-        { "host" => host, "container" => container }
+        {
+          "host" => host,
+          "container" => container
+        }
       end
     end
 
@@ -46,20 +49,40 @@ module Orn
     # (blocks sandbox creation in preflight) or `:warning` (reported only).
     Check = Data.define(:name, :kind, :passed, :message) do
       def self.pass(name, message)
-        new(name: name, kind: :error, passed: true, message: message)
+        new(
+          name: name,
+          kind: :error,
+          passed: true,
+          message: message
+        )
       end
 
       def self.fail(name, message)
-        new(name: name, kind: :error, passed: false, message: message)
+        new(
+          name: name,
+          kind: :error,
+          passed: false,
+          message: message
+        )
       end
 
       def self.warning(name, passed, message)
-        new(name: name, kind: :warning, passed: passed, message: message)
+        new(
+          name: name,
+          kind: :warning,
+          passed: passed,
+          message: message
+        )
       end
 
       # The JSON shape (field order + lowercase kind).
       def to_json_hash
-        { "name" => name, "kind" => kind.to_s, "passed" => passed, "message" => message }
+        {
+          "name" => name,
+          "kind" => kind.to_s,
+          "passed" => passed,
+          "message" => message
+        }
       end
     end
 
@@ -181,7 +204,10 @@ module Orn
         next unless item.is_a?(Hash) && item["name"].is_a?(String)
 
         status = item["status"].is_a?(String) ? item["status"] : "unknown"
-        SandboxEntry.new(name: item["name"], status: status)
+        SandboxEntry.new(
+          name: item["name"],
+          status: status
+        )
       end
     end
 
@@ -307,7 +333,12 @@ module Orn
     def self.read_ports(orn_dir, name)
       path = File.join(orn_dir, "sandbox", "#{name}.ports")
       parsed = JSON.parse(File.read(path))
-      parsed.map { |entry| PortMapping.new(host: entry["host"], container: entry["container"]) }
+      parsed.map do |entry|
+        PortMapping.new(
+          host: entry["host"],
+          container: entry["container"]
+        )
+      end
     rescue Errno::ENOENT
       raise Orn::Error, "Failed to read #{path}"
     rescue JSON::ParserError
@@ -344,7 +375,12 @@ module Orn
         output_mode.status("Publishing port #{host}:#{entry.container}...")
         publish_port(output_mode, name, host, entry.container)
         verify_port(host, PORT_VERIFY_TIMEOUT, PORT_VERIFY_INITIAL_BACKOFF)
-        mappings.push(PortMapping.new(host: host, container: entry.container))
+        mappings.push(
+          PortMapping.new(
+            host: host,
+            container: entry.container
+          )
+        )
       end
       persist_ports(orn_dir, name, mappings) unless mappings.empty?
       mappings
@@ -531,7 +567,10 @@ module Orn
     # True when `key` is set in the given git config file; system and global
     # config are masked out so only that file is consulted.
     def self.git_config_set?(config_path, key)
-      env = { "GIT_CONFIG_NOSYSTEM" => "1", "GIT_CONFIG_GLOBAL" => "/dev/null" }
+      env = {
+        "GIT_CONFIG_NOSYSTEM" => "1",
+        "GIT_CONFIG_GLOBAL" => "/dev/null"
+      }
       _stdout, _stderr, status = Open3.capture3(
         env, "git", "config", "--file", config_path.to_s, key, chdir: Dir.tmpdir
       )
@@ -611,10 +650,25 @@ module Orn
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
-    private_class_method :optional_create_flags, :tool_and_platform_checks, :config_checks,
-      :macos?, :safe_tar_name, :save_and_load_template, :read_persisted_ports,
-      :template_present?, :git_config_set?, :colima_arch, :on_path?, :build_exec_command_with,
-      :sbx_exec, :run_sbx_ls, :run_template_ls, :sbx_secret_ls, :colima_status,
-      :probe_bind, :port_open?, :monotonic
+    private_class_method :optional_create_flags,
+      :tool_and_platform_checks,
+      :config_checks,
+      :macos?,
+      :safe_tar_name,
+      :save_and_load_template,
+      :read_persisted_ports,
+      :template_present?,
+      :git_config_set?,
+      :colima_arch,
+      :on_path?,
+      :build_exec_command_with,
+      :sbx_exec,
+      :run_sbx_ls,
+      :run_template_ls,
+      :sbx_secret_ls,
+      :colima_status,
+      :probe_bind,
+      :port_open?,
+      :monotonic
   end
 end

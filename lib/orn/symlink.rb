@@ -123,7 +123,11 @@ module Orn
         next if entry.empty?
 
         validate_entry!(entry)
-        ResolvedEntry.new(dest_name: entry, src: File.join(base_wt, entry), dst: File.join(wt_path, entry))
+        ResolvedEntry.new(
+          dest_name: entry,
+          src: File.join(base_wt, entry),
+          dst: File.join(wt_path, entry)
+        )
       end
     end
 
@@ -133,7 +137,11 @@ module Orn
         dest_name = root_symlink.effective_dest
         validate_entry!(dest_name)
         src = File.join(project_root, root_symlink.source)
-        ResolvedEntry.new(dest_name: dest_name, src: src, dst: File.join(wt_path, dest_name))
+        ResolvedEntry.new(
+          dest_name: dest_name,
+          src: src,
+          dst: File.join(wt_path, dest_name)
+        )
       end
     end
 
@@ -176,7 +184,13 @@ module Orn
       nil
     end
 
-    private_class_method :create_one, :resolve_symlink_entries, :base_entries, :root_entries,
-      :create_relative_symlink, :same_file?, :relative_path, :git_output
+    private_class_method :create_one,
+      :resolve_symlink_entries,
+      :base_entries,
+      :root_entries,
+      :create_relative_symlink,
+      :same_file?,
+      :relative_path,
+      :git_output
   end
 end

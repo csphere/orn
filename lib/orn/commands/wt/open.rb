@@ -14,18 +14,32 @@ module Orn
         # neither place.
         def self.resolve(output_mode, project, branch)
           wt_path = project.worktree_path(branch)
-          return Result.new(branch: branch, path: wt_path.to_s, created: false) if File.exist?(wt_path)
-
-          output_mode.status("Checking remote for #{branch}...")
-          worktree = Orn::Git::Worktree.new(root: project.root, output_mode: output_mode)
-          if worktree.remote_branch_exists?("origin", branch)
-            created = New.create(output_mode, project, branch, nil)
-            return Result.new(branch: branch, path: created.worktree_path, created: true)
+          if File.exist?(wt_path)
+            return Result.new(
+              branch: branch,
+              path: wt_path.to_s,
+              created: false
+            )
           end
 
-          raise Orn::Error, "No worktree found for '#{branch}'\n  " \
-                            "Branch does not exist on the remote either\n  " \
-                            "Use 'orn new #{branch}' to create it"
+          output_mode.status("Checking remote for #{branch}...")
+          worktree = Orn::Git::Worktree.new(
+            root: project.root,
+            output_mode: output_mode
+          )
+          if worktree.remote_branch_exists?("origin", branch)
+            created = New.create(output_mode, project, branch, nil)
+            return Result.new(
+              branch: branch,
+              path: created.worktree_path,
+              created: true
+            )
+          end
+
+          raise Orn::Error,
+            "No worktree found for '#{branch}'\n  " \
+            "Branch does not exist on the remote either\n  " \
+            "Use 'orn new #{branch}' to create it"
         end
 
         def initialize(output_mode:)

@@ -154,13 +154,21 @@ module Orn
         end
 
         def sourced_hash(sourced)
-          { "value" => yield(sourced.value), "source" => sourced.source.to_s }
+          {
+            "value" => yield(sourced.value),
+            "source" => sourced.source.to_s
+          }
         end
 
         def symlinks_hash(symlinks)
           {
             "base" => symlinks.base,
-            "root" => symlinks.root.map { |entry| { "source" => entry.source, "dest" => entry.dest } }
+            "root" => symlinks.root.map do |entry|
+              {
+                "source" => entry.source,
+                "dest" => entry.dest
+              }
+            end
           }
         end
 

@@ -47,7 +47,9 @@ module Orn
       return layout if commands.empty?
 
       approved = check_trust_flow(
-        commands_fingerprint(commands), approval_path(data_dir, project_root), commands,
+        commands_fingerprint(commands),
+        approval_path(data_dir, project_root),
+        commands,
         header: "Project config contains pane commands that will be executed:",
         prompt: "Trust these commands? [y/N] ",
         non_interactive_msg: "Project config contains untrusted pane commands\n  " \
@@ -138,7 +140,9 @@ module Orn
       non_interactive_msg = "Project config contains untrusted sandbox commands:\n  " \
                             "#{items.join("\n  ")}\n  Run interactively to review and approve them"
       approved = check_trust_flow(
-        sbx_fingerprint(sbx), sbx_approval_path(data_dir, project_root), items,
+        sbx_fingerprint(sbx),
+        sbx_approval_path(data_dir, project_root),
+        items,
         header: "The sbx config will run these commands:",
         prompt: "Approve? [y/N] ",
         non_interactive_msg: non_interactive_msg,
@@ -191,7 +195,13 @@ module Orn
       raise Orn::Error, non_interactive_msg unless interactive
 
       confirmed = Orn::Confirm.with_stdin_stderr do |reader, writer|
-        confirm_prompt(display_items, header: header, prompt: prompt, reader: reader, writer: writer)
+        confirm_prompt(
+          display_items,
+          header: header,
+          prompt: prompt,
+          reader: reader,
+          writer: writer
+        )
       end
       return false unless confirmed
 
@@ -227,9 +237,17 @@ module Orn
       return Config::Layout.of_columns(map_columns(layout.columns, &transform)) if layout.columns?
 
       rows = layout.rows.map do |row|
-        next Config::Row.new(panes: [], columns: map_columns(row.columns, &transform)) if row.columns?
+        if row.columns?
+          next Config::Row.new(
+            panes: [],
+            columns: map_columns(row.columns, &transform)
+          )
+        end
 
-        Config::Row.new(panes: row.panes.map(&transform), columns: [])
+        Config::Row.new(
+          panes: row.panes.map(&transform),
+          columns: []
+        )
       end
       Config::Layout.of_rows(rows)
     end
@@ -307,9 +325,19 @@ module Orn
       setup.each_with_index { |command, index| items << "[setup #{index + 1}/#{setup.length}] #{command}" }
     end
 
-    private_class_method :interactive?, :check_trust_flow, :approval_data_dir,
-      :sbx_approval_path, :map_panes, :map_columns, :for_each_pane, :each_column_pane,
-      :hash_list, :hash_sbx_setup, :hash_sbx_start, :hash_sbx_build_args, :hash_sbx_env,
+    private_class_method :interactive?,
+      :check_trust_flow,
+      :approval_data_dir,
+      :sbx_approval_path,
+      :map_panes,
+      :map_columns,
+      :for_each_pane,
+      :each_column_pane,
+      :hash_list,
+      :hash_sbx_setup,
+      :hash_sbx_start,
+      :hash_sbx_build_args,
+      :hash_sbx_env,
       :format_sbx_setup
   end
 end

@@ -10,7 +10,10 @@ module Orn
       class Build
         Result = Data.define(:template, :dockerfile) do
           def to_json_hash
-            { "template" => template, "dockerfile" => dockerfile }
+            {
+              "template" => template,
+              "dockerfile" => dockerfile
+            }
           end
         end
 
@@ -32,7 +35,10 @@ module Orn
           announce(template, dockerfile, build.build_args)
           Orn::Sandbox.build(@output_mode, dockerfile, template, build.build_args, ".")
 
-          Result.new(template: template, dockerfile: dockerfile)
+          Result.new(
+            template: template,
+            dockerfile: dockerfile
+          )
         end
 
         def run

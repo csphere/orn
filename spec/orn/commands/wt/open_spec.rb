@@ -10,7 +10,10 @@ RSpec.describe Orn::Commands::Wt::Open do
   end
 
   def load_project(root)
-    Orn::Git::Project.new(root: root, config: Orn::Config.load_from(root, nil))
+    Orn::Git::Project.new(
+      root: root,
+      config: Orn::Config.load_from(root, nil)
+    )
   end
 
   describe ".resolve" do

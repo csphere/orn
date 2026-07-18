@@ -11,15 +11,24 @@ module Orn
     # (new-branch mode) or the branch being removed (confirm-remove mode).
     Mode = Data.define(:kind, :text) do
       def self.normal
-        new(kind: :normal, text: nil)
+        new(
+          kind: :normal,
+          text: nil
+        )
       end
 
       def self.new_branch(input = "")
-        new(kind: :new_branch, text: input)
+        new(
+          kind: :new_branch,
+          text: input
+        )
       end
 
       def self.confirm_remove(branch)
-        new(kind: :confirm_remove, text: branch)
+        new(
+          kind: :confirm_remove,
+          text: branch
+        )
       end
 
       def normal? = kind == :normal
@@ -63,7 +72,10 @@ module Orn
         @session = session
         @base_branch = base_branch
         @repo_name = repo_name || File.basename(root.to_s)
-        @symlinks = symlinks || Orn::Config::SymlinksConfig.new(base: [], root: [])
+        @symlinks = symlinks || Orn::Config::SymlinksConfig.new(
+          base: [],
+          root: []
+        )
         @sbx_agent_type = sbx_agent_type
         @entries = []
         @selected = 0
@@ -78,7 +90,10 @@ module Orn
       # Rebuild worktree rows from git and tmux (base branch first, then
       # alphabetical) and re-enforce the session's window order.
       def refresh
-        worktree = Orn::Git::Worktree.new(root: @root, output_mode: @output)
+        worktree = Orn::Git::Worktree.new(
+          root: @root,
+          output_mode: @output
+        )
         windows = Orn::Tmux.list_windows(@output, @session)
         entries = worktree.entries.map { |branch| status_for(branch, windows) }
         entries.sort_by! { |entry| [entry.branch == @base_branch ? 0 : 1, entry.branch] }
@@ -239,7 +254,10 @@ module Orn
 
       def create_branch(branch)
         wt_path = File.join(@root.to_s, branch)
-        worktree = Orn::Git::Worktree.new(root: @root, output_mode: @output)
+        worktree = Orn::Git::Worktree.new(
+          root: @root,
+          output_mode: @output
+        )
         start_point = resolve_start_point(worktree, branch)
         return if start_point.nil?
 
@@ -280,8 +298,14 @@ module Orn
 
       def create_window(branch, wt_path)
         Orn::Tmux.create_window(
-          @output, @session, branch, wt_path, Orn::Config::Layout.of_columns([]),
-          template_vars: {}, default_window_name: @base_branch
+          @output,
+          @session,
+          branch,
+          wt_path,
+          Orn::Config::Layout.of_columns([]),
+          template_vars: {},
+
+          default_window_name: @base_branch
         )
       end
 
@@ -312,7 +336,10 @@ module Orn
 
       def remove_worktree(branch)
         wt_path = File.join(@root.to_s, branch)
-        Orn::Git::Worktree.new(root: @root, output_mode: @output).remove(wt_path)
+        Orn::Git::Worktree.new(
+          root: @root,
+          output_mode: @output
+        ).remove(wt_path)
         refresh
       rescue Orn::Error => e
         @error = e.message

@@ -9,7 +9,10 @@ module Orn
       class Doctor
         Result = Data.define(:checks, :all_passed) do
           def to_json_hash
-            { "checks" => checks.map(&:to_json_hash), "all_passed" => all_passed }
+            {
+              "checks" => checks.map(&:to_json_hash),
+              "all_passed" => all_passed
+            }
           end
         end
 
@@ -20,7 +23,10 @@ module Orn
         def run_inner(project)
           sbx_config = project.config.require_sbx!
           checks = Orn::Sandbox.doctor(@output_mode, sbx_config, project.root)
-          Result.new(checks: checks, all_passed: checks.all?(&:passed))
+          Result.new(
+            checks: checks,
+            all_passed: checks.all?(&:passed)
+          )
         end
 
         def run

@@ -14,7 +14,10 @@ RSpec.describe Orn::Commands::Switch do
   end
 
   def load_project(root)
-    Orn::Git::Project.new(root: root, config: Orn::Config.load_from(root, nil))
+    Orn::Git::Project.new(
+      root: root,
+      config: Orn::Config.load_from(root, nil)
+    )
   end
 
   def sbx_project(seed_branch, config)
@@ -30,7 +33,10 @@ RSpec.describe Orn::Commands::Switch do
       json = described_class::Result.simple("feature/x", :switched).to_json_hash
 
       aggregate_failures do
-        expect(json).to eq("branch" => "feature/x", "action" => "switched")
+        expect(json).to eq(
+          "branch" => "feature/x",
+          "action" => "switched"
+        )
         expect(json).not_to have_key("base")
         expect(json).not_to have_key("worktree_path")
         expect(json).not_to have_key("sandbox_name")
@@ -40,31 +46,67 @@ RSpec.describe Orn::Commands::Switch do
 
     it "includes base and path for a created branch" do
       result = described_class::Result.new(
-        branch: "feature/x", action: :created, base: "main",
-        worktree_path: "/path", sandbox_name: nil, host_ports: []
+        branch: "feature/x",
+
+        action: :created,
+
+        base: "main",
+        worktree_path: "/path",
+
+        sandbox_name: nil,
+
+        host_ports: []
       )
 
-      expect(result.to_json_hash).to include("base" => "main", "worktree_path" => "/path", "action" => "created")
+      expect(result.to_json_hash).to include(
+        "base" => "main",
+        "worktree_path" => "/path",
+        "action" => "created"
+      )
     end
 
     it "includes the sandbox name and published ports for a created sandbox" do
       result = described_class::Result.new(
-        branch: "feature/x", action: :created, base: "main", worktree_path: "/path",
-        sandbox_name: "proj-feature-x", host_ports: [Orn::Sandbox::PortMapping.new(host: 3042, container: 3000)]
+        branch: "feature/x",
+
+        action: :created,
+
+        base: "main",
+
+        worktree_path: "/path",
+        sandbox_name: "proj-feature-x",
+
+        host_ports: [Orn::Sandbox::PortMapping.new(
+          host: 3042,
+          container: 3000
+        )]
       )
 
       json = result.to_json_hash
 
       aggregate_failures do
         expect(json["sandbox_name"]).to eq("proj-feature-x")
-        expect(json["host_ports"]).to eq([{ "host" => 3042, "container" => 3000 }])
+        expect(json["host_ports"]).to eq(
+          [{
+            "host" => 3042,
+            "container" => 3000
+          }]
+        )
       end
     end
 
     it "includes the sandbox name but omits empty ports for a reopened sandbox" do
       result = described_class::Result.new(
-        branch: "feature/x", action: :reopened, base: nil,
-        worktree_path: nil, sandbox_name: "proj-feature-x", host_ports: []
+        branch: "feature/x",
+
+        action: :reopened,
+
+        base: nil,
+        worktree_path: nil,
+
+        sandbox_name: "proj-feature-x",
+
+        host_ports: []
       )
 
       json = result.to_json_hash

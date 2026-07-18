@@ -105,7 +105,10 @@ RSpec.describe Orn::Git::Project do
   end
 
   def project_at(root)
-    described_class.new(root: root, config: Orn::Config.load_from("/nonexistent", nil))
+    described_class.new(
+      root: root,
+      config: Orn::Config.load_from("/nonexistent", nil)
+    )
   end
 
   describe "#worktree_path" do

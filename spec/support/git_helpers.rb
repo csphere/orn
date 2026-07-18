@@ -124,11 +124,17 @@ module GitHelpers
   def make_project(root, config_yaml = "")
     FileUtils.mkdir_p(File.join(root, ".orn"))
     File.write(File.join(root, ".orn/config.yaml"), config_yaml)
-    Orn::Git::Project.new(root: root, config: Orn::Config.load_from(root, nil))
+    Orn::Git::Project.new(
+      root: root,
+      config: Orn::Config.load_from(root, nil)
+    )
   end
 
   def git(*args, chdir: nil)
-    options = { out: File::NULL, err: File::NULL }
+    options = {
+      out: File::NULL,
+      err: File::NULL
+    }
     options[:chdir] = chdir if chdir
     system(GIT_ISOLATION_ENV, "git", *args, **options)
   end

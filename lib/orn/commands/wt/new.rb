@@ -17,11 +17,19 @@ module Orn
             raise Orn::Error, "Worktree already exists at #{wt_path}\n  Use 'orn open #{branch}' to open it"
           end
 
-          worktree = Orn::Git::Worktree.new(root: project.root, output_mode: output_mode)
+          worktree = Orn::Git::Worktree.new(
+            root: project.root,
+            output_mode: output_mode
+          )
           from_remote = create_worktree(output_mode, project, worktree, branch, base)
           apply_symlinks(output_mode, project, worktree, wt_path, base)
 
-          Result.new(branch: branch, base: base, worktree_path: wt_path.to_s, from_remote: from_remote)
+          Result.new(
+            branch: branch,
+            base: base,
+            worktree_path: wt_path.to_s,
+            from_remote: from_remote
+          )
         end
 
         # Fetches base, then creates the worktree from origin/<branch> when the
@@ -108,8 +116,12 @@ module Orn
           end
         end
 
-        private_class_method :create_worktree, :apply_symlinks, :handle_unignored,
-          :resolve_unignored_interactively, :unignored_message, :safe_remove
+        private_class_method :create_worktree,
+          :apply_symlinks,
+          :handle_unignored,
+          :resolve_unignored_interactively,
+          :unignored_message,
+          :safe_remove
       end
     end
   end

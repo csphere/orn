@@ -5,9 +5,19 @@ module Orn
     # One discovered bare-worktree repo, with cached tmux session and agent
     # status for the sidebar. Mutable: the refresh passes update it in place.
     class RepoEntry
-      attr_accessor :display_name, :root, :healthy, :session_name, :base_branch,
-        :session_alive, :window_count, :expanded, :worktrees, :session_activity,
-        :mru_timestamp, :aggregate_agent_state, :sbx_agent_type
+      attr_accessor :display_name,
+        :root,
+        :healthy,
+        :session_name,
+        :base_branch,
+        :session_alive,
+        :window_count,
+        :expanded,
+        :worktrees,
+        :session_activity,
+        :mru_timestamp,
+        :aggregate_agent_state,
+        :sbx_agent_type
 
       def initialize(display_name:, root:, healthy:, session_name:, base_branch:,
         session_alive: false, window_count: 0, expanded: false, worktrees: [],
@@ -51,11 +61,19 @@ module Orn
     # worktree under it, identified by index into `entries`.
     TreeRow = Data.define(:kind, :repo_index, :wt_index) do
       def self.repo(repo_index)
-        new(kind: :repo, repo_index: repo_index, wt_index: nil)
+        new(
+          kind: :repo,
+          repo_index: repo_index,
+          wt_index: nil
+        )
       end
 
       def self.worktree(repo_index, wt_index)
-        new(kind: :worktree, repo_index: repo_index, wt_index: wt_index)
+        new(
+          kind: :worktree,
+          repo_index: repo_index,
+          wt_index: wt_index
+        )
       end
 
       def repo? = kind == :repo
@@ -67,11 +85,19 @@ module Orn
     # drifting to whatever now occupies its old index.
     RowIdentity = Data.define(:kind, :root, :branch) do
       def self.repo(root)
-        new(kind: :repo, root: root.to_s, branch: nil)
+        new(
+          kind: :repo,
+          root: root.to_s,
+          branch: nil
+        )
       end
 
       def self.worktree(root, branch)
-        new(kind: :worktree, root: root.to_s, branch: branch)
+        new(
+          kind: :worktree,
+          root: root.to_s,
+          branch: branch
+        )
       end
     end
 
@@ -189,8 +215,16 @@ module Orn
       def self.build(output_mode, config)
         hub_pane = ENV.fetch("TMUX_PANE", nil)
         hub_location = hub_pane && Orn::Tmux.current_session_window(output_mode, hub_pane)
-        app = new(output_mode: output_mode, config: config, mru_state: State.load,
-          hub_pane: hub_pane, hub_location: hub_location)
+        app = new(
+          output_mode: output_mode,
+
+          config: config,
+
+          mru_state: State.load,
+          hub_pane: hub_pane,
+
+          hub_location: hub_location
+        )
         app.full_refresh
         app
       end
@@ -468,7 +502,10 @@ module Orn
         project_root = File.dirname(bare_path)
         config = Orn::Config.load(project_root)
         agent = config.sbx&.agent_type && Orn::Detect.identify_agent(config.sbx.agent_type)
-        project = Orn::Git::Project.new(root: project_root, config: config)
+        project = Orn::Git::Project.new(
+          root: project_root,
+          config: config
+        )
         RepoEntry.new(
           display_name: relative_display_name(project_root, scan_root),
           root: project_root,
@@ -489,7 +526,10 @@ module Orn
 
       # Worktree rows for a repo, base branch first, then alphabetical.
       def self.list_worktree_rows(output, root, base)
-        branches = Orn::Git::Worktree.new(root: root, output_mode: output).entries
+        branches = Orn::Git::Worktree.new(
+          root: root,
+          output_mode: output
+        ).entries
         sort_branches_base_first(branches, base)
         branches.map { |branch| WorktreeRow.new(branch: branch) }
       end
@@ -588,7 +628,10 @@ module Orn
 
         result.stdout.lines.filter_map do |line|
           name, activity = line.chomp.split("\t", 2)
-          activity && SessionInfo.new(name: name, activity: activity.to_i)
+          activity && SessionInfo.new(
+            name: name,
+            activity: activity.to_i
+          )
         end
       rescue Orn::Error
         []
@@ -618,7 +661,10 @@ module Orn
         pane = all_panes.find { |candidate| candidate.pane_id == tab.pane_id }
         return nil unless pane
 
-        pane.with(session_name: repo.session_name, window_name: tab.branch)
+        pane.with(
+          session_name: repo.session_name,
+          window_name: tab.branch
+        )
       end
 
       # Refresh window and agent state for a repo whose session is alive. The
@@ -695,7 +741,10 @@ module Orn
       # its `orn` TUI window when missing.
       def self.enter_repo(output, root)
         config = Orn::Config.load(root)
-        project = Orn::Git::Project.new(root: root, config: config)
+        project = Orn::Git::Project.new(
+          root: root,
+          config: config
+        )
         session_name = Orn::Session.session_name(project)
         base = config.base
 
@@ -708,8 +757,16 @@ module Orn
 
       def self.create_repo_tui_window(output, session_name, root)
         Orn::Cmd.new(output_mode: output).exec(
-          "tmux", "new-window", "-a", "-t", "#{session_name}:",
-          "-n", REPO_TUI_WINDOW, "-c", root.to_s, Orn::TUI.relaunch_command
+          "tmux",
+          "new-window",
+          "-a",
+          "-t",
+          "#{session_name}:",
+          "-n",
+          REPO_TUI_WINDOW,
+          "-c",
+          root.to_s,
+          Orn::TUI.relaunch_command
         )
       end
 
@@ -771,8 +828,17 @@ module Orn
         hide_visible
         @mru_state.touch(entry.root)
         @mru_state.save
-        tab = Hub.open_tab(@output, root: entry.root, session: entry.session_name,
-          base_branch: entry.base_branch, branch: branch, hub_pane: hub_pane)
+        tab = Hub.open_tab(
+          @output,
+          root: entry.root,
+
+          session: entry.session_name,
+          base_branch: entry.base_branch,
+
+          branch: branch,
+
+          hub_pane: hub_pane
+        )
         idx = @hub.push_tab(tab)
         @hub.visible_index = idx
         install_bindings_for_visible

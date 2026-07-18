@@ -90,9 +90,15 @@ module Orn
         global_path: global_path,
         global_exists: global_path ? File.exist?(global_path) : false,
         base: sourced_or_default(project&.base, "main"),
-        session: project&.session && Sourced.new(value: project.session, source: :project),
+        session: project&.session && Sourced.new(
+          value: project.session,
+          source: :project
+        ),
         symlinks: sourced_symlinks(project),
-        layout: Sourced.new(value: layout_value, source: layout_source),
+        layout: Sourced.new(
+          value: layout_value,
+          source: layout_source
+        ),
         tui: tui_info(global)
       )
     end
@@ -186,16 +192,32 @@ module Orn
     end
 
     def self.sourced_or_default(value, default)
-      return Sourced.new(value: value, source: :project) if value
+      if value
+        return Sourced.new(
+          value: value,
+          source: :project
+        )
+      end
 
-      Sourced.new(value: default, source: :default)
+      Sourced.new(
+        value: default,
+        source: :default
+      )
     end
 
     def self.sourced_symlinks(project)
       symlinks = project&.symlinks
-      return Sourced.new(value: symlinks, source: :project) if symlinks
+      if symlinks
+        return Sourced.new(
+          value: symlinks,
+          source: :project
+        )
+      end
 
-      Sourced.new(value: SymlinksConfig.empty, source: :default)
+      Sourced.new(
+        value: SymlinksConfig.empty,
+        source: :default
+      )
     end
 
     def self.tui_info(global)
@@ -208,9 +230,17 @@ module Orn
     end
 
     def self.sourced_global(value, default)
-      return Sourced.new(value: value, source: :global) unless value.nil?
+      unless value.nil?
+        return Sourced.new(
+          value: value,
+          source: :global
+        )
+      end
 
-      Sourced.new(value: default, source: :default)
+      Sourced.new(
+        value: default,
+        source: :default
+      )
     end
 
     def self.read_yaml_mapping(path)
@@ -222,8 +252,15 @@ module Orn
       {}
     end
 
-    private_class_method :resolve_layout, :default_layout, :resolve_session,
-      :filter_sbx_ports, :valid_host_range?, :sourced_or_default,
-      :sourced_symlinks, :tui_info, :sourced_global, :read_yaml_mapping
+    private_class_method :resolve_layout,
+      :default_layout,
+      :resolve_session,
+      :filter_sbx_ports,
+      :valid_host_range?,
+      :sourced_or_default,
+      :sourced_symlinks,
+      :tui_info,
+      :sourced_global,
+      :read_yaml_mapping
   end
 end

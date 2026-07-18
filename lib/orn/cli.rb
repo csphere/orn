@@ -64,13 +64,17 @@ module Orn
     # `option` (Thor's method-level option) declares an option scoped to the
     # single command that follows. `required: true` makes `--base` mandatory.
     desc "clone URL", "Clone a remote repository into a new bare-worktree project"
-    option :base, required: true, desc: "Base branch for the project"
+    option :base,
+      required: true,
+      desc: "Base branch for the project"
     def clone(url)
       Orn::Commands::Clone.new(output_mode: Orn::OutputMode.from_options(options)).run(url, options[:base])
     end
 
     desc "init", "Initialize a new bare-worktree project in the current directory"
-    option :base, default: "main", desc: "Base branch for the project"
+    option :base,
+      default: "main",
+      desc: "Base branch for the project"
     def init
       Orn::Commands::Init.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])
     end
@@ -83,21 +87,30 @@ module Orn
 
     desc "switch BRANCH", "Switch to a branch's tmux window, creating the worktree if needed"
     option :base, desc: "Base branch (defaults to config or 'main')"
-    option :sbx, type: :boolean, default: false, desc: "Also create a sandbox with port publishing and services"
+    option :sbx,
+      type: :boolean,
+      default: false,
+      desc: "Also create a sandbox with port publishing and services"
     def switch(branch)
       Orn::Commands::Switch.new(output_mode: Orn::OutputMode.from_options(options))
-        .run(branch, base_override: options[:base], sbx: options[:sbx])
+        .run(branch,
+          base_override: options[:base],
+          sbx: options[:sbx])
     end
 
     # `hide` keeps these deprecated aliases out of help; both warn and delegate
     # to `switch`. `open` takes no base/sandbox options (matching the original).
     desc "new BRANCH", "Deprecated: use `orn switch` instead", hide: true
     option :base, desc: "Base branch (defaults to config or 'main')"
-    option :sbx, type: :boolean, default: false
+    option :sbx,
+      type: :boolean,
+      default: false
     def new(branch)
       warn "warning: `orn new` is deprecated, use `orn switch` instead"
       Orn::Commands::Switch.new(output_mode: Orn::OutputMode.from_options(options))
-        .run(branch, base_override: options[:base], sbx: options[:sbx])
+        .run(branch,
+          base_override: options[:base],
+          sbx: options[:sbx])
     end
 
     desc "open BRANCH", "Deprecated: use `orn switch` instead", hide: true
@@ -112,13 +125,21 @@ module Orn
     end
 
     desc "remove BRANCH [BRANCH ...]", "Remove worktrees and their tmux windows (with --prune, also their branches)"
-    option :prune, type: :boolean, default: false, desc: "Also delete the local and remote branches"
-    option :force, type: :boolean, default: false, desc: "Skip the confirmation prompt when pruning"
+    option :prune,
+      type: :boolean,
+      default: false,
+      desc: "Also delete the local and remote branches"
+    option :force,
+      type: :boolean,
+      default: false,
+      desc: "Skip the confirmation prompt when pruning"
     def remove(*branches)
       raise Orn::Error, "remove requires at least one branch" if branches.empty?
 
       Orn::Commands::Remove.new(output_mode: Orn::OutputMode.from_options(options))
-        .run(branches, prune: options[:prune], force: options[:force])
+        .run(branches,
+          prune: options[:prune],
+          force: options[:force])
     end
 
     # `subcommand` registers a nested Thor class as a command group, so

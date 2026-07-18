@@ -41,10 +41,22 @@ RSpec.describe Orn::Tmux do
       aggregate_failures do
         expect(panes.length).to eq(2)
         expect(panes[0]).to have_attributes(
-          window_name: "main", pane_pid: 12_345, pane_current_command: "claude",
-          pane_id: "%0", pane_title: "Claude Code", session_name: nil
+          window_name: "main",
+
+          pane_pid: 12_345,
+
+          pane_current_command: "claude",
+          pane_id: "%0",
+
+          pane_title: "Claude Code",
+
+          session_name: nil
         )
-        expect(panes[1]).to have_attributes(window_name: "feature", pane_pid: 67_890, pane_current_command: "bash")
+        expect(panes[1]).to have_attributes(
+          window_name: "feature",
+          pane_pid: 67_890,
+          pane_current_command: "bash"
+        )
       end
     end
 
@@ -66,15 +78,26 @@ RSpec.describe Orn::Tmux do
       panes = described_class.parse_pane_lines("sess\tmain\t12345\tclaude\t%0\tTitle\n", with_session: true)
 
       expect(panes.first).to have_attributes(
-        session_name: "sess", window_name: "main", pane_pid: 12_345,
-        pane_title: "Title", pane_current_command: "claude", pane_id: "%0"
+        session_name: "sess",
+
+        window_name: "main",
+
+        pane_pid: 12_345,
+        pane_title: "Title",
+
+        pane_current_command: "claude",
+
+        pane_id: "%0"
       )
     end
 
     it "keeps embedded tabs in the trailing title field" do
       panes = described_class.parse_pane_lines("sess\tmain\t12345\tclaude\t%0\tTitle\twith\ttabs\n", with_session: true)
 
-      expect(panes.first).to have_attributes(pane_title: "Title\twith\ttabs", pane_id: "%0")
+      expect(panes.first).to have_attributes(
+        pane_title: "Title\twith\ttabs",
+        pane_id: "%0"
+      )
     end
 
     it "returns nothing for empty input" do
@@ -95,7 +118,11 @@ RSpec.describe Orn::Tmux do
       borrowed = described_class.parse_borrowed_lines(output)
 
       expect(borrowed).to eq(
-        [described_class::BorrowedPane.new(pane_id: "%3", home_session: "dev", home_window: "issues/270")]
+        [described_class::BorrowedPane.new(
+          pane_id: "%3",
+          home_session: "dev",
+          home_window: "issues/270"
+        )]
       )
     end
 
@@ -201,7 +228,11 @@ RSpec.describe Orn::Tmux do
         described_class.set_pane_option(output_mode, pane, described_class::OPT_HOME_WINDOW, "home-win")
 
         expect(described_class.list_borrowed_panes(output_mode)).to contain_exactly(
-          described_class::BorrowedPane.new(pane_id: pane, home_session: "home-sess", home_window: "home-win")
+          described_class::BorrowedPane.new(
+            pane_id: pane,
+            home_session: "home-sess",
+            home_window: "home-win"
+          )
         )
 
         described_class.unset_pane_option(output_mode, pane, described_class::OPT_HOME_SESSION)

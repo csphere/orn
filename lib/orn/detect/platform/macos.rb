@@ -35,7 +35,10 @@ module Orn
           processes = parse_ps_group(result.stdout)
           return nil if processes.empty?
 
-          Orn::Detect::ForegroundJob.new(process_group_id: tpgid, processes: processes)
+          Orn::Detect::ForegroundJob.new(
+            process_group_id: tpgid,
+            processes: processes
+          )
         end
 
         def self.parse_ps_group(output)
@@ -52,7 +55,11 @@ module Orn
           return nil if pid.nil?
 
           argv = fields[2]&.split(/\s+/)
-          Orn::Detect::ForegroundProcess.new(pid: pid, name: fields[1], argv: argv)
+          Orn::Detect::ForegroundProcess.new(
+            pid: pid,
+            name: fields[1],
+            argv: argv
+          )
         end
 
         def self.run_ps(*args)

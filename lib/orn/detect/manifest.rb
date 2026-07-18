@@ -23,8 +23,16 @@ module Orn
       AgentDetection = Data.define(:state, :visible_idle, :visible_blocker, :visible_working, :skip_state_update) do
         # Fallback when no rule matches or no manifest is available.
         def self.idle
-          new(state: :idle, visible_idle: false, visible_blocker: false, visible_working: false,
-            skip_state_update: false)
+          new(
+            state: :idle,
+
+            visible_idle: false,
+
+            visible_blocker: false,
+
+            visible_working: false,
+            skip_state_update: false
+          )
         end
       end
 
@@ -35,8 +43,15 @@ module Orn
       # One detection rule: its matcher gate over a screen `region`, mapping to
       # a `state`. Among matching rules the highest `priority` wins.
       Rule = Data.define(
-        :id, :state, :priority, :region,
-        :visible_idle, :visible_blocker, :visible_working, :skip_state_update, :gate
+        :id,
+        :state,
+        :priority,
+        :region,
+        :visible_idle,
+        :visible_blocker,
+        :visible_working,
+        :skip_state_update,
+        :gate
       )
 
       # A compiled gate: `contains` needles lowercased, patterns built to Regexp.
@@ -57,7 +72,12 @@ module Orn
         all any not contains regex line_regex
       ].freeze
       GATE_KEYS = %w[all any not contains regex line_regex].freeze
-      STATES = { "idle" => :idle, "working" => :working, "blocked" => :blocked, "unknown" => :unknown }.freeze
+      STATES = {
+        "idle" => :idle,
+        "working" => :working,
+        "blocked" => :blocked,
+        "unknown" => :unknown
+      }.freeze
 
       REGION_NAMES = %w[
         whole_recent prompt_box_body above_prompt_box after_last_horizontal_rule
@@ -166,7 +186,10 @@ module Orn
       end
 
       def self.build_loaded(manifest)
-        Loaded.new(rules: manifest.rules, compiled_gates: compile_manifest(manifest))
+        Loaded.new(
+          rules: manifest.rules,
+          compiled_gates: compile_manifest(manifest)
+        )
       end
 
       def self.manifest_matches_agent?(manifest, agent)
@@ -187,7 +210,9 @@ module Orn
         raise InvalidManifest, "manifest rules must be a list" unless rules_raw.is_a?(Array)
 
         manifest = ParsedManifest.new(
-          id: id, aliases: string_list(raw["aliases"], "aliases"), rules: rules_raw.map { |rule| parse_rule(rule) }
+          id: id,
+          aliases: string_list(raw["aliases"], "aliases"),
+          rules: rules_raw.map { |rule| parse_rule(rule) }
         )
         validate_manifest(manifest)
         manifest
@@ -204,8 +229,16 @@ module Orn
         raise InvalidManifest, "rule region must be a string" unless region.is_a?(String)
 
         Rule.new(
-          id: id, state: parse_state(raw["state"]), priority: parse_int(raw["priority"], 0, "priority"),
-          region: region, gate: gate_from(raw), **rule_flags(raw)
+          id: id,
+
+          state: parse_state(raw["state"]),
+
+          priority: parse_int(raw["priority"], 0, "priority"),
+          region: region,
+
+          gate: gate_from(raw),
+
+          **rule_flags(raw)
         )
       end
 
@@ -229,8 +262,14 @@ module Orn
       # already validated by the caller).
       def self.gate_from(raw)
         Gate.new(
-          all: gate_list(raw["all"]), any: gate_list(raw["any"]), not_gate: gate_list(raw["not"]),
-          contains: string_list(raw["contains"], "contains"), regex: string_list(raw["regex"], "regex"),
+          all: gate_list(raw["all"]),
+
+          any: gate_list(raw["any"]),
+
+          not_gate: gate_list(raw["not"]),
+          contains: string_list(raw["contains"], "contains"),
+
+          regex: string_list(raw["regex"], "regex"),
           line_regex: string_list(raw["line_regex"], "line_regex")
         )
       end
@@ -284,7 +323,10 @@ module Orn
           raise InvalidManifest, "manifest contains #{manifest.rules.length} rules, max is #{MAX_RULES_PER_MANIFEST}"
         end
 
-        complexity = { gates: 0, matchers: 0 }
+        complexity = {
+          gates: 0,
+          matchers: 0
+        }
         manifest.rules.each { |rule| validate_rule(rule, complexity) }
       end
 
@@ -630,17 +672,54 @@ module Orn
         parts.map { |line| line.end_with?("\r") ? line[0...-1] : line }
       end
 
-      private_class_method :evaluate, :detection_for, :load_manifest, :cache, :load_uncached,
-        :load_override, :load_bundled, :build_loaded, :manifest_matches_agent?,
-        :parse_rule, :rule_flags, :parse_gate, :gate_from, :gate_list, :string_list, :parse_int, :parse_bool,
-        :parse_state, :reject_unknown_keys, :validate_manifest, :validate_rule,
-        :validate_skip_state_update, :validate_region_name, :validate_gate, :validate_not_gate,
-        :check_gate_budget, :validate_matcher_limits, :positive_matcher?, :any_matcher?,
-        :gate_matches?, :leaf_matches?, :nested_matches?, :line_regex_matches?, :any_gate_matches?,
-        :region_with_lines, :box_region, :marker_region, :parameterized_region,
-        :bottom_lines, :bottom_non_empty_lines, :prompt_box_body, :above_prompt_box,
-        :after_last_horizontal_rule, :prompt_box_top_border_index, :after_last_prompt_marker,
-        :before_last_prompt_marker, :slice_from_line_index, :line_start_offset
+      private_class_method :evaluate,
+        :detection_for,
+        :load_manifest,
+        :cache,
+        :load_uncached,
+        :load_override,
+        :load_bundled,
+        :build_loaded,
+        :manifest_matches_agent?,
+        :parse_rule,
+        :rule_flags,
+        :parse_gate,
+        :gate_from,
+        :gate_list,
+        :string_list,
+        :parse_int,
+        :parse_bool,
+        :parse_state,
+        :reject_unknown_keys,
+        :validate_manifest,
+        :validate_rule,
+        :validate_skip_state_update,
+        :validate_region_name,
+        :validate_gate,
+        :validate_not_gate,
+        :check_gate_budget,
+        :validate_matcher_limits,
+        :positive_matcher?,
+        :any_matcher?,
+        :gate_matches?,
+        :leaf_matches?,
+        :nested_matches?,
+        :line_regex_matches?,
+        :any_gate_matches?,
+        :region_with_lines,
+        :box_region,
+        :marker_region,
+        :parameterized_region,
+        :bottom_lines,
+        :bottom_non_empty_lines,
+        :prompt_box_body,
+        :above_prompt_box,
+        :after_last_horizontal_rule,
+        :prompt_box_top_border_index,
+        :after_last_prompt_marker,
+        :before_last_prompt_marker,
+        :slice_from_line_index,
+        :line_start_offset
     end
   end
 end

@@ -2,6 +2,9 @@ plugins:
   - rubocop-rake
   - rubocop-rspec
 
+require:
+  - ./.rubocop/cop/orn/multi_pair_hash_line_breaks.rb
+
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
@@ -67,6 +70,26 @@ Layout/ClassStructure:
     - protected_methods
     - private_methods
 
+# Hashes with more than one key/value pair break one pair per line, whether
+# braced literals or braceless keyword arguments. The custom cop inserts the
+# line breaks; the Layout cops below then put the first element after the
+# opening delimiter on its own line and keep every element on its own line
+# once a hash or call spans multiple lines.
+Orn/MultiPairHashLineBreaks:
+  Enabled: true
+
+Layout/FirstHashElementLineBreak:
+  Enabled: true
+
+Layout/MultilineHashKeyLineBreaks:
+  Enabled: true
+
+Layout/FirstMethodArgumentLineBreak:
+  Enabled: true
+
+Layout/MultilineMethodArgumentLineBreaks:
+  Enabled: true
+
 # Class-level documentation is not mandatory; we comment where the intent
 # is not obvious from the code.
 Style/Documentation:
@@ -78,8 +101,13 @@ Metrics/BlockLength:
     - "spec/**/*"
     - "*.gemspec"
 
+# Multiline hashes and calls are one statement; the one-pair-per-line hash
+# style makes them tall, so length cops count them as one line.
 Metrics/MethodLength:
   Max: 20
+  CountAsOne:
+    - hash
+    - method_call
   Exclude:
     - "spec/**/*"
 
@@ -106,6 +134,9 @@ Metrics/ClassLength:
 # bundled data are likewise a single large module.
 Metrics/ModuleLength:
   Max: 150
+  CountAsOne:
+    - hash
+    - method_call
   Exclude:
     - "lib/orn/sandbox.rb"
     - "lib/orn/detect/manifest.rb"
@@ -144,6 +175,7 @@ RSpec/ExampleLength:
     - heredoc
     - array
     - hash
+    - method_call
 
 # Prefer explicitly named splat arguments (*args) over anonymous forwarding.
 Style/ArgumentsForwarding:

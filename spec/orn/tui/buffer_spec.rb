@@ -3,7 +3,14 @@
 module Orn
   module TUI
     RSpec.describe Buffer do
-      let(:area) { Rect.new(x: 0, y: 0, width: 10, height: 3) }
+      let(:area) do
+        Rect.new(
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 3
+        )
+      end
       let(:buffer) { described_class.new(area) }
 
       it "writes a styled line into cells starting at the given position" do

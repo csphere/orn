@@ -4,7 +4,15 @@ RSpec.describe Orn::Commands::Convert do
   subject(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
 
   def git!(dir, *args)
-    system(GitHelpers::GIT_ISOLATION_ENV, "git", "-C", dir, *args, out: File::NULL, err: File::NULL)
+    system(
+      GitHelpers::GIT_ISOLATION_ENV,
+      "git",
+      "-C",
+      dir,
+      *args,
+      out: File::NULL,
+      err: File::NULL
+    )
   end
 
   describe "#check_guards" do

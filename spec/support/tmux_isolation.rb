@@ -6,7 +6,12 @@ require "tmpdir"
 module TmuxSpecSupport
   # Whether a tmux binary is on PATH; specs gate their integration examples on
   # this so the suite still passes on a host without tmux.
-  AVAILABLE = system("tmux", "-V", out: File::NULL, err: File::NULL)
+  AVAILABLE = system(
+    "tmux",
+    "-V",
+    out: File::NULL,
+    err: File::NULL
+  )
 end
 
 # Runs each example against a throwaway private tmux server. Unsetting TMUX
@@ -23,7 +28,14 @@ RSpec.shared_context "with an isolated tmux server" do
       ENV["TMUX_TMPDIR"] = socket_dir
       example.run
     ensure
-      system("tmux", "kill-server", out: File::NULL, err: File::NULL) if ENV["TMUX_TMPDIR"] == socket_dir
+      if ENV["TMUX_TMPDIR"] == socket_dir
+        system(
+          "tmux",
+          "kill-server",
+          out: File::NULL,
+          err: File::NULL
+        )
+      end
       ENV["TMUX"] = original_tmux
       ENV["TMUX_TMPDIR"] = original_tmpdir
     end

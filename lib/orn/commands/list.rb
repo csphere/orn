@@ -7,13 +7,19 @@ module Orn
     class List
       Entry = Data.define(:branch, :has_window) do
         def to_json_hash
-          { "branch" => branch, "has_window" => has_window }
+          {
+            "branch" => branch,
+            "has_window" => has_window
+          }
         end
       end
 
       Result = Data.define(:repo, :worktrees) do
         def to_json_hash
-          { "repo" => repo, "worktrees" => worktrees.map(&:to_json_hash) }
+          {
+            "repo" => repo,
+            "worktrees" => worktrees.map(&:to_json_hash)
+          }
         end
       end
 
@@ -24,10 +30,21 @@ module Orn
       # The resolved result: worktree branches joined with the tmux window list
       # for the project session.
       def run_inner(project)
-        worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
+        worktree = Orn::Git::Worktree.new(
+          root: project.root,
+          output_mode: @output_mode
+        )
         windows = Orn::Tmux.list_windows(@output_mode, Orn::Session.session_name(project))
-        entries = worktree.entries.map { |branch| Entry.new(branch: branch, has_window: windows.include?(branch)) }
-        Result.new(repo: File.basename(project.root), worktrees: entries)
+        entries = worktree.entries.map do |branch|
+          Entry.new(
+            branch: branch,
+            has_window: windows.include?(branch)
+          )
+        end
+        Result.new(
+          repo: File.basename(project.root),
+          worktrees: entries
+        )
       end
 
       def run

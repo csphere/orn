@@ -17,7 +17,10 @@ module Orn
       # config.
       def self.discover
         root = discover_root
-        new(root: root, config: Orn::Config.load(root))
+        new(
+          root: root,
+          config: Orn::Config.load(root)
+        )
       end
 
       # Resolves the project root from the current directory, requiring a

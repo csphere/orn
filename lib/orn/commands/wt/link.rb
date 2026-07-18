@@ -8,7 +8,11 @@ module Orn
       class Link
         Result = Data.define(:worktree_path, :created, :skipped) do
           def to_json_hash
-            { "worktree_path" => worktree_path, "created" => created, "skipped" => skipped }
+            {
+              "worktree_path" => worktree_path,
+              "created" => created,
+              "skipped" => skipped
+            }
           end
         end
 
@@ -29,7 +33,11 @@ module Orn
           created, skipped = Orn::Symlink.create_symlinks(
             project.root, wt_path, project.config.base, project.config.symlinks
           )
-          Result.new(worktree_path: wt_path, created: created, skipped: skipped)
+          Result.new(
+            worktree_path: wt_path,
+            created: created,
+            skipped: skipped
+          )
         end
 
         private

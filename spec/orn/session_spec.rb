@@ -2,7 +2,10 @@
 
 RSpec.describe Orn::Session do
   def project_at(root)
-    Orn::Git::Project.new(root: root, config: Orn::Config.load_from("/nonexistent", nil))
+    Orn::Git::Project.new(
+      root: root,
+      config: Orn::Config.load_from("/nonexistent", nil)
+    )
   end
 
   describe ".session_name" do

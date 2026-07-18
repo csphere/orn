@@ -93,7 +93,11 @@ module Orn
         pane_id, home_session, home_window = fields
         next if home_session.empty? || home_window.empty?
 
-        BorrowedPane.new(pane_id: pane_id, home_session: home_session, home_window: home_window)
+        BorrowedPane.new(
+          pane_id: pane_id,
+          home_session: home_session,
+          home_window: home_window
+        )
       end
     end
 

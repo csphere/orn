@@ -5,7 +5,10 @@ RSpec.describe Orn::Commands::Wt::List do
     remote = make_remote_with_branch(branch)
     project = make_bare_project
     add_origin(project, remote)
-    worktree = Orn::Git::Worktree.new(root: project, output_mode: Orn::OutputMode.quiet)
+    worktree = Orn::Git::Worktree.new(
+      root: project,
+      output_mode: Orn::OutputMode.quiet
+    )
     worktree.fetch("origin", branch)
     worktree.add(File.join(project, branch), branch, "origin/#{branch}")
     project

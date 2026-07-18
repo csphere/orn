@@ -9,7 +9,10 @@ RSpec.describe Orn::Commands::Wt::Remove do
 
   def add_worktree(project, branch, remote)
     add_origin(project.root, remote)
-    worktree = Orn::Git::Worktree.new(root: project.root, output_mode: Orn::OutputMode.quiet)
+    worktree = Orn::Git::Worktree.new(
+      root: project.root,
+      output_mode: Orn::OutputMode.quiet
+    )
     worktree.fetch("origin", branch)
     worktree.add(project.worktree_path(branch), branch, "origin/#{branch}")
     worktree
@@ -54,7 +57,10 @@ RSpec.describe Orn::Commands::Wt::Remove do
       remote = make_remote_with_branch("feature/multi-a")
       add_origin(project.root, remote)
       push_branch(remote, "feature/multi-b")
-      worktree = Orn::Git::Worktree.new(root: project.root, output_mode: Orn::OutputMode.quiet)
+      worktree = Orn::Git::Worktree.new(
+        root: project.root,
+        output_mode: Orn::OutputMode.quiet
+      )
       %w[feature/multi-a feature/multi-b].each do |branch|
         worktree.fetch("origin", branch)
         worktree.add(project.worktree_path(branch), branch, "origin/#{branch}")

@@ -25,7 +25,10 @@ module Orn
     # any discovery failure (so completion never errors at the prompt).
     def self.branch_candidates
       project = Orn::Git::Project.discover
-      Orn::Git::Worktree.new(root: project.root, output_mode: Orn::OutputMode.quiet).entries
+      Orn::Git::Worktree.new(
+        root: project.root,
+        output_mode: Orn::OutputMode.quiet
+      ).entries
     rescue Orn::Error
       []
     end

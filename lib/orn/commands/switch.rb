@@ -12,12 +12,22 @@ module Orn
       Result = Data.define(:branch, :action, :base, :worktree_path, :sandbox_name, :host_ports) do
         # A minimal result with all optional fields empty.
         def self.simple(branch, action)
-          new(branch: branch, action: action, base: nil, worktree_path: nil, sandbox_name: nil, host_ports: [])
+          new(
+            branch: branch,
+            action: action,
+            base: nil,
+            worktree_path: nil,
+            sandbox_name: nil,
+            host_ports: []
+          )
         end
 
         # JSON shape: omit nil / empty optionals.
         def to_json_hash
-          hash = { "branch" => branch, "action" => action.to_s }
+          hash = {
+            "branch" => branch,
+            "action" => action.to_s
+          }
           hash["base"] = base if base
           hash["worktree_path"] = worktree_path if worktree_path
           hash["sandbox_name"] = sandbox_name if sandbox_name
@@ -49,7 +59,10 @@ module Orn
 
         # Case 3: branch exists on the remote, fetch and create.
         @output_mode.status("Checking remote for #{branch}...")
-        worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
+        worktree = Orn::Git::Worktree.new(
+          root: project.root,
+          output_mode: @output_mode
+        )
         if worktree.remote_branch_exists?("origin", branch)
           Wt::New.create(@output_mode, project, branch, nil)
           Orn::Tmux.open_window(@output_mode, project, branch)
@@ -94,8 +107,16 @@ module Orn
         wt_result = Wt::New.create(@output_mode, project, branch, base_override)
         Orn::Tmux.open_window(@output_mode, project, branch)
         Result.new(
-          branch: wt_result.branch, action: :created, base: wt_result.base,
-          worktree_path: wt_result.worktree_path, sandbox_name: nil, host_ports: []
+          branch: wt_result.branch,
+
+          action: :created,
+
+          base: wt_result.base,
+          worktree_path: wt_result.worktree_path,
+
+          sandbox_name: nil,
+
+          host_ports: []
         )
       end
 

@@ -59,7 +59,10 @@ module Orn
       # Renders the project config: version and base branch as data (YAML-safe
       # for any base), followed by the commented option examples.
       def self.serialize_config(base)
-        header = dump_header("orn_version" => Orn::VERSION, "git" => { "base" => base })
+        header = dump_header(
+          "orn_version" => Orn::VERSION,
+          "git" => { "base" => base }
+        )
         "#{header}\n#{Orn::Template.new("config.yaml").read}"
       end
 

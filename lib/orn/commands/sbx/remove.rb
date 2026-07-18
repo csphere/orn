@@ -9,7 +9,11 @@ module Orn
       class Remove
         Result = Data.define(:name, :branch, :removed) do
           def to_json_hash
-            { "name" => name, "branch" => branch, "removed" => removed }
+            {
+              "name" => name,
+              "branch" => branch,
+              "removed" => removed
+            }
           end
         end
 
@@ -26,7 +30,11 @@ module Orn
 
           Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), name)
 
-          Result.new(name: name, branch: branch, removed: removed)
+          Result.new(
+            name: name,
+            branch: branch,
+            removed: removed
+          )
         end
 
         def run(branch)

@@ -8,11 +8,17 @@ RSpec.describe Orn::Symlink do
   end
 
   def symlinks(base: [], root: [])
-    Orn::Config::SymlinksConfig.new(base: base, root: root)
+    Orn::Config::SymlinksConfig.new(
+      base: base,
+      root: root
+    )
   end
 
   def root_symlink(source:, dest: nil)
-    Orn::Config::RootSymlink.new(source: source, dest: dest)
+    Orn::Config::RootSymlink.new(
+      source: source,
+      dest: dest
+    )
   end
 
   describe ".validate_entry!" do
@@ -58,7 +64,12 @@ RSpec.describe Orn::Symlink do
       it "rejects a root dest that traverses" do
         root = temp_dir("root")
         FileUtils.mkdir_p(File.join(root, "legit"))
-        config = symlinks(root: [root_symlink(source: "legit", dest: "../../.bashrc")])
+        config = symlinks(
+          root: [root_symlink(
+            source: "legit",
+            dest: "../../.bashrc"
+          )]
+        )
 
         expect { described_class.create_symlinks(root, temp_dir("wt"), "develop", config) }
           .to raise_error(Orn::Error, /traversal/)
@@ -82,8 +93,12 @@ RSpec.describe Orn::Symlink do
         FileUtils.mkdir_p(File.join(base_wt, ".claude"))
         File.write(File.join(base_wt, ".claude/settings.local.json"), "{}")
 
-        created, skipped = described_class.create_symlinks(root, wt, "develop",
-          symlinks(base: [".claude/settings.local.json"]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(base: [".claude/settings.local.json"])
+        )
 
         expect(created).to eq([".claude/settings.local.json"])
         expect(skipped).to be_empty
@@ -108,8 +123,12 @@ RSpec.describe Orn::Symlink do
         root = temp_dir("root")
         FileUtils.mkdir_p(File.join(root, "develop"))
 
-        created, skipped = described_class.create_symlinks(root, temp_dir("wt"), "develop",
-          symlinks(base: ["nonexistent"]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          temp_dir("wt"),
+          "develop",
+          symlinks(base: ["nonexistent"])
+        )
 
         expect(created).to be_empty
         expect(skipped).to eq(["nonexistent"])
@@ -175,8 +194,12 @@ RSpec.describe Orn::Symlink do
         wt = temp_dir("wt")
         FileUtils.mkdir_p(File.join(root, "_shared/docs"))
 
-        created, = described_class.create_symlinks(root, wt, "develop",
-          symlinks(root: [root_symlink(source: "_shared/docs")]))
+        created, = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(root: [root_symlink(source: "_shared/docs")])
+        )
 
         expect(created).to eq(["docs"])
         expect(File.symlink?(File.join(wt, "docs"))).to be(true)
@@ -188,8 +211,17 @@ RSpec.describe Orn::Symlink do
         FileUtils.mkdir_p(File.join(root, "_shared/docs"))
         File.write(File.join(root, "_shared/docs/readme.md"), "docs")
 
-        created, = described_class.create_symlinks(root, wt, "develop",
-          symlinks(root: [root_symlink(source: "_shared/docs", dest: "shared_docs")]))
+        created, = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(
+            root: [root_symlink(
+              source: "_shared/docs",
+              dest: "shared_docs"
+            )]
+          )
+        )
 
         expect(created).to eq(["shared_docs"])
         expect(File.read(File.join(wt, "shared_docs/readme.md"))).to eq("docs")
@@ -205,8 +237,15 @@ RSpec.describe Orn::Symlink do
         File.write(File.join(base_wt, ".env"), "secret")
         FileUtils.mkdir_p(File.join(root, "_"))
 
-        created, skipped = described_class.create_symlinks(root, wt, "develop",
-          symlinks(base: [".env"], root: [root_symlink(source: "_")]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(
+            base: [".env"],
+            root: [root_symlink(source: "_")]
+          )
+        )
 
         expect(created).to eq([".env", "_"])
         expect(skipped).to be_empty
@@ -229,10 +268,21 @@ RSpec.describe Orn::Symlink do
     it "lists destinations whose source exists and destination is free" do
       root = temp_dir("root")
       FileUtils.mkdir_p(File.join(root, "_shared"))
-      config = symlinks(root: [root_symlink(source: "_shared", dest: "shared_docs")])
+      config = symlinks(
+        root: [root_symlink(
+          source: "_shared",
+          dest: "shared_docs"
+        )]
+      )
 
-      expect(described_class.collect_symlink_destinations(root, temp_dir("wt"), "develop",
-        config)).to eq(["shared_docs"])
+      expect(
+        described_class.collect_symlink_destinations(
+          root,
+          temp_dir("wt"),
+          "develop",
+          config
+        )
+      ).to eq(["shared_docs"])
     end
 
     it "skips a missing source and an occupied destination" do
@@ -278,7 +328,12 @@ RSpec.describe Orn::Symlink do
       wt = temp_dir("wt")
       init_git_repo(wt)
       FileUtils.mkdir_p(File.join(root, "_shared"))
-      config = symlinks(root: [root_symlink(source: "_shared", dest: "shared_docs")])
+      config = symlinks(
+        root: [root_symlink(
+          source: "_shared",
+          dest: "shared_docs"
+        )]
+      )
 
       described_class.apply(mode, root, wt, "main", config) do |unignored|
         described_class.add_to_gitignore_and_stage(mode, wt, unignored)

@@ -26,7 +26,11 @@ module Orn
       def app_with(entries)
         described_class.new(
           output_mode: Orn::OutputMode.quiet,
-          config: Orn::Config::GlobalTuiConfig.new(session: "orn", scan_roots: [], scan_depth: 3),
+          config: Orn::Config::GlobalTuiConfig.new(
+            session: "orn",
+            scan_roots: [],
+            scan_depth: 3
+          ),
           entries: entries
         )
       end
@@ -57,9 +61,11 @@ module Orn
         it "shows worktrees of expanded repos" do
           app = app_with([entry_with_worktrees("a", %w[main feat], true), entry("b")])
 
-          expect(app.visible_rows).to eq([
-            TreeRow.repo(0), TreeRow.worktree(0, 0), TreeRow.worktree(0, 1), TreeRow.repo(1)
-          ])
+          expect(app.visible_rows).to eq(
+            [
+              TreeRow.repo(0), TreeRow.worktree(0, 0), TreeRow.worktree(0, 1), TreeRow.repo(1)
+            ]
+          )
         end
       end
 
@@ -270,7 +276,11 @@ module Orn
         end
 
         def config_for(root)
-          Orn::Config::GlobalTuiConfig.new(session: "orn", scan_roots: [root], scan_depth: 3)
+          Orn::Config::GlobalTuiConfig.new(
+            session: "orn",
+            scan_roots: [root],
+            scan_depth: 3
+          )
         end
 
         it "finds bare projects and names them relative to the scan root" do |example|
@@ -332,10 +342,26 @@ module Orn
       describe ".disambiguate_names" do
         it "prefixes colliding names with the scan-root basename" do
           repos = [
-            RepoEntry.new(display_name: "orn", root: "/home/user/dev/orn", healthy: true,
-              session_name: "orn", base_branch: "main"),
-            RepoEntry.new(display_name: "orn", root: "/home/user/work/orn", healthy: true,
-              session_name: "orn", base_branch: "main")
+            RepoEntry.new(
+              display_name: "orn",
+
+              root: "/home/user/dev/orn",
+
+              healthy: true,
+              session_name: "orn",
+
+              base_branch: "main"
+            ),
+            RepoEntry.new(
+              display_name: "orn",
+
+              root: "/home/user/work/orn",
+
+              healthy: true,
+              session_name: "orn",
+
+              base_branch: "main"
+            )
           ]
 
           described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
@@ -348,10 +374,26 @@ module Orn
 
         it "leaves unique names untouched" do
           repos = [
-            RepoEntry.new(display_name: "alpha", root: "/home/user/dev/alpha", healthy: true,
-              session_name: "alpha", base_branch: "main"),
-            RepoEntry.new(display_name: "beta", root: "/home/user/work/beta", healthy: true,
-              session_name: "beta", base_branch: "main")
+            RepoEntry.new(
+              display_name: "alpha",
+
+              root: "/home/user/dev/alpha",
+
+              healthy: true,
+              session_name: "alpha",
+
+              base_branch: "main"
+            ),
+            RepoEntry.new(
+              display_name: "beta",
+
+              root: "/home/user/work/beta",
+
+              healthy: true,
+              session_name: "beta",
+
+              base_branch: "main"
+            )
           ]
 
           described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
@@ -426,7 +468,10 @@ module Orn
       describe ".aggregate_state" do
         def states(*pairs)
           pairs.each_with_index.to_h do |(agent, state), i|
-            ["win#{i}", Orn::Detect::PaneAgentState.new(agent: agent, state: state)]
+            ["win#{i}", Orn::Detect::PaneAgentState.new(
+              agent: agent,
+              state: state
+            )]
           end
         end
 

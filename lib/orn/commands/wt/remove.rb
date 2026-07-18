@@ -55,7 +55,10 @@ module Orn
           reject_base_prune!(project, branch, prune)
           reject_inside_worktree!(project, branch)
 
-          worktree = Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode)
+          worktree = Orn::Git::Worktree.new(
+            root: project.root,
+            output_mode: @output_mode
+          )
           worktree_removed = remove_worktree(worktree, project.worktree_path(branch))
           branch_deleted = prune ? worktree.delete_branch(branch) : false
           remote_branch_deleted = prune ? worktree.delete_remote_branch(branch) : false

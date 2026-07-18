@@ -100,8 +100,14 @@ RSpec.describe Orn::Commands::Config::Show do
       info = Orn::Config.info_from(project_with("git:\n  base: develop\n"), nil)
 
       parsed = JSON.parse(command.json(info))
-      expect(parsed["base"]).to eq("value" => "develop", "source" => "project")
-      expect(parsed["tui"]["scan_depth"]).to eq("value" => 3, "source" => "default")
+      expect(parsed["base"]).to eq(
+        "value" => "develop",
+        "source" => "project"
+      )
+      expect(parsed["tui"]["scan_depth"]).to eq(
+        "value" => 3,
+        "source" => "default"
+      )
     end
   end
 end

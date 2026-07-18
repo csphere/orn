@@ -46,7 +46,11 @@ module Orn
 
     def capture(command)
       stdout, stderr, process_status = Open3.capture3(*command)
-      Result.new(stdout:, stderr:, status: process_status.exitstatus || 1)
+      Result.new(
+        stdout:,
+        stderr:,
+        status: process_status.exitstatus || 1
+      )
     rescue Errno::ENOENT
       raise Orn::Error, "Failed to run #{command.first}: command not found"
     end

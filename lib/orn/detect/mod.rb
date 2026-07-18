@@ -189,16 +189,41 @@ module Orn
     # definitive.
     def self.detect_pane(output_mode, pane, sbx_agent_type)
       agent = resolve_agent(pane, sbx_agent_type)
-      return PaneAgentState.new(agent: nil, state: :unknown) if agent.nil?
+      if agent.nil?
+        return PaneAgentState.new(
+          agent: nil,
+          state: :unknown
+        )
+      end
 
-      osc_result = Manifest.detect(agent,
-        Manifest::DetectionInput.new(screen: "", osc_title: pane.pane_title, osc_progress: ""))
-      return PaneAgentState.new(agent: agent, state: osc_result.state) if osc_definitive?(osc_result)
+      osc_result = Manifest.detect(
+        agent,
+        Manifest::DetectionInput.new(
+          screen: "",
+          osc_title: pane.pane_title,
+          osc_progress: ""
+        )
+      )
+      if osc_definitive?(osc_result)
+        return PaneAgentState.new(
+          agent: agent,
+          state: osc_result.state
+        )
+      end
 
       screen = Orn::Tmux.capture_pane(output_mode, pane.pane_id) || ""
-      full = Manifest.detect(agent,
-        Manifest::DetectionInput.new(screen: screen, osc_title: pane.pane_title, osc_progress: ""))
-      PaneAgentState.new(agent: agent, state: full.state)
+      full = Manifest.detect(
+        agent,
+        Manifest::DetectionInput.new(
+          screen: screen,
+          osc_title: pane.pane_title,
+          osc_progress: ""
+        )
+      )
+      PaneAgentState.new(
+        agent: agent,
+        state: full.state
+      )
     end
 
     # Detect agent state per window, keyed by window name. The first pane with
@@ -214,8 +239,15 @@ module Orn
       results
     end
 
-    private_class_method :normalize_process_name, :agent_from_name, :generic_runtime?,
-      :container_runtime?, :identify_wrapped_agent, :match_leader, :match_other_process,
-      :match_wrapped_process, :resolve_agent, :osc_definitive?
+    private_class_method :normalize_process_name,
+      :agent_from_name,
+      :generic_runtime?,
+      :container_runtime?,
+      :identify_wrapped_agent,
+      :match_leader,
+      :match_other_process,
+      :match_wrapped_process,
+      :resolve_agent,
+      :osc_definitive?
   end
 end

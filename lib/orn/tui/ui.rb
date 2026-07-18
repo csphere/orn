@@ -30,21 +30,25 @@ module Orn
       # Title (2), worktree list (fills), optional error row, optional modal
       # row, help footer (2). Absent rows collapse to zero height.
       def split_chunks(area, has_error, has_modal)
-        Layout.vertical([
-          Constraint.length(2),
-          Constraint.min(1),
-          Constraint.length(has_error ? 1 : 0),
-          Constraint.length(has_modal ? 1 : 0),
-          Constraint.length(2)
-        ]).split(area)
+        Layout.vertical(
+          [
+            Constraint.length(2),
+            Constraint.min(1),
+            Constraint.length(has_error ? 1 : 0),
+            Constraint.length(has_modal ? 1 : 0),
+            Constraint.length(2)
+          ]
+        ).split(area)
       end
 
       def title_line(app)
-        Line.from([
-          Span.styled(" orn", Style.default.bold),
-          Span.raw(" - "),
-          Span.raw(app.repo_name)
-        ])
+        Line.from(
+          [
+            Span.styled(" orn", Style.default.bold),
+            Span.raw(" - "),
+            Span.raw(app.repo_name)
+          ]
+        )
       end
 
       def entry_lines(app)
@@ -85,11 +89,13 @@ module Orn
 
       def modal_line(mode)
         if mode.new_branch?
-          Line.from([
-            Span.styled(" Branch: ", Style.default.fg(Color::CYAN)),
-            Span.raw(mode.input),
-            Span.styled("_", Style.default.fg(Color::DARK_GRAY))
-          ])
+          Line.from(
+            [
+              Span.styled(" Branch: ", Style.default.fg(Color::CYAN)),
+              Span.raw(mode.input),
+              Span.styled("_", Style.default.fg(Color::DARK_GRAY))
+            ]
+          )
         else
           Line.styled(" Remove #{mode.branch}? y/n", Style.default.fg(Color::YELLOW))
         end

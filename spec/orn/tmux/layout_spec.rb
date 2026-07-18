@@ -6,19 +6,33 @@ RSpec.describe Orn::Tmux::Layout do
   end
 
   def row_panes(*panes)
-    Orn::Config::Row.new(panes: panes, columns: [])
+    Orn::Config::Row.new(
+      panes: panes,
+      columns: []
+    )
   end
 
   def row_cols(*columns)
-    Orn::Config::Row.new(panes: [], columns: columns)
+    Orn::Config::Row.new(
+      panes: [],
+      columns: columns
+    )
   end
 
   def split(direction, target, percentage, result)
-    described_class::Split.new(direction: direction, target: target, percentage: percentage, result: result)
+    described_class::Split.new(
+      direction: direction,
+      target: target,
+      percentage: percentage,
+      result: result
+    )
   end
 
   def pane_command(pane, command)
-    described_class::PaneCommand.new(pane: pane, command: command)
+    described_class::PaneCommand.new(
+      pane: pane,
+      command: command
+    )
   end
 
   describe ".split_percentage" do
@@ -46,10 +60,12 @@ RSpec.describe Orn::Tmux::Layout do
     it "stacks three panes vertically in one column", :aggregate_failures do
       plan = described_class.plan_columns([col("a", "b", "c")])
 
-      expect(plan.splits).to eq([
-        split(:vertical, 0, 67, 1),
-        split(:vertical, 1, 50, 2)
-      ])
+      expect(plan.splits).to eq(
+        [
+          split(:vertical, 0, 67, 1),
+          split(:vertical, 1, 50, 2)
+        ]
+      )
       expect(plan.commands).to eq([pane_command(0, "a"), pane_command(1, "b"), pane_command(2, "c")])
       expect(plan.focus_pane).to eq(0)
     end
@@ -57,27 +73,33 @@ RSpec.describe Orn::Tmux::Layout do
     it "splits two columns of two panes each", :aggregate_failures do
       plan = described_class.plan_columns([col("a", "b"), col("c", "d")])
 
-      expect(plan.splits).to eq([
-        split(:horizontal, 0, 50, 1),
-        split(:vertical, 0, 50, 2),
-        split(:vertical, 1, 50, 3)
-      ])
-      expect(plan.commands).to eq([
-        pane_command(0, "a"), pane_command(2, "b"),
-        pane_command(1, "c"), pane_command(3, "d")
-      ])
+      expect(plan.splits).to eq(
+        [
+          split(:horizontal, 0, 50, 1),
+          split(:vertical, 0, 50, 2),
+          split(:vertical, 1, 50, 3)
+        ]
+      )
+      expect(plan.commands).to eq(
+        [
+          pane_command(0, "a"), pane_command(2, "b"),
+          pane_command(1, "c"), pane_command(3, "d")
+        ]
+      )
     end
 
     it "handles three columns with varying pane counts", :aggregate_failures do
       plan = described_class.plan_columns([col("a"), col("b", "c"), col("d", "e", "f")])
 
-      expect(plan.splits).to eq([
-        split(:horizontal, 0, 67, 1),
-        split(:horizontal, 1, 50, 2),
-        split(:vertical, 1, 50, 3),
-        split(:vertical, 2, 67, 4),
-        split(:vertical, 4, 50, 5)
-      ])
+      expect(plan.splits).to eq(
+        [
+          split(:horizontal, 0, 67, 1),
+          split(:horizontal, 1, 50, 2),
+          split(:vertical, 1, 50, 3),
+          split(:vertical, 2, 67, 4),
+          split(:vertical, 4, 50, 5)
+        ]
+      )
       expect(plan.commands.map(&:pane)).to eq([0, 1, 3, 2, 4, 5])
     end
 
@@ -111,36 +133,46 @@ RSpec.describe Orn::Tmux::Layout do
     end
 
     it "splits a row with nested columns", :aggregate_failures do
-      plan = described_class.plan_rows([
-        row_panes("main-command"),
-        row_cols(col("cmd1", "cmd2"), col("cmd3", "cmd4"))
-      ])
+      plan = described_class.plan_rows(
+        [
+          row_panes("main-command"),
+          row_cols(col("cmd1", "cmd2"), col("cmd3", "cmd4"))
+        ]
+      )
 
-      expect(plan.splits).to eq([
-        split(:vertical, 0, 50, 1),
-        split(:horizontal, 1, 50, 2),
-        split(:vertical, 1, 50, 3),
-        split(:vertical, 2, 50, 4)
-      ])
-      expect(plan.commands).to eq([
-        pane_command(0, "main-command"),
-        pane_command(1, "cmd1"), pane_command(3, "cmd2"),
-        pane_command(2, "cmd3"), pane_command(4, "cmd4")
-      ])
+      expect(plan.splits).to eq(
+        [
+          split(:vertical, 0, 50, 1),
+          split(:horizontal, 1, 50, 2),
+          split(:vertical, 1, 50, 3),
+          split(:vertical, 2, 50, 4)
+        ]
+      )
+      expect(plan.commands).to eq(
+        [
+          pane_command(0, "main-command"),
+          pane_command(1, "cmd1"), pane_command(3, "cmd2"),
+          pane_command(2, "cmd3"), pane_command(4, "cmd4")
+        ]
+      )
     end
 
     it "handles three rows, one with nested columns", :aggregate_failures do
-      plan = described_class.plan_rows([
-        row_panes("top"),
-        row_cols(col("left"), col("right")),
-        row_panes("bottom")
-      ])
+      plan = described_class.plan_rows(
+        [
+          row_panes("top"),
+          row_cols(col("left"), col("right")),
+          row_panes("bottom")
+        ]
+      )
 
-      expect(plan.splits).to eq([
-        split(:vertical, 0, 67, 1),
-        split(:vertical, 1, 50, 2),
-        split(:horizontal, 1, 50, 3)
-      ])
+      expect(plan.splits).to eq(
+        [
+          split(:vertical, 0, 67, 1),
+          split(:vertical, 1, 50, 2),
+          split(:horizontal, 1, 50, 3)
+        ]
+      )
       expect(plan.commands.map(&:pane)).to eq([0, 1, 3, 2])
     end
 
@@ -160,7 +192,10 @@ RSpec.describe Orn::Tmux::Layout do
 
   describe ".substitute_template_vars" do
     it "replaces known placeholders, leaving unknown ones and plain text alone" do
-      vars = { "sandbox" => "my-sbx", "branch" => "feature/x" }
+      vars = {
+        "sandbox" => "my-sbx",
+        "branch" => "feature/x"
+      }
 
       expect(described_class.substitute_template_vars("echo {{branch}} in {{sandbox}}", vars))
         .to eq("echo feature/x in my-sbx")

@@ -11,7 +11,11 @@ module Orn
         # null); `ports` is omitted when empty.
         Entry = Data.define(:name, :branch, :status, :ports) do
           def to_json_hash
-            hash = { "name" => name, "branch" => branch, "status" => status }
+            hash = {
+              "name" => name,
+              "branch" => branch,
+              "status" => status
+            }
             hash["ports"] = ports.map(&:to_json_hash) unless ports.empty?
             hash
           end
@@ -33,7 +37,12 @@ module Orn
           sandboxes = entries.map do |entry|
             ports = ports_for(orn_dir, entry.name)
             branch = find_branch_for_sandbox(project, branches, entry.name)
-            Entry.new(name: entry.name, branch: branch, status: entry.status, ports: ports)
+            Entry.new(
+              name: entry.name,
+              branch: branch,
+              status: entry.status,
+              ports: ports
+            )
           end
           Result.new(sandboxes: sandboxes)
         end
@@ -47,7 +56,10 @@ module Orn
         private
 
         def worktree_branches(project)
-          Orn::Git::Worktree.new(root: project.root, output_mode: @output_mode).entries
+          Orn::Git::Worktree.new(
+            root: project.root,
+            output_mode: @output_mode
+          ).entries
         rescue Orn::Error
           []
         end

@@ -7,7 +7,12 @@ require "fileutils"
 RSpec.describe Orn::Sandbox do
   describe Orn::Sandbox::PortMapping do
     it "displays as host:container" do
-      expect(described_class.new(host: 3042, container: 3000).to_s).to eq("3042:3000")
+      expect(
+        described_class.new(
+          host: 3042,
+          container: 3000
+        ).to_s
+      ).to eq("3042:3000")
     end
   end
 
@@ -19,15 +24,26 @@ RSpec.describe Orn::Sandbox do
 
       aggregate_failures do
         expect(entries.length).to eq(2)
-        expect(entries[0]).to have_attributes(name: "sbx-1", status: "running")
-        expect(entries[1]).to have_attributes(name: "sbx-2", status: "stopped")
+        expect(entries[0]).to have_attributes(
+          name: "sbx-1",
+          status: "running"
+        )
+        expect(entries[1]).to have_attributes(
+          name: "sbx-2",
+          status: "stopped"
+        )
       end
     end
 
     it "parses a {sandboxes: [...]} wrapper object" do
       entries = described_class.parse_list_output('{"sandboxes": [{"name": "sbx-1", "status": "running"}]}')
 
-      expect(entries).to contain_exactly(have_attributes(name: "sbx-1", status: "running"))
+      expect(entries).to contain_exactly(
+        have_attributes(
+          name: "sbx-1",
+          status: "running"
+        )
+      )
     end
 
     it "returns nothing for an empty array and empty wrapper" do
@@ -140,7 +156,10 @@ RSpec.describe Orn::Sandbox do
     after { FileUtils.remove_entry(orn_dir, true) }
 
     it "round-trips a single mapping" do
-      mappings = [Orn::Sandbox::PortMapping.new(host: 3042, container: 3000)]
+      mappings = [Orn::Sandbox::PortMapping.new(
+        host: 3042,
+        container: 3000
+      )]
       described_class.persist_ports(orn_dir, "my-sbx", mappings)
 
       expect(described_class.read_ports(orn_dir, "my-sbx")).to eq(mappings)
@@ -148,8 +167,14 @@ RSpec.describe Orn::Sandbox do
 
     it "round-trips multiple mappings" do
       mappings = [
-        Orn::Sandbox::PortMapping.new(host: 3042, container: 3000),
-        Orn::Sandbox::PortMapping.new(host: 6380, container: 6379)
+        Orn::Sandbox::PortMapping.new(
+          host: 3042,
+          container: 3000
+        ),
+        Orn::Sandbox::PortMapping.new(
+          host: 6380,
+          container: 6379
+        )
       ]
       described_class.persist_ports(orn_dir, "my-sbx", mappings)
 
@@ -157,7 +182,14 @@ RSpec.describe Orn::Sandbox do
     end
 
     it "creates the sandbox directory" do
-      described_class.persist_ports(orn_dir, "test", [Orn::Sandbox::PortMapping.new(host: 8080, container: 80)])
+      described_class.persist_ports(
+        orn_dir,
+        "test",
+        [Orn::Sandbox::PortMapping.new(
+          host: 8080,
+          container: 80
+        )]
+      )
 
       expect(File).to exist(File.join(orn_dir, "sandbox", "test.ports"))
     end
@@ -167,7 +199,14 @@ RSpec.describe Orn::Sandbox do
     end
 
     it "removes the ports file" do
-      described_class.persist_ports(orn_dir, "my-sbx", [Orn::Sandbox::PortMapping.new(host: 3042, container: 3000)])
+      described_class.persist_ports(
+        orn_dir,
+        "my-sbx",
+        [Orn::Sandbox::PortMapping.new(
+          host: 3042,
+          container: 3000
+        )]
+      )
 
       described_class.remove_ports_file(orn_dir, "my-sbx")
 
@@ -191,8 +230,16 @@ RSpec.describe Orn::Sandbox do
 
   describe ".build_create_command" do
     def create_params(**overrides)
-      defaults = { name: "my-sbx", agent_type: "claude", worktree_path: "/work/tree", bare_path: "/project/.bare" }
-      Orn::Sandbox::CreateParams.new(**defaults, **overrides)
+      defaults = {
+        name: "my-sbx",
+        agent_type: "claude",
+        worktree_path: "/work/tree",
+        bare_path: "/project/.bare"
+      }
+      Orn::Sandbox::CreateParams.new(
+        **defaults,
+        **overrides
+      )
     end
 
     it "puts the bare path last" do
@@ -209,7 +256,12 @@ RSpec.describe Orn::Sandbox do
 
     it "orders agent type, worktree, then bare path positionally" do
       args = described_class.build_create_command(
-        create_params(template: "my-template:latest", kits: ["/path/to/kit"], cpus: 4, memory: "8g")
+        create_params(
+          template: "my-template:latest",
+          kits: ["/path/to/kit"],
+          cpus: 4,
+          memory: "8g"
+        )
       )
 
       aggregate_failures do
@@ -221,7 +273,13 @@ RSpec.describe Orn::Sandbox do
 
     it "includes the name and all flags" do
       args = described_class.build_create_command(
-        create_params(name: "test-sbx", template: "img:1", kits: ["/kit/a", "/kit/b"], cpus: 2, memory: "4g")
+        create_params(
+          name: "test-sbx",
+          template: "img:1",
+          kits: ["/kit/a", "/kit/b"],
+          cpus: 2,
+          memory: "4g"
+        )
       )
 
       aggregate_failures do
@@ -233,7 +291,12 @@ RSpec.describe Orn::Sandbox do
 
     it "emits only the required args when minimal" do
       args = described_class.build_create_command(
-        create_params(name: "sbx", agent_type: "agent", worktree_path: "/wt", bare_path: "/bare")
+        create_params(
+          name: "sbx",
+          agent_type: "agent",
+          worktree_path: "/wt",
+          bare_path: "/bare"
+        )
       )
 
       expect(args).to eq(["create", "--name", "sbx", "agent", "/wt", "/bare"])
@@ -248,7 +311,10 @@ RSpec.describe Orn::Sandbox do
     end
 
     it "prepends sorted env assignments via env(1)" do
-      env = { "REDIS_URL" => "redis://localhost:6379", "DATABASE_URL" => "postgres://localhost/db" }
+      env = {
+        "REDIS_URL" => "redis://localhost:6379",
+        "DATABASE_URL" => "postgres://localhost/db"
+      }
 
       args = described_class.build_exec_command("my-sbx", "bin/setup", env)
 
@@ -278,25 +344,43 @@ RSpec.describe Orn::Sandbox do
     it "builds a passing error check" do
       check = described_class.pass("test", "ok")
 
-      expect(check).to have_attributes(passed: true, kind: :error, name: "test", message: "ok")
+      expect(check).to have_attributes(
+        passed: true,
+        kind: :error,
+        name: "test",
+        message: "ok"
+      )
     end
 
     it "builds a failing error check" do
       check = described_class.fail("test", "bad")
 
-      expect(check).to have_attributes(passed: false, kind: :error, name: "test", message: "bad")
+      expect(check).to have_attributes(
+        passed: false,
+        kind: :error,
+        name: "test",
+        message: "bad"
+      )
     end
 
     it "builds a failing warning check" do
       check = described_class.warning("test", false, "warn msg")
 
-      expect(check).to have_attributes(passed: false, kind: :warning, name: "test", message: "warn msg")
+      expect(check).to have_attributes(
+        passed: false,
+        kind: :warning,
+        name: "test",
+        message: "warn msg"
+      )
     end
 
     it "builds a passing warning check" do
       check = described_class.warning("test", true, "ok msg")
 
-      expect(check).to have_attributes(passed: true, kind: :warning)
+      expect(check).to have_attributes(
+        passed: true,
+        kind: :warning
+      )
     end
 
     it "serializes kind as a lowercase string" do
@@ -335,8 +419,16 @@ RSpec.describe Orn::Sandbox do
     def set_git_config(root, key, value)
       config_path = File.join(root, ".bare", "config")
       system(
-        GitHelpers::GIT_ISOLATION_ENV, "git", "config", "--file", config_path, key, value,
-        out: File::NULL, err: File::NULL
+        GitHelpers::GIT_ISOLATION_ENV,
+        "git",
+        "config",
+        "--file",
+        config_path,
+        key,
+        value,
+        out: File::NULL,
+
+        err: File::NULL
       )
     end
 
@@ -349,7 +441,11 @@ RSpec.describe Orn::Sandbox do
 
       check = described_class.git_identity_check(mode, root)
 
-      expect(check).to have_attributes(passed: true, kind: :error, name: "git-identity")
+      expect(check).to have_attributes(
+        passed: true,
+        kind: :error,
+        name: "git-identity"
+      )
     end
 
     it "fails and suggests setting the name when it is missing" do
@@ -379,20 +475,29 @@ RSpec.describe Orn::Sandbox do
     it "fails when both are missing" do
       check = described_class.git_identity_check(mode, make_bare_project)
 
-      expect(check).to have_attributes(passed: false, kind: :error)
+      expect(check).to have_attributes(
+        passed: false,
+        kind: :error
+      )
     end
   end
 
   describe ".ssh_auth_check" do
     it "is a warning-kind check" do
-      expect(described_class.ssh_auth_check).to have_attributes(kind: :warning, name: "ssh-auth")
+      expect(described_class.ssh_auth_check).to have_attributes(
+        kind: :warning,
+        name: "ssh-auth"
+      )
     end
   end
 
   describe ".github_secret_check" do
     it "is a warning-kind check" do
       expect(described_class.github_secret_check(Orn::OutputMode.default))
-        .to have_attributes(kind: :warning, name: "github-secret")
+        .to have_attributes(
+          kind: :warning,
+          name: "github-secret"
+        )
     end
   end
 

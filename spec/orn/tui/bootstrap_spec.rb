@@ -4,13 +4,22 @@ module Orn
   module TUI
     RSpec.describe Bootstrap do
       def project_app
-        App.new(output_mode: Orn::OutputMode.quiet, root: "/tmp/nonexistent", session: "test", base_branch: "main")
+        App.new(
+          output_mode: Orn::OutputMode.quiet,
+          root: "/tmp/nonexistent",
+          session: "test",
+          base_branch: "main"
+        )
       end
 
       def global_app
         GlobalApp.new(
           output_mode: Orn::OutputMode.quiet,
-          config: Orn::Config::GlobalTuiConfig.new(session: "orn", scan_roots: [], scan_depth: 3)
+          config: Orn::Config::GlobalTuiConfig.new(
+            session: "orn",
+            scan_roots: [],
+            scan_depth: 3
+          )
         )
       end
 
@@ -70,8 +79,18 @@ module Orn
 
         it "toggles expansion on space" do
           app = global_app
-          app.entries = [RepoEntry.new(display_name: "a", root: "/tmp/x", healthy: true,
-            session_name: "a", base_branch: "main", worktrees: [])]
+          app.entries = [RepoEntry.new(
+            display_name: "a",
+
+            root: "/tmp/x",
+
+            healthy: true,
+            session_name: "a",
+
+            base_branch: "main",
+
+            worktrees: []
+          )]
           app.sync_list_state
           described_class.dispatch_global(app, char(" "))
 

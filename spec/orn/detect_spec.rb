@@ -2,27 +2,60 @@
 
 RSpec.describe Orn::Detect do
   def process(pid, name, argv = nil)
-    Orn::Detect::ForegroundProcess.new(pid: pid, name: name, argv: argv)
+    Orn::Detect::ForegroundProcess.new(
+      pid: pid,
+      name: name,
+      argv: argv
+    )
   end
 
   def job(pgid, processes)
-    Orn::Detect::ForegroundJob.new(process_group_id: pgid, processes: processes)
+    Orn::Detect::ForegroundJob.new(
+      process_group_id: pgid,
+      processes: processes
+    )
   end
 
   def pane(window:, command:, pane_id:, title: "")
     Orn::Tmux::PaneMetadata.new(
-      session_name: nil, window_name: window, pane_pid: 99_999,
-      pane_title: title, pane_current_command: command, pane_id: pane_id
+      session_name: nil,
+
+      window_name: window,
+
+      pane_pid: 99_999,
+      pane_title: title,
+
+      pane_current_command: command,
+
+      pane_id: pane_id
     )
   end
 
   describe ".identify_agent" do
     it "matches known agents and their aliases" do
       cases = {
-        "claude" => :claude, "claude-code" => :claude, "pi" => :pi, "codex" => :codex,
-        "gemini" => :gemini, "cursor" => :cursor, "cursor-agent" => :cursor,
-        "devin" => :devin, "devin-cli" => :devin, "amp" => :amp, "amp-local" => :amp,
-        "kiro" => :kiro, "kiro-cli" => :kiro
+        "claude" => :claude,
+
+        "claude-code" => :claude,
+
+        "pi" => :pi,
+
+        "codex" => :codex,
+        "gemini" => :gemini,
+
+        "cursor" => :cursor,
+
+        "cursor-agent" => :cursor,
+        "devin" => :devin,
+
+        "devin-cli" => :devin,
+
+        "amp" => :amp,
+
+        "amp-local" => :amp,
+        "kiro" => :kiro,
+
+        "kiro-cli" => :kiro
       }
 
       aggregate_failures do
@@ -111,21 +144,41 @@ RSpec.describe Orn::Detect do
 
   describe ".choose_agent_pane" do
     it "prefers the pane running an agent over a shell" do
-      panes = [pane(window: "issues/1", command: "zsh", pane_id: "%1"),
-               pane(window: "issues/1", command: "claude", pane_id: "%2")]
+      panes = [pane(
+        window: "issues/1",
+        command: "zsh",
+        pane_id: "%1"
+      ),
+               pane(
+                 window: "issues/1",
+                 command: "claude",
+                 pane_id: "%2"
+               )]
 
       expect(described_class.choose_agent_pane(panes, "issues/1").pane_id).to eq("%2")
     end
 
     it "falls back to the first pane when no agent is present" do
-      panes = [pane(window: "issues/1", command: "zsh", pane_id: "%1"),
-               pane(window: "issues/1", command: "vim", pane_id: "%2")]
+      panes = [pane(
+        window: "issues/1",
+        command: "zsh",
+        pane_id: "%1"
+      ),
+               pane(
+                 window: "issues/1",
+                 command: "vim",
+                 pane_id: "%2"
+               )]
 
       expect(described_class.choose_agent_pane(panes, "issues/1").pane_id).to eq("%1")
     end
 
     it "ignores panes in other windows" do
-      panes = [pane(window: "main", command: "claude", pane_id: "%1")]
+      panes = [pane(
+        window: "main",
+        command: "claude",
+        pane_id: "%1"
+      )]
 
       expect(described_class.choose_agent_pane(panes, "issues/1")).to be_nil
     end
@@ -135,34 +188,83 @@ RSpec.describe Orn::Detect do
     let(:mode) { Orn::OutputMode.quiet }
 
     it "identifies claude from the pane command" do
-      result = described_class.detect_pane(mode, pane(window: "w", command: "claude", pane_id: "%99"), nil)
+      result = described_class.detect_pane(
+        mode,
+        pane(
+          window: "w",
+          command: "claude",
+          pane_id: "%99"
+        ),
+        nil
+      )
 
       expect(result.agent).to eq(:claude)
     end
 
     it "falls through to no agent for a shell" do
-      result = described_class.detect_pane(mode, pane(window: "w", command: "bash", pane_id: "%99"), nil)
+      result = described_class.detect_pane(
+        mode,
+        pane(
+          window: "w",
+          command: "bash",
+          pane_id: "%99"
+        ),
+        nil
+      )
 
-      expect(result).to have_attributes(agent: nil, state: :unknown)
+      expect(result).to have_attributes(
+        agent: nil,
+        state: :unknown
+      )
     end
 
     it "uses the sbx agent type when the command is a container runtime" do
-      result = described_class.detect_pane(mode, pane(window: "w", command: "docker", pane_id: "%99"), :claude)
+      result = described_class.detect_pane(
+        mode,
+        pane(
+          window: "w",
+          command: "docker",
+          pane_id: "%99"
+        ),
+        :claude
+      )
 
       expect(result.agent).to eq(:claude)
     end
 
     it "reports no agent for a container runtime without an sbx agent type" do
-      result = described_class.detect_pane(mode, pane(window: "w", command: "docker", pane_id: "%99"), nil)
+      result = described_class.detect_pane(
+        mode,
+        pane(
+          window: "w",
+          command: "docker",
+          pane_id: "%99"
+        ),
+        nil
+      )
 
-      expect(result).to have_attributes(agent: nil, state: :unknown)
+      expect(result).to have_attributes(
+        agent: nil,
+        state: :unknown
+      )
     end
 
     it "skips the screen capture when the osc title is definitive" do
-      result = described_class.detect_pane(mode,
-        pane(window: "w", command: "claude", title: "\u{2802} project", pane_id: "%99"), nil)
+      result = described_class.detect_pane(
+        mode,
+        pane(
+          window: "w",
+          command: "claude",
+          title: "\u{2802} project",
+          pane_id: "%99"
+        ),
+        nil
+      )
 
-      expect(result).to have_attributes(agent: :claude, state: :working)
+      expect(result).to have_attributes(
+        agent: :claude,
+        state: :working
+      )
     end
   end
 
@@ -171,9 +273,22 @@ RSpec.describe Orn::Detect do
 
     it "lets the first pane with an agent win its window" do
       panes = [
-        pane(window: "win", command: "bash", pane_id: "%0"),
-        pane(window: "win", command: "claude", title: "\u{2802} project", pane_id: "%1"),
-        pane(window: "win", command: "codex", pane_id: "%2")
+        pane(
+          window: "win",
+          command: "bash",
+          pane_id: "%0"
+        ),
+        pane(
+          window: "win",
+          command: "claude",
+          title: "\u{2802} project",
+          pane_id: "%1"
+        ),
+        pane(
+          window: "win",
+          command: "codex",
+          pane_id: "%2"
+        )
       ]
 
       expect(described_class.detect_all_panes(mode, panes, nil)["win"].agent).to eq(:claude)
@@ -181,8 +296,16 @@ RSpec.describe Orn::Detect do
 
     it "detects each window separately" do
       panes = [
-        pane(window: "main", command: "claude", pane_id: "%0"),
-        pane(window: "feature", command: "bash", pane_id: "%1")
+        pane(
+          window: "main",
+          command: "claude",
+          pane_id: "%0"
+        ),
+        pane(
+          window: "feature",
+          command: "bash",
+          pane_id: "%1"
+        )
       ]
 
       results = described_class.detect_all_panes(mode, panes, nil)
@@ -242,11 +365,19 @@ RSpec.describe Orn::Detect do
       it "splits pid, command, and space-joined argv" do
         process = described_class.parse_ps_line("  1234 claude /usr/bin/claude --model opus")
 
-        expect(process).to have_attributes(pid: 1234, name: "claude", argv: ["/usr/bin/claude", "--model", "opus"])
+        expect(process).to have_attributes(
+          pid: 1234,
+          name: "claude",
+          argv: ["/usr/bin/claude", "--model", "opus"]
+        )
       end
 
       it "returns a nil argv when only pid and command are present" do
-        expect(described_class.parse_ps_line("  1234 bash")).to have_attributes(pid: 1234, name: "bash", argv: nil)
+        expect(described_class.parse_ps_line("  1234 bash")).to have_attributes(
+          pid: 1234,
+          name: "bash",
+          argv: nil
+        )
       end
 
       it "returns nil for an unparseable line" do

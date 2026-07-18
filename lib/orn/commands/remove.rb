@@ -14,7 +14,10 @@ module Orn
 
         # sandbox/window flags plus the flattened worktree-removal fields.
         def to_json_hash
-          { "sandbox_removed" => sandbox_removed, "window_closed" => window_closed }.merge(wt.to_json_hash)
+          {
+            "sandbox_removed" => sandbox_removed,
+            "window_closed" => window_closed
+          }.merge(wt.to_json_hash)
         end
 
         def print_summary
@@ -37,7 +40,11 @@ module Orn
         window_closed = close_window(session, branch)
         wt_result = Wt::Remove.new(output_mode: @output_mode)
           .run_inner(project, branch, prune)
-        Result.new(sandbox_removed: sandbox_removed, window_closed: window_closed, wt: wt_result)
+        Result.new(
+          sandbox_removed: sandbox_removed,
+          window_closed: window_closed,
+          wt: wt_result
+        )
       end
 
       def run(branches, prune:, force:)

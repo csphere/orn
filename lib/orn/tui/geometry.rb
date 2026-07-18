@@ -5,7 +5,12 @@ module Orn
     # A rectangular region of the terminal, in cells.
     Rect = Data.define(:x, :y, :width, :height) do
       def self.zero
-        new(x: 0, y: 0, width: 0, height: 0)
+        new(
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0
+        )
       end
 
       def right
@@ -22,19 +27,31 @@ module Orn
     # leftover space), a `percentage` of the parent, and a `fill` weight.
     Constraint = Data.define(:kind, :value) do
       def self.length(cells)
-        new(kind: :length, value: cells)
+        new(
+          kind: :length,
+          value: cells
+        )
       end
 
       def self.min(cells)
-        new(kind: :min, value: cells)
+        new(
+          kind: :min,
+          value: cells
+        )
       end
 
       def self.percentage(percent)
-        new(kind: :percentage, value: percent)
+        new(
+          kind: :percentage,
+          value: percent
+        )
       end
 
       def self.fill(weight)
-        new(kind: :fill, value: weight)
+        new(
+          kind: :fill,
+          value: weight
+        )
       end
     end
 
@@ -120,9 +137,19 @@ module Orn
 
       def slice(area, offset, size)
         if @direction == :vertical
-          Rect.new(x: area.x, y: offset, width: area.width, height: size)
+          Rect.new(
+            x: area.x,
+            y: offset,
+            width: area.width,
+            height: size
+          )
         else
-          Rect.new(x: offset, y: area.y, width: size, height: area.height)
+          Rect.new(
+            x: offset,
+            y: area.y,
+            width: size,
+            height: area.height
+          )
         end
       end
     end

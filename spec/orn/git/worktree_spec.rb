@@ -2,7 +2,10 @@
 
 RSpec.describe Orn::Git::Worktree do
   def worktree_for(root)
-    described_class.new(root: root, output_mode: Orn::OutputMode.default)
+    described_class.new(
+      root: root,
+      output_mode: Orn::OutputMode.default
+    )
   end
 
   describe "#local_branch_exists?" do

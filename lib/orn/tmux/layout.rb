@@ -89,7 +89,12 @@ module Orn
           panes = chain_split(root, pane_commands.length, :vertical)
           @pane_grid << panes
           pane_commands.each_with_index do |command, index|
-            @commands << PaneCommand.new(pane: panes[index], command: command) unless command.empty?
+            next if command.empty?
+
+            @commands << PaneCommand.new(
+              pane: panes[index],
+              command: command
+            )
           end
         end
 
@@ -102,8 +107,12 @@ module Orn
             new_pane = @next_pane
             @next_pane += 1
             @splits << Split.new(
-              direction: direction, target: previous,
-              percentage: Layout.split_percentage(count - i), result: new_pane
+              direction: direction,
+
+              target: previous,
+              percentage: Layout.split_percentage(count - i),
+
+              result: new_pane
             )
             panes << new_pane
             previous = new_pane
@@ -112,11 +121,19 @@ module Orn
         end
 
         def finish
-          Plan.new(splits: @splits, commands: @commands, focus_pane: @pane_grid.first.first)
+          Plan.new(
+            splits: @splits,
+            commands: @commands,
+            focus_pane: @pane_grid.first.first
+          )
         end
 
         def empty_plan
-          Plan.new(splits: [], commands: [], focus_pane: 0)
+          Plan.new(
+            splits: [],
+            commands: [],
+            focus_pane: 0
+          )
         end
       end
       private_constant :Planner

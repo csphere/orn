@@ -37,7 +37,10 @@ module Orn
         current_branch = check_head_not_detached!(dir, base)
         check_no_unpushed_commits!(dir)
         check_no_local_only_branches!(dir)
-        Guards.new(origin_url: origin_url, current_branch: current_branch)
+        Guards.new(
+          origin_url: origin_url,
+          current_branch: current_branch
+        )
       end
 
       # Picks the base branch: an explicit `base` wins (validated); otherwise the

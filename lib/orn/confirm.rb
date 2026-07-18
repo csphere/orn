@@ -10,7 +10,10 @@ module Orn
     # raises "Aborted" if declined. Returns immediately (nil) when neither
     # branch exists.
     def self.prune_interactive(root, branch)
-      worktree = Orn::Git::Worktree.new(root: root, output_mode: Orn::OutputMode.default)
+      worktree = Orn::Git::Worktree.new(
+        root: root,
+        output_mode: Orn::OutputMode.default
+      )
       has_local = worktree.local_branch_exists?(branch)
       has_remote = worktree.remote_branch_exists?("origin", branch)
       return if !has_local && !has_remote

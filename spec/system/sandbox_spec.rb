@@ -25,7 +25,10 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
       orn_ok("wt", "new", branch, chdir: project)
 
       created = orn_json("sbx", "new", branch, chdir: project)
-      expect(created).to include("name" => sandbox_name, "branch" => branch)
+      expect(created).to include(
+        "name" => sandbox_name,
+        "branch" => branch
+      )
       expect(listed_sandbox_names(project)).to include(sandbox_name)
 
       removal = orn_ok("sbx", "remove", branch, chdir: project)
@@ -52,7 +55,13 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
 
       # Setup commands are gated on trust approval, so the first run goes
       # through a pseudo-terminal to answer the prompt.
-      output, status = orn_pty("sbx", "new", branch, chdir: project, input: "y\n")
+      output, status = orn_pty(
+        "sbx",
+        "new",
+        branch,
+        chdir: project,
+        input: "y\n"
+      )
       expect(status).to be_success, "orn sbx new failed:\n#{output}"
       expect(output).to include("Approve?")
 
@@ -61,8 +70,13 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
 
     def setup_marker_exists?
       _stdout, _stderr, status = Open3.capture3(
-        "sbx", "exec", sandbox_name, "--",
-        "test", "-f", "/tmp/orn-setup-marker"
+        "sbx",
+        "exec",
+        sandbox_name,
+        "--",
+        "test",
+        "-f",
+        "/tmp/orn-setup-marker"
       )
       status.success?
     end
@@ -83,7 +97,11 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
       YAML
 
       result = orn_json("switch", "--sbx", branch, chdir: project)
-      expect(result).to include("branch" => branch, "action" => "created", "sandbox_name" => sandbox_name)
+      expect(result).to include(
+        "branch" => branch,
+        "action" => "created",
+        "sandbox_name" => sandbox_name
+      )
       expect_provisioned(project)
 
       orn_ok("remove", branch, chdir: project)

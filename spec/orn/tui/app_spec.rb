@@ -15,11 +15,20 @@ module Orn
       end
 
       def status(branch)
-        WorktreeStatus.new(branch: branch, dirty: false, has_window: false, ahead: 0, behind: 0)
+        WorktreeStatus.new(
+          branch: branch,
+          dirty: false,
+          has_window: false,
+          ahead: 0,
+          behind: 0
+        )
       end
 
       def working_state
-        Orn::Detect::PaneAgentState.new(agent: :claude, state: :working)
+        Orn::Detect::PaneAgentState.new(
+          agent: :claude,
+          state: :working
+        )
       end
 
       describe "selection movement" do
@@ -128,7 +137,10 @@ module Orn
 
         it "does not report idle or blocked agents as working" do
           app = build_app(%w[main])
-          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(agent: :claude, state: :idle)
+          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(
+            agent: :claude,
+            state: :idle
+          )
 
           expect(app.any_agent_working?).to be(false)
         end
@@ -170,7 +182,10 @@ module Orn
           root = make_bare_project
           add_origin(root, remote)
           File.write(File.join(root, ".orn", "config.yaml"), "git:\n  base: main\n")
-          worktree = Orn::Git::Worktree.new(root: root, output_mode: Orn::OutputMode.quiet)
+          worktree = Orn::Git::Worktree.new(
+            root: root,
+            output_mode: Orn::OutputMode.quiet
+          )
           worktree.fetch("origin", "main")
           worktree.add(File.join(root, "main"), "main", "origin/main")
           root

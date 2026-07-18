@@ -109,7 +109,17 @@ module Orn
       if !Session.session_exists?(output_mode, session) && default_window_name == name
         result = tmux_run(
           output_mode,
-          "new-session", "-d", "-s", session, "-n", name, "-P", "-F", "\#{pane_id}", "-c", path.to_s
+          "new-session",
+          "-d",
+          "-s",
+          session,
+          "-n",
+          name,
+          "-P",
+          "-F",
+          "\#{pane_id}",
+          "-c",
+          path.to_s
         )
         return result.stdout.strip
       end
@@ -122,7 +132,17 @@ module Orn
       session_target = "#{session}:"
       result = tmux_run(
         output_mode,
-        "new-window", "-a", "-P", "-F", "\#{pane_id}", "-t", session_target, "-n", name, "-c", path.to_s
+        "new-window",
+        "-a",
+        "-P",
+        "-F",
+        "\#{pane_id}",
+        "-t",
+        session_target,
+        "-n",
+        name,
+        "-c",
+        path.to_s
       )
       result.stdout.strip
     end
@@ -159,7 +179,17 @@ module Orn
       flag = direction == :horizontal ? "-h" : "-v"
       result = tmux_run(
         output_mode,
-        "split-window", flag, "-t", target, "-c", path.to_s, "-l", "#{percentage}%", "-P", "-F", "\#{pane_id}"
+        "split-window",
+        flag,
+        "-t",
+        target,
+        "-c",
+        path.to_s,
+        "-l",
+        "#{percentage}%",
+        "-P",
+        "-F",
+        "\#{pane_id}"
       )
       result.stdout.strip
     end
@@ -201,8 +231,15 @@ module Orn
       nil
     end
 
-    private_class_method :create_first_pane, :layout_empty?, :realize_splits,
-      :run_pane_commands, :split_pane, :wait_for_shell, :warn_if_tmux_too_old,
-      :tmux_exec, :tmux_run, :tmux_output
+    private_class_method :create_first_pane,
+      :layout_empty?,
+      :realize_splits,
+      :run_pane_commands,
+      :split_pane,
+      :wait_for_shell,
+      :warn_if_tmux_too_old,
+      :tmux_exec,
+      :tmux_run,
+      :tmux_output
   end
 end

@@ -19,7 +19,12 @@ RSpec.describe Orn::Commands::Output do
 
   describe ".print_json" do
     it "prints pretty-formatted JSON" do
-      expect { described_class.print_json("repo" => "x", "worktrees" => []) }
+      expect do
+        described_class.print_json(
+          "repo" => "x",
+          "worktrees" => []
+        )
+      end
         .to output(/\{\n  "repo": "x",\n  "worktrees": \[\]\n\}/).to_stdout
     end
   end

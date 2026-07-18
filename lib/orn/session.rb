@@ -128,7 +128,11 @@ module Orn
       nil
     end
 
-    private_class_method :session_path, :resolve_collision, :tmux_output,
-      :directory_name, :path_components, :safe_realpath
+    private_class_method :session_path,
+      :resolve_collision,
+      :tmux_output,
+      :directory_name,
+      :path_components,
+      :safe_realpath
   end
 end

@@ -68,11 +68,27 @@ module Orn
         MigrationStep.new(
           to: Gem::Version.new("0.1.0"),
           changes: [
-            MoveTopLevel.new(key: "base", to_section: "git"),
-            MoveTopLevel.new(key: "session", to_section: "tmux"),
-            MoveTopLevel.new(key: "columns", to_section: "tmux"),
-            MoveTopLevel.new(key: "rows", to_section: "tmux"),
-            RenameInSection.new(section: "symlinks", old_key: "worktree", new_key: "base")
+            MoveTopLevel.new(
+              key: "base",
+              to_section: "git"
+            ),
+            MoveTopLevel.new(
+              key: "session",
+              to_section: "tmux"
+            ),
+            MoveTopLevel.new(
+              key: "columns",
+              to_section: "tmux"
+            ),
+            MoveTopLevel.new(
+              key: "rows",
+              to_section: "tmux"
+            ),
+            RenameInSection.new(
+              section: "symlinks",
+              old_key: "worktree",
+              new_key: "base"
+            )
           ]
         )
       ].freeze
@@ -86,14 +102,24 @@ module Orn
       # both count as :missing.
       def self.check_version(config_version, binary)
         config = parse_version(config_version)
-        return VersionCheck.new(kind: :missing, config: nil, binary: binary) if config.nil?
+        if config.nil?
+          return VersionCheck.new(
+            kind: :missing,
+            config: nil,
+            binary: binary
+          )
+        end
 
         kind = if config == binary
                  :match
                else
                  config < binary ? :behind : :ahead
                end
-        VersionCheck.new(kind: kind, config: config, binary: binary)
+        VersionCheck.new(
+          kind: kind,
+          config: config,
+          binary: binary
+        )
       end
 
       # :behind is a hard error pointing at `orn config migrate`; :ahead and
@@ -104,8 +130,9 @@ module Orn
         when :match
           nil
         when :behind
-          raise Orn::Error, "#{path}: config version (#{check.config}) is behind orn (#{binary})\n  " \
-                            "Run `orn config migrate` to update"
+          raise Orn::Error,
+            "#{path}: config version (#{check.config}) is behind orn (#{binary})\n  " \
+            "Run `orn config migrate` to update"
         when :ahead
           warn "warning: #{path}: config version (#{check.config}) is ahead of orn (#{binary})"
         when :missing
@@ -147,7 +174,12 @@ module Orn
       def self.plan(table, from_version)
         binary = binary_version
         from = parse_version(from_version)
-        return MigrationPlan.new(to_version: binary, descriptions: []) if from == binary
+        if from == binary
+          return MigrationPlan.new(
+            to_version: binary,
+            descriptions: []
+          )
+        end
 
         descriptions = []
         applicable_steps(from, binary).each do |step|
@@ -157,7 +189,10 @@ module Orn
           end
         end
         descriptions << %(set orn_version = "#{binary}")
-        MigrationPlan.new(to_version: binary, descriptions: descriptions)
+        MigrationPlan.new(
+          to_version: binary,
+          descriptions: descriptions
+        )
       end
 
       # Applies pending steps to the table and stamps orn_version. Existing
@@ -265,28 +300,58 @@ module Orn
 
       def self.up_to_date_result(path, version, migration_plan)
         MigrateFileResult.new(
-          path: path, from_version: version, to_version: migration_plan.to_version.to_s,
-          changes: [], backup_path: nil, up_to_date: true
+          path: path,
+
+          from_version: version,
+
+          to_version: migration_plan.to_version.to_s,
+          changes: [],
+
+          backup_path: nil,
+
+          up_to_date: true
         )
       end
 
       def self.dry_run_result(path, version, migration_plan)
         MigrateFileResult.new(
-          path: path, from_version: version, to_version: migration_plan.to_version.to_s,
-          changes: migration_plan.descriptions, backup_path: nil, up_to_date: false
+          path: path,
+
+          from_version: version,
+
+          to_version: migration_plan.to_version.to_s,
+          changes: migration_plan.descriptions,
+
+          backup_path: nil,
+
+          up_to_date: false
         )
       end
 
       def self.migrated_result(path, version, migration_plan, backup_path)
         MigrateFileResult.new(
-          path: path, from_version: version, to_version: migration_plan.to_version.to_s,
-          changes: migration_plan.descriptions, backup_path: backup_path, up_to_date: false
+          path: path,
+
+          from_version: version,
+
+          to_version: migration_plan.to_version.to_s,
+          changes: migration_plan.descriptions,
+
+          backup_path: backup_path,
+
+          up_to_date: false
         )
       end
 
-      private_class_method :applicable_steps, :parse_version, :load_table,
-        :string_version, :serialize, :write_migration, :up_to_date_result,
-        :dry_run_result, :migrated_result
+      private_class_method :applicable_steps,
+        :parse_version,
+        :load_table,
+        :string_version,
+        :serialize,
+        :write_migration,
+        :up_to_date_result,
+        :dry_run_result,
+        :migrated_result
     end
   end
 end

@@ -18,13 +18,23 @@ module Orn
       end
 
       it "emits an SGR sequence carrying foreground, background, and bold" do
-        cell = Cell.new(symbol: "x", fg: Color::RED, bg: Color::WHITE, bold: true)
+        cell = Cell.new(
+          symbol: "x",
+          fg: Color::RED,
+          bg: Color::WHITE,
+          bold: true
+        )
 
         expect(backend.send(:sgr, cell)).to eq("\e[0;1;31;47m")
       end
 
       it "renders a buffer row with a cursor move and a clear-to-end" do
-        area = Rect.new(x: 0, y: 0, width: 3, height: 1)
+        area = Rect.new(
+          x: 0,
+          y: 0,
+          width: 3,
+          height: 1
+        )
         buffer = Buffer.new(area)
         buffer.set_line(0, 0, Line.raw("hi"), 3)
 

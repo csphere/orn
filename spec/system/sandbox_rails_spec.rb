@@ -61,13 +61,21 @@ RSpec.describe "orn sandbox full-stack app", :sbx_system, :system do
 
     # The build approves the sbx commands at the trust prompt; every later
     # run reuses the saved approval non-interactively.
-    build_output, build_status = orn_pty("sbx", "build", chdir: project, input: "y\n")
+    build_output, build_status = orn_pty(
+      "sbx",
+      "build",
+      chdir: project,
+      input: "y\n"
+    )
     expect(build_status).to be_success, "orn sbx build failed:\n#{build_output}"
 
     # One command provisions everything: worktree, tmux window, sandbox,
     # setup (services + database), published port, detached app start.
     result = orn_json("switch", "--sbx", branch, chdir: project)
-    expect(result).to include("branch" => branch, "sandbox_name" => sandbox_name)
+    expect(result).to include(
+      "branch" => branch,
+      "sandbox_name" => sandbox_name
+    )
 
     expect_app_healthy(result.fetch("host_ports").first.fetch("host"))
     expect_job_processed
@@ -91,7 +99,12 @@ RSpec.describe "orn sandbox full-stack app", :sbx_system, :system do
   end
 
   def health_body(host_port)
-    response = Net::HTTP.start("127.0.0.1", host_port, open_timeout: 5, read_timeout: 5) do |http|
+    response = Net::HTTP.start(
+      "127.0.0.1",
+      host_port,
+      open_timeout: 5,
+      read_timeout: 5
+    ) do |http|
       http.get("/up")
     end
     response.is_a?(Net::HTTPSuccess) ? response.body : nil
@@ -123,9 +136,16 @@ RSpec.describe "orn sandbox full-stack app", :sbx_system, :system do
   # the app was configured with.
   def app_exec(command)
     Open3.capture3(
-      "sbx", "exec", sandbox_name, "--",
-      "env", "DATABASE_URL=#{database_url}", "REDIS_URL=#{redis_url}",
-      "sh", "-c", "cd '#{app_dir}' && #{command}"
+      "sbx",
+      "exec",
+      sandbox_name,
+      "--",
+      "env",
+      "DATABASE_URL=#{database_url}",
+      "REDIS_URL=#{redis_url}",
+      "sh",
+      "-c",
+      "cd '#{app_dir}' && #{command}"
     )
   end
 

@@ -16,7 +16,13 @@ module Orn
       end
 
       def entry(branch, dirty: false, has_window: false, ahead: 0, behind: 0)
-        WorktreeStatus.new(branch: branch, dirty: dirty, has_window: has_window, ahead: ahead, behind: behind)
+        WorktreeStatus.new(
+          branch: branch,
+          dirty: dirty,
+          has_window: has_window,
+          ahead: ahead,
+          behind: behind
+        )
       end
 
       def render(app, width: 60, height: 12)
@@ -45,7 +51,15 @@ module Orn
       end
 
       it "shows ahead and behind counts" do
-        screen = render(app_with([entry("dev", ahead: 5, behind: 2)])).to_s
+        screen = render(
+          app_with(
+            [entry(
+              "dev",
+              ahead: 5,
+              behind: 2
+            )]
+          )
+        ).to_s
 
         aggregate_failures do
           expect(screen).to include("5")
@@ -116,7 +130,10 @@ module Orn
       describe "agent indicators" do
         def app_with_agent(state)
           app = app_with([entry("main", has_window: true)])
-          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(agent: :claude, state: state)
+          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(
+            agent: :claude,
+            state: state
+          )
           app
         end
 
@@ -149,7 +166,10 @@ module Orn
 
         it "shows no status when the pane has no agent" do
           app = app_with([entry("main", has_window: true)])
-          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(agent: nil, state: :unknown)
+          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(
+            agent: nil,
+            state: :unknown
+          )
 
           expect(render(app, width: 80).to_s).not_to include("idle")
         end

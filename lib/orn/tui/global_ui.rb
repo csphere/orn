@@ -23,12 +23,14 @@ module Orn
       end
 
       def split_chunks(area, has_error)
-        Layout.vertical([
-          Constraint.length(2),
-          Constraint.min(1),
-          Constraint.length(has_error ? 1 : 0),
-          Constraint.length(2)
-        ]).split(area)
+        Layout.vertical(
+          [
+            Constraint.length(2),
+            Constraint.min(1),
+            Constraint.length(has_error ? 1 : 0),
+            Constraint.length(2)
+          ]
+        ).split(area)
       end
 
       def render_tree(frame, app, chunk)

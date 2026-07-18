@@ -9,11 +9,17 @@ module Orn
     # `code == :char`. The decoded key event the event loops match on.
     KeyEvent = Data.define(:code, :char) do
       def self.char(character)
-        new(code: :char, char: character)
+        new(
+          code: :char,
+          char: character
+        )
       end
 
       def self.key(code)
-        new(code: code, char: nil)
+        new(
+          code: code,
+          char: nil
+        )
       end
     end
 
@@ -66,7 +72,12 @@ module Orn
       attr_reader :area, :buffer, :clears
 
       def initialize(width, height)
-        @area = Rect.new(x: 0, y: 0, width: width, height: height)
+        @area = Rect.new(
+          x: 0,
+          y: 0,
+          width: width,
+          height: height
+        )
         @buffer = Buffer.new(@area)
         @events = []
         @clears = 0
@@ -89,14 +100,22 @@ module Orn
       # Queue a resize into the same stream as `feed`, so tests can script a
       # size change between key presses.
       def feed_resize(width, height)
-        @events << Resize.new(width: width, height: height)
+        @events << Resize.new(
+          width: width,
+          height: height
+        )
       end
 
       def poll(_timeout)
         event = @events.shift
         return event unless event.is_a?(Resize)
 
-        @area = Rect.new(x: 0, y: 0, width: event.width, height: event.height)
+        @area = Rect.new(
+          x: 0,
+          y: 0,
+          width: event.width,
+          height: event.height
+        )
         nil
       end
     end
@@ -131,7 +150,12 @@ module Orn
 
       def area
         rows, cols = console_size
-        Rect.new(x: 0, y: 0, width: cols, height: rows)
+        Rect.new(
+          x: 0,
+          y: 0,
+          width: cols,
+          height: rows
+        )
       end
 
       # Enter raw mode + alt screen. Idempotent.

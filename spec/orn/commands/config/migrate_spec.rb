@@ -9,7 +9,10 @@ RSpec.describe Orn::Commands::Config::Migrate do
 
   def command(dry_run: false, global_only: false, project_only: true, output_mode: Orn::OutputMode.quiet)
     described_class.new(
-      output_mode: output_mode, dry_run: dry_run, global_only: global_only, project_only: project_only
+      output_mode: output_mode,
+      dry_run: dry_run,
+      global_only: global_only,
+      project_only: project_only
     )
   end
 
@@ -58,7 +61,12 @@ RSpec.describe Orn::Commands::Config::Migrate do
     it "returns only the global config with global_only" do
       ENV["XDG_CONFIG_HOME"] = "/xdg"
 
-      expect(command(global_only: true, project_only: false).targets("/proj"))
+      expect(
+        command(
+          global_only: true,
+          project_only: false
+        ).targets("/proj")
+      )
         .to eq([["global", "/xdg/orn/default.yaml"]])
     end
 

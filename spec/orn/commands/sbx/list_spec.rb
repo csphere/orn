@@ -35,7 +35,12 @@ RSpec.describe Orn::Commands::Sbx::List do
 
   describe Orn::Commands::Sbx::List::Entry do
     it "omits ports from JSON when empty" do
-      entry = described_class.new(name: "sbx-1", branch: nil, status: "stopped", ports: [])
+      entry = described_class.new(
+        name: "sbx-1",
+        branch: nil,
+        status: "stopped",
+        ports: []
+      )
 
       hash = entry.to_json_hash
 
@@ -47,10 +52,21 @@ RSpec.describe Orn::Commands::Sbx::List do
 
     it "includes port mappings in JSON when present" do
       ports = [
-        Orn::Sandbox::PortMapping.new(host: 3042, container: 3000),
-        Orn::Sandbox::PortMapping.new(host: 6380, container: 6379)
+        Orn::Sandbox::PortMapping.new(
+          host: 3042,
+          container: 3000
+        ),
+        Orn::Sandbox::PortMapping.new(
+          host: 6380,
+          container: 6379
+        )
       ]
-      entry = described_class.new(name: "sbx-1", branch: nil, status: "running", ports: ports)
+      entry = described_class.new(
+        name: "sbx-1",
+        branch: nil,
+        status: "running",
+        ports: ports
+      )
 
       hash = entry.to_json_hash
 

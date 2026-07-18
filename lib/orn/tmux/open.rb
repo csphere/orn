@@ -10,8 +10,12 @@ module Orn
     # source.
     def self.open_window(output_mode, project, branch)
       open_window_with_layout(
-        output_mode, project, branch,
-        project.config.layout, project.config.layout_source, template_vars: {}
+        output_mode,
+        project,
+        branch,
+        project.config.layout,
+        project.config.layout_source,
+        template_vars: {}
       )
     end
 
@@ -37,10 +41,19 @@ module Orn
       session = Session.session_name(project)
       output_mode.status("Opening tmux window...")
       create_window(
-        output_mode, session, branch, project.worktree_path(branch), layout,
-        template_vars: template_vars, default_window_name: project.config.base
+        output_mode,
+        session,
+        branch,
+        project.worktree_path(branch),
+        layout,
+        template_vars: template_vars,
+
+        default_window_name: project.config.base
       )
-      OpenWindowResult.new(branch: branch, session: session)
+      OpenWindowResult.new(
+        branch: branch,
+        session: session
+      )
     end
 
     private_class_method :open_checked_window

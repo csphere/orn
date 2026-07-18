@@ -2,12 +2,22 @@
 
 RSpec.describe Orn::Detect::Manifest do
   def det(agent, screen: "", title: "", progress: "")
-    described_class.detect(agent,
-      described_class::DetectionInput.new(screen: screen, osc_title: title, osc_progress: progress))
+    described_class.detect(
+      agent,
+      described_class::DetectionInput.new(
+        screen: screen,
+        osc_title: title,
+        osc_progress: progress
+      )
+    )
   end
 
   def region_of(screen, spec, title: "", progress: "")
-    input = described_class::DetectionInput.new(screen: screen, osc_title: title, osc_progress: progress)
+    input = described_class::DetectionInput.new(
+      screen: screen,
+      osc_title: title,
+      osc_progress: progress
+    )
     described_class.region(input, spec)
   end
 
@@ -16,7 +26,13 @@ RSpec.describe Orn::Detect::Manifest do
   end
 
   def rule(fields)
-    { "id" => "test", "rules" => [{ "id" => "r", "state" => "working" }.merge(fields)] }
+    {
+      "id" => "test",
+      "rules" => [{
+        "id" => "r",
+        "state" => "working"
+      }.merge(fields)]
+    }
   end
 
   describe ".parse_manifest" do
@@ -24,8 +40,18 @@ RSpec.describe Orn::Detect::Manifest do
       manifest = described_class.parse_manifest(
         "id" => "test",
         "rules" => [
-          { "id" => "rule_a", "state" => "working", "priority" => 100, "contains" => ["working"] },
-          { "id" => "rule_b", "state" => "idle", "priority" => 50, "contains" => ["ready"] }
+          {
+            "id" => "rule_a",
+            "state" => "working",
+            "priority" => 100,
+            "contains" => ["working"]
+          },
+          {
+            "id" => "rule_b",
+            "state" => "idle",
+            "priority" => 50,
+            "contains" => ["ready"]
+          }
         ]
       )
 
@@ -40,17 +66,40 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "rejects a manifest exceeding the max rule count" do
-      rules = Array.new(129) { |i| { "id" => "rule_#{i}", "state" => "idle", "contains" => ["ready"] } }
+      rules = Array.new(129) do |i|
+        {
+          "id" => "rule_#{i}",
+          "state" => "idle",
+          "contains" => ["ready"]
+        }
+      end
 
-      expect { described_class.parse_manifest("id" => "test", "rules" => rules) }
+      expect do
+        described_class.parse_manifest(
+          "id" => "test",
+          "rules" => rules
+        )
+      end
         .to raise_error(described_class::InvalidManifest)
     end
 
     it "rejects gate nesting deeper than the max" do
       gate = { "contains" => ["9"] }
-      8.downto(1) { |i| gate = { "contains" => [i.to_s], "all" => [gate] } }
+      8.downto(1) do |i|
+        gate = {
+          "contains" => [i.to_s],
+          "all" => [gate]
+        }
+      end
 
-      expect { described_class.parse_manifest(rule("contains" => ["ready"], "all" => [gate])) }
+      expect do
+        described_class.parse_manifest(
+          rule(
+            "contains" => ["ready"],
+            "all" => [gate]
+          )
+        )
+      end
         .to raise_error(described_class::InvalidManifest)
     end
 
@@ -60,7 +109,11 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "rejects skip_state_update without state unknown" do
-      manifest = rule("state" => "idle", "skip_state_update" => true, "contains" => ["menu"])
+      manifest = rule(
+        "state" => "idle",
+        "skip_state_update" => true,
+        "contains" => ["menu"]
+      )
 
       expect { described_class.parse_manifest(manifest) }.to raise_error(described_class::InvalidManifest)
     end
@@ -81,14 +134,28 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "rejects an invalid region" do
-      expect { described_class.parse_manifest(rule("region" => "nonexistent_region", "contains" => ["test"])) }
+      expect do
+        described_class.parse_manifest(
+          rule(
+            "region" => "nonexistent_region",
+            "contains" => ["test"]
+          )
+        )
+      end
         .to raise_error(described_class::InvalidManifest)
     end
 
     it "rejects too many matchers in a single gate" do
       needles = Array.new(33) { |i| "m#{i}" }
 
-      expect { described_class.parse_manifest(rule("state" => "idle", "contains" => needles)) }
+      expect do
+        described_class.parse_manifest(
+          rule(
+            "state" => "idle",
+            "contains" => needles
+          )
+        )
+      end
         .to raise_error(described_class::InvalidManifest)
     end
   end
@@ -170,8 +237,12 @@ RSpec.describe Orn::Detect::Manifest do
 
   describe "matcher evaluation" do
     it "matches contains case-insensitively" do
-      expect(described_class.gate_matches_text?(compiled_first(rule("contains" => ["hello"])),
-        "HELLO WORLD")).to be(true)
+      expect(
+        described_class.gate_matches_text?(
+          compiled_first(rule("contains" => ["hello"])),
+          "HELLO WORLD"
+        )
+      ).to be(true)
     end
 
     it "requires every contains string to be present" do
@@ -202,7 +273,12 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "requires every nested gate for all" do
-      gate = compiled_first(rule("contains" => ["root"], "all" => [{ "contains" => ["xx"] }, { "contains" => ["yy"] }]))
+      gate = compiled_first(
+        rule(
+          "contains" => ["root"],
+          "all" => [{ "contains" => ["xx"] }, { "contains" => ["yy"] }]
+        )
+      )
 
       aggregate_failures do
         expect(described_class.gate_matches_text?(gate, "root xx yy")).to be(true)
@@ -211,7 +287,12 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "requires at least one nested gate for any" do
-      gate = compiled_first(rule("contains" => ["base"], "any" => [{ "contains" => ["x"] }, { "contains" => ["y"] }]))
+      gate = compiled_first(
+        rule(
+          "contains" => ["base"],
+          "any" => [{ "contains" => ["x"] }, { "contains" => ["y"] }]
+        )
+      )
 
       aggregate_failures do
         expect(described_class.gate_matches_text?(gate, "base x")).to be(true)
@@ -221,13 +302,23 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "treats an empty any gate as vacuously true" do
-      gate = compiled_first(rule("contains" => ["base"], "any" => []))
+      gate = compiled_first(
+        rule(
+          "contains" => ["base"],
+          "any" => []
+        )
+      )
 
       expect(described_class.gate_matches_text?(gate, "base")).to be(true)
     end
 
     it "fails when any not gate matches" do
-      gate = compiled_first(rule("contains" => ["base"], "not" => [{ "contains" => ["blocked"] }]))
+      gate = compiled_first(
+        rule(
+          "contains" => ["base"],
+          "not" => [{ "contains" => ["blocked"] }]
+        )
+      )
 
       aggregate_failures do
         expect(described_class.gate_matches_text?(gate, "base ok")).to be(true)
@@ -241,11 +332,25 @@ RSpec.describe Orn::Detect::Manifest do
       manifest = described_class.parse_manifest(
         "id" => "test",
         "rules" => [
-          { "id" => "low", "state" => "idle", "priority" => 10, "contains" => ["match"] },
-          { "id" => "high", "state" => "working", "priority" => 100, "contains" => ["match"] }
+          {
+            "id" => "low",
+            "state" => "idle",
+            "priority" => 10,
+            "contains" => ["match"]
+          },
+          {
+            "id" => "high",
+            "state" => "working",
+            "priority" => 100,
+            "contains" => ["match"]
+          }
         ]
       )
-      input = described_class::DetectionInput.new(screen: "match", osc_title: "", osc_progress: "")
+      input = described_class::DetectionInput.new(
+        screen: "match",
+        osc_title: "",
+        osc_progress: ""
+      )
 
       expect(described_class.evaluate_manifest(manifest, input).state).to eq(:working)
     end
@@ -262,13 +367,19 @@ RSpec.describe Orn::Detect::Manifest do
 
   describe "claude detection" do
     it "reads a braille spinner in the osc title as working" do
-      expect(det(:claude, title: "\u{2802} project")).to have_attributes(state: :working, visible_working: true)
+      expect(det(:claude, title: "\u{2802} project")).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads a prompt in the prompt box as idle" do
       screen = "output\n─────────\n  ❯ type here\n─────────\nfooter"
 
-      expect(det(:claude, screen: screen)).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:claude, screen: screen)).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "reads a bash permission prompt as blocked" do
@@ -277,14 +388,20 @@ RSpec.describe Orn::Detect::Manifest do
                "❯ 1. Yes\n   2. No\n\n" \
                "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
 
-      expect(det(:claude, screen: screen)).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(det(:claude, screen: screen)).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "reads a live blocked form as blocked" do
       screen = "──────────\n  1. Yes\n  2. No\n\n" \
                "Enter to select \u{00B7} \u{2191}/\u{2193} to navigate \u{00B7} Esc to cancel\n"
 
-      expect(det(:claude, screen: screen)).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(det(:claude, screen: screen)).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "skips the state update for the transcript viewer" do
@@ -294,7 +411,10 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "reads a star in the osc title as idle" do
-      expect(det(:claude, title: "\u{2733} Claude Code")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:claude, title: "\u{2733} Claude Code")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "reads an osc progress of 4;0 as idle" do
@@ -302,7 +422,10 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "falls back to idle with no visible evidence when nothing matches" do
-      expect(det(:claude, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:claude, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
 
     it "lets a blocker outrank an idle osc title" do
@@ -311,190 +434,322 @@ RSpec.describe Orn::Detect::Manifest do
                "❯ 1. Yes\n   2. No\n\n" \
                "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
 
-      expect(det(:claude, screen: screen, title: "\u{2733} Claude Code"))
-        .to have_attributes(state: :blocked, visible_blocker: true)
+      expect(
+        det(
+          :claude,
+          screen: screen,
+          title: "\u{2733} Claude Code"
+        )
+      )
+        .to have_attributes(
+          state: :blocked,
+          visible_blocker: true
+        )
     end
   end
 
   describe "codex detection" do
     it "reads a braille osc title as working" do
-      expect(det(:codex, title: "\u{2802} myproject")).to have_attributes(state: :working, visible_working: true)
+      expect(det(:codex, title: "\u{2802} myproject")).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads the working status indicator as working" do
       expect(det(:codex, screen: "• Working (47s • esc to interrupt)\n"))
-        .to have_attributes(state: :working, visible_working: true)
+        .to have_attributes(
+          state: :working,
+          visible_working: true
+        )
     end
 
     it "reads sandbox execution as working" do
       expect(det(:codex, screen: "✓ Previous task 2s\nexecuting in sandbox\n"))
-        .to have_attributes(state: :working, visible_working: true)
+        .to have_attributes(
+          state: :working,
+          visible_working: true
+        )
     end
 
     it "reads an approval prompt as blocked" do
       expect(det(:codex, screen: "I want to run: rm -rf /tmp/test\nApprove? (y/n)\n"))
-        .to have_attributes(state: :blocked, visible_blocker: true)
+        .to have_attributes(
+          state: :blocked,
+          visible_blocker: true
+        )
     end
 
     it "reads apply-changes as blocked" do
-      expect(det(:codex, screen: "Apply changes?\n")).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(det(:codex, screen: "Apply changes?\n")).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "reads an idle prompt as idle" do
       expect(det(:codex, screen: "✓ Task completed 3s\nSome output here\n›\n"))
-        .to have_attributes(state: :idle, visible_idle: true)
+        .to have_attributes(
+          state: :idle,
+          visible_idle: true
+        )
     end
 
     it "reads a completed block as idle" do
       expect(det(:codex, screen: "✓ Updated file.rb 2s\nChanges applied.\n"))
-        .to have_attributes(state: :idle, visible_idle: true)
+        .to have_attributes(
+          state: :idle,
+          visible_idle: true
+        )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:codex, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:codex, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 
   describe "pi detection" do
     it "reads osc progress 9;4 as working" do
-      expect(det(:pi, progress: "9;4;50")).to have_attributes(state: :working, visible_working: true)
+      expect(det(:pi, progress: "9;4;50")).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads a spinner as working" do
       expect(det(:pi, screen: "\u{2802} Processing request\nReading files...\n"))
-        .to have_attributes(state: :working, visible_working: true)
+        .to have_attributes(
+          state: :working,
+          visible_working: true
+        )
     end
 
     it "reads a trust prompt as blocked" do
-      expect(det(:pi,
-        screen: "Trust this project folder?\n")).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(
+        det(
+          :pi,
+          screen: "Trust this project folder?\n"
+        )
+      ).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "reads an idle prompt as idle" do
-      expect(det(:pi, screen: "Output complete\n❯\n")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:pi, screen: "Output complete\n❯\n")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:pi, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:pi, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 
   describe "gemini detection" do
     it "reads a spinner as working" do
       expect(det(:gemini, screen: "\u{280F} Searching for files...\n"))
-        .to have_attributes(state: :working, visible_working: true)
+        .to have_attributes(
+          state: :working,
+          visible_working: true
+        )
     end
 
     it "reads a permission prompt as blocked" do
       screen = "Allow this action?\n1. Yes, allow once\n2. Yes, allow always\n3. No, suggest changes\n"
 
-      expect(det(:gemini, screen: screen)).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(det(:gemini, screen: screen)).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "reads an idle prompt as idle" do
-      expect(det(:gemini, screen: "Response complete\n❯\n")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:gemini, screen: "Response complete\n❯\n")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:gemini, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:gemini, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 
   describe "cursor detection" do
     it "reads a spinner as working" do
       expect(det(:cursor, screen: "\u{2802} Running tool: read_file\n"))
-        .to have_attributes(state: :working, visible_working: true)
+        .to have_attributes(
+          state: :working,
+          visible_working: true
+        )
     end
 
     it "reads a permission prompt as blocked" do
       expect(det(:cursor, screen: "Allow this action?\n(y)es  (n)o\n"))
-        .to have_attributes(state: :blocked, visible_blocker: true)
+        .to have_attributes(
+          state: :blocked,
+          visible_blocker: true
+        )
     end
 
     it "reads an idle prompt as idle" do
-      expect(det(:cursor, screen: "Done.\n>\n")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:cursor, screen: "Done.\n>\n")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:cursor, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:cursor, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 
   describe "devin detection" do
     it "reads running-tools as working" do
       expect(det(:devin, screen: "Running tools, esc to interrupt\n"))
-        .to have_attributes(state: :working, visible_working: true)
+        .to have_attributes(
+          state: :working,
+          visible_working: true
+        )
     end
 
     it "reads a spinner as working" do
-      expect(det(:devin,
-        screen: "\u{2802} Working on task\n")).to have_attributes(state: :working, visible_working: true)
+      expect(
+        det(
+          :devin,
+          screen: "\u{2802} Working on task\n"
+        )
+      ).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads an allow-once prompt as blocked" do
       screen = "Execute rm -rf /tmp/test?\nAllow once | Allow for session | Allow for project | Allow globally\n"
 
-      expect(det(:devin, screen: screen)).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(det(:devin, screen: screen)).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "reads a hash prompt as idle" do
-      expect(det(:devin, screen: "Task complete.\n#\n")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:devin, screen: "Task complete.\n#\n")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:devin, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:devin, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 
   describe "amp detection" do
     it "reads a spinner as working" do
-      expect(det(:amp, screen: "\u{2802} Executing tool\n")).to have_attributes(state: :working, visible_working: true)
+      expect(det(:amp, screen: "\u{2802} Executing tool\n")).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads awaiting-approval as blocked" do
       expect(det(:amp, screen: "Awaiting approval for MCP tool call\n"))
-        .to have_attributes(state: :blocked, visible_blocker: true)
+        .to have_attributes(
+          state: :blocked,
+          visible_blocker: true
+        )
     end
 
     it "reads an idle prompt as idle" do
-      expect(det(:amp, screen: "Done.\n>\n")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:amp, screen: "Done.\n>\n")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:amp, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:amp, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 
   describe "kiro detection" do
     it "reads a pending-approval title as blocked" do
-      expect(det(:kiro, title: "pending approval")).to have_attributes(state: :blocked, visible_blocker: true)
+      expect(det(:kiro, title: "pending approval")).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
 
     it "reads a streaming title as working" do
-      expect(det(:kiro, title: "streaming")).to have_attributes(state: :working, visible_working: true)
+      expect(det(:kiro, title: "streaming")).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads a pause icon as blocked" do
       expect(det(:kiro, screen: "⏸ Awaiting approval\nYes  Trust  No\n"))
-        .to have_attributes(state: :blocked, visible_blocker: true)
+        .to have_attributes(
+          state: :blocked,
+          visible_blocker: true
+        )
     end
 
     it "reads a yes/trust/no panel as blocked" do
       expect(det(:kiro, screen: "Execute: git pull --rebase\nYes  Trust  No\n"))
-        .to have_attributes(state: :blocked, visible_blocker: true)
+        .to have_attributes(
+          state: :blocked,
+          visible_blocker: true
+        )
     end
 
     it "reads a spinner as working" do
-      expect(det(:kiro,
-        screen: "\u{2802} Generating code\n")).to have_attributes(state: :working, visible_working: true)
+      expect(
+        det(
+          :kiro,
+          screen: "\u{2802} Generating code\n"
+        )
+      ).to have_attributes(
+        state: :working,
+        visible_working: true
+      )
     end
 
     it "reads an idle prompt as idle" do
-      expect(det(:kiro, screen: "Done.\n>\n")).to have_attributes(state: :idle, visible_idle: true)
+      expect(det(:kiro, screen: "Done.\n>\n")).to have_attributes(
+        state: :idle,
+        visible_idle: true
+      )
     end
 
     it "falls back to idle when nothing matches" do
-      expect(det(:kiro, screen: "plain text")).to have_attributes(state: :idle, visible_idle: false)
+      expect(det(:kiro, screen: "plain text")).to have_attributes(
+        state: :idle,
+        visible_idle: false
+      )
     end
   end
 

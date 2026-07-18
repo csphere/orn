@@ -59,7 +59,14 @@ module Orn
         output = Orn::OutputMode.quiet
         session = Orn::Session.session_name(project)
         base = project.config.base
-        bootstrap_tui(output, session, project.root, default_window_name: base, reorder_base: base, relaunch_suffix: "")
+        bootstrap_tui(
+          output,
+          session,
+          project.root,
+          default_window_name: base,
+          reorder_base: base,
+          relaunch_suffix: ""
+        )
       end
 
       # Launch (or select) the global TUI window in the configured session,
@@ -68,7 +75,14 @@ module Orn
         output = Orn::OutputMode.quiet
         config = Orn::Config::GlobalTuiConfig.load
         cwd = config.scan_roots.first || Dir.pwd
-        bootstrap_tui(output, config.session, cwd, default_window_name: nil, reorder_base: "", relaunch_suffix: " -g")
+        bootstrap_tui(
+          output,
+          config.session,
+          cwd,
+          default_window_name: nil,
+          reorder_base: "",
+          relaunch_suffix: " -g"
+        )
       end
 
       # Select or (re-)launch the `orn` TUI window in `session`, at `cwd`.
@@ -81,8 +95,14 @@ module Orn
 
         tui_cmd = Orn::TUI.relaunch_command(relaunch_suffix)
         if ENV["TMUX"]
-          launch_window(output, session, cwd, tui_cmd, default_window_name: default_window_name,
-            reorder_base: reorder_base)
+          launch_window(
+            output,
+            session,
+            cwd,
+            tui_cmd,
+            default_window_name: default_window_name,
+            reorder_base: reorder_base
+          )
         else
           launch_session(session, cwd, tui_cmd)
         end
@@ -189,22 +209,47 @@ module Orn
       # Normal-mode key tokens mapped to the zero-argument App action they
       # invoke ("q" is handled separately as the quit signal).
       NORMAL_ACTIONS = {
-        "r" => :refresh, :enter => :open_selected, "c" => :close_selected,
-        "n" => :start_new_branch, "d" => :start_remove,
-        "j" => :move_down, :down => :move_down, "k" => :move_up, :up => :move_up
+        "r" => :refresh,
+
+        :enter => :open_selected,
+
+        "c" => :close_selected,
+        "n" => :start_new_branch,
+
+        "d" => :start_remove,
+        "j" => :move_down,
+
+        :down => :move_down,
+
+        "k" => :move_up,
+
+        :up => :move_up
       }.freeze
 
       # Global-mode key tokens mapped to the zero-argument GlobalApp action they
       # invoke ("q" quits and the cycle keys are handled separately, since they
       # take a direction).
       GLOBAL_ACTIONS = {
-        "r" => :full_refresh, :enter => :enter_selected, " " => :toggle_expanded,
+        "r" => :full_refresh,
+
+        :enter => :enter_selected,
+
+        " " => :toggle_expanded,
         "x" => :close_tab,
-        "j" => :move_down, :down => :move_down, "k" => :move_up, :up => :move_up
+        "j" => :move_down,
+
+        :down => :move_down,
+
+        "k" => :move_up,
+
+        :up => :move_up
       }.freeze
 
       # The cycle keys ("n"/"p") and the direction each cycles the visible tab.
-      CYCLE_KEYS = { Hub::CYCLE_NEXT_INPUT => true, Hub::CYCLE_PREV_INPUT => false }.freeze
+      CYCLE_KEYS = {
+        Hub::CYCLE_NEXT_INPUT => true,
+        Hub::CYCLE_PREV_INPUT => false
+      }.freeze
 
       def dispatch_normal(app, key)
         token = key_token(key)

@@ -39,8 +39,22 @@ RSpec.shared_context "with a sandbox system project" do
   # skipped one must not touch the host's sbx or tmux at all.
   after do
     if ENV["ORN_SYSTEM_TEST"] == "1"
-      system("sbx", "rm", "--force", sandbox_name, out: File::NULL, err: File::NULL)
-      system("tmux", "kill-session", "-t", session, out: File::NULL, err: File::NULL)
+      system(
+        "sbx",
+        "rm",
+        "--force",
+        sandbox_name,
+        out: File::NULL,
+        err: File::NULL
+      )
+      system(
+        "tmux",
+        "kill-session",
+        "-t",
+        session,
+        out: File::NULL,
+        err: File::NULL
+      )
     end
     [xdg_config, xdg_data, workspace].each { |dir| FileUtils.remove_entry(dir, true) }
   end

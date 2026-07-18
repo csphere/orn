@@ -55,7 +55,10 @@ module Orn
       def self.ensure_window(output_mode, root, branch, session)
         return if Orn::Tmux.window_exists?(output_mode, session, branch)
 
-        project = Orn::Git::Project.new(root: root, config: Orn::Config.load(root))
+        project = Orn::Git::Project.new(
+          root: root,
+          config: Orn::Config.load(root)
+        )
         sbx_name = project.sandbox_name(branch)
         if Orn::Sandbox.exists?(output_mode, sbx_name)
           raise Orn::Error,
