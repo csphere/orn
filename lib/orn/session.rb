@@ -17,7 +17,12 @@ module Orn
 
     # Whether a tmux session named `session` currently exists.
     def self.session_exists?(output_mode, session)
-      result = tmux_output(output_mode, "has-session", "-t", session)
+      result = tmux_output(
+        output_mode,
+        "has-session",
+        "-t",
+        session
+      )
       result ? result.success? : false
     end
 
@@ -27,7 +32,12 @@ module Orn
       return nil unless ENV.key?("TMUX")
 
       # The escaped \#{...} is a literal tmux format string, not Ruby interpolation.
-      result = tmux_output(output_mode, "display-message", "-p", "\#{client_session}")
+      result = tmux_output(
+        output_mode,
+        "display-message",
+        "-p",
+        "\#{client_session}"
+      )
       return nil unless result&.success?
 
       name = result.stdout.strip
@@ -50,7 +60,11 @@ module Orn
       our_path = safe_realpath(project.root)
       return project if our_path.nil? || session_belongs_to_project?(existing_path, our_path)
 
-      resolve_collision(project, session, existing_path)
+      resolve_collision(
+        project,
+        session,
+        existing_path
+      )
     end
 
     # Whether `session_path` is the project root or a path inside it. Compares
@@ -80,7 +94,14 @@ module Orn
       # caller's current session instead.
       # "#{session}:" interpolates the session; "\#{session_path}" is a literal
       # tmux format string.
-      result = tmux_output(output_mode, "display-message", "-t", "#{session}:", "-p", "\#{session_path}")
+      result = tmux_output(
+        output_mode,
+        "display-message",
+        "-t",
+        "#{session}:",
+        "-p",
+        "\#{session_path}"
+      )
       return nil unless result&.success?
 
       path = result.stdout.strip

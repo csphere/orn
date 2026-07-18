@@ -140,13 +140,25 @@ RSpec.describe Orn::Sandbox do
       listener = TCPServer.new("127.0.0.1", 0)
       port = listener.addr[1]
 
-      expect { described_class.verify_port(port, 1, 0.01) }.not_to raise_error
+      expect do
+        described_class.verify_port(
+          port,
+          1,
+          0.01
+        )
+      end.not_to raise_error
     ensure
       listener&.close
     end
 
     it "times out when the port never opens" do
-      expect { described_class.verify_port(1, 0.2, 0.05) }.to raise_error(Orn::Error, /not reachable/)
+      expect do
+        described_class.verify_port(
+          1,
+          0.2,
+          0.05
+        )
+      end.to raise_error(Orn::Error, /not reachable/)
     end
   end
 
@@ -160,7 +172,11 @@ RSpec.describe Orn::Sandbox do
         host: 3042,
         container: 3000
       )]
-      described_class.persist_ports(orn_dir, "my-sbx", mappings)
+      described_class.persist_ports(
+        orn_dir,
+        "my-sbx",
+        mappings
+      )
 
       expect(described_class.read_ports(orn_dir, "my-sbx")).to eq(mappings)
     end
@@ -176,7 +192,11 @@ RSpec.describe Orn::Sandbox do
           container: 6379
         )
       ]
-      described_class.persist_ports(orn_dir, "my-sbx", mappings)
+      described_class.persist_ports(
+        orn_dir,
+        "my-sbx",
+        mappings
+      )
 
       expect(described_class.read_ports(orn_dir, "my-sbx")).to eq(mappings)
     end
@@ -191,7 +211,13 @@ RSpec.describe Orn::Sandbox do
         )]
       )
 
-      expect(File).to exist(File.join(orn_dir, "sandbox", "test.ports"))
+      expect(File).to exist(
+        File.join(
+          orn_dir,
+          "sandbox",
+          "test.ports"
+        )
+      )
     end
 
     it "raises when reading a missing file" do
@@ -210,7 +236,13 @@ RSpec.describe Orn::Sandbox do
 
       described_class.remove_ports_file(orn_dir, "my-sbx")
 
-      expect(File).not_to exist(File.join(orn_dir, "sandbox", "my-sbx.ports"))
+      expect(File).not_to exist(
+        File.join(
+          orn_dir,
+          "sandbox",
+          "my-sbx.ports"
+        )
+      )
     end
 
     it "cleans up the legacy single-port file" do
@@ -284,7 +316,14 @@ RSpec.describe Orn::Sandbox do
 
       aggregate_failures do
         expect(args[0..2]).to eq(["create", "--name", "test-sbx"])
-        expect(args).to include("-t", "img:1", "--cpus", "2", "-m", "4g")
+        expect(args).to include(
+          "-t",
+          "img:1",
+          "--cpus",
+          "2",
+          "-m",
+          "4g"
+        )
         expect(args.each_cons(2)).to include(["--kit", "/kit/a"], ["--kit", "/kit/b"])
       end
     end
@@ -305,7 +344,11 @@ RSpec.describe Orn::Sandbox do
 
   describe ".build_exec_command" do
     it "wraps the command in sh -c without env" do
-      args = described_class.build_exec_command("my-sbx", "bin/setup", {})
+      args = described_class.build_exec_command(
+        "my-sbx",
+        "bin/setup",
+        {}
+      )
 
       expect(args).to eq(["exec", "my-sbx", "--", "sh", "-c", "bin/setup"])
     end
@@ -316,7 +359,11 @@ RSpec.describe Orn::Sandbox do
         "DATABASE_URL" => "postgres://localhost/db"
       }
 
-      args = described_class.build_exec_command("my-sbx", "bin/setup", env)
+      args = described_class.build_exec_command(
+        "my-sbx",
+        "bin/setup",
+        env
+      )
 
       expect(args).to eq(
         ["exec", "my-sbx", "--", "env",
@@ -328,13 +375,21 @@ RSpec.describe Orn::Sandbox do
 
   describe ".build_exec_detached_command" do
     it "adds the -d flag without env" do
-      args = described_class.build_exec_detached_command("my-sbx", "bin/start", {})
+      args = described_class.build_exec_detached_command(
+        "my-sbx",
+        "bin/start",
+        {}
+      )
 
       expect(args).to eq(["exec", "-d", "my-sbx", "--", "sh", "-c", "bin/start"])
     end
 
     it "adds the -d flag with env" do
-      args = described_class.build_exec_detached_command("my-sbx", "bin/start", { "SECRET" => "s3cr3t" })
+      args = described_class.build_exec_detached_command(
+        "my-sbx",
+        "bin/start",
+        { "SECRET" => "s3cr3t" }
+      )
 
       expect(args).to eq(["exec", "-d", "my-sbx", "--", "env", "SECRET=s3cr3t", "sh", "-c", "bin/start"])
     end
@@ -364,7 +419,11 @@ RSpec.describe Orn::Sandbox do
     end
 
     it "builds a failing warning check" do
-      check = described_class.warning("test", false, "warn msg")
+      check = described_class.warning(
+        "test",
+        false,
+        "warn msg"
+      )
 
       expect(check).to have_attributes(
         passed: false,
@@ -375,7 +434,11 @@ RSpec.describe Orn::Sandbox do
     end
 
     it "builds a passing warning check" do
-      check = described_class.warning("test", true, "ok msg")
+      check = described_class.warning(
+        "test",
+        true,
+        "ok msg"
+      )
 
       expect(check).to have_attributes(
         passed: true,
@@ -385,7 +448,13 @@ RSpec.describe Orn::Sandbox do
 
     it "serializes kind as a lowercase string" do
       aggregate_failures do
-        expect(described_class.warning("test", false, "msg").to_json_hash["kind"]).to eq("warning")
+        expect(
+          described_class.warning(
+            "test",
+            false,
+            "msg"
+          ).to_json_hash["kind"]
+        ).to eq("warning")
         expect(described_class.fail("test", "msg").to_json_hash["kind"]).to eq("error")
       end
     end
@@ -417,7 +486,11 @@ RSpec.describe Orn::Sandbox do
 
   describe ".git_identity_check" do
     def set_git_config(root, key, value)
-      config_path = File.join(root, ".bare", "config")
+      config_path = File.join(
+        root,
+        ".bare",
+        "config"
+      )
       system(
         GitHelpers::GIT_ISOLATION_ENV,
         "git",
@@ -435,8 +508,16 @@ RSpec.describe Orn::Sandbox do
 
     it "passes when both name and email are set" do
       root = make_bare_project
-      set_git_config(root, "user.name", "Test User")
-      set_git_config(root, "user.email", "test@example.com")
+      set_git_config(
+        root,
+        "user.name",
+        "Test User"
+      )
+      set_git_config(
+        root,
+        "user.email",
+        "test@example.com"
+      )
 
       check = described_class.git_identity_check(mode, root)
 
@@ -449,7 +530,11 @@ RSpec.describe Orn::Sandbox do
 
     it "fails and suggests setting the name when it is missing" do
       root = make_bare_project
-      set_git_config(root, "user.email", "test@example.com")
+      set_git_config(
+        root,
+        "user.email",
+        "test@example.com"
+      )
 
       check = described_class.git_identity_check(mode, root)
 
@@ -461,7 +546,11 @@ RSpec.describe Orn::Sandbox do
 
     it "fails and suggests setting the email when it is missing" do
       root = make_bare_project
-      set_git_config(root, "user.name", "Test User")
+      set_git_config(
+        root,
+        "user.name",
+        "Test User"
+      )
 
       check = described_class.git_identity_check(mode, root)
 
@@ -506,13 +595,25 @@ RSpec.describe Orn::Sandbox do
     let(:config_yaml) { "sbx: {}\n" }
 
     it "includes the git-identity, ssh-auth, and github-secret checks" do
-      names = described_class.doctor(mode, project.config.sbx, project.root).map(&:name)
+      names = described_class.doctor(
+        mode,
+        project.config.sbx,
+        project.root
+      ).map(&:name)
 
-      expect(names).to include("git-identity", "ssh-auth", "github-secret")
+      expect(names).to include(
+        "git-identity",
+        "ssh-auth",
+        "github-secret"
+      )
     end
 
     it "skips the colima check off macOS" do
-      names = described_class.doctor(mode, project.config.sbx, project.root).map(&:name)
+      names = described_class.doctor(
+        mode,
+        project.config.sbx,
+        project.root
+      ).map(&:name)
 
       if described_class.send(:macos?)
         expect(names).to include("colima")
@@ -525,7 +626,11 @@ RSpec.describe Orn::Sandbox do
       let(:config_yaml) { "sbx:\n  template: img:1\n  build:\n    build_args: [MY_BUILD_ARG]\n" }
 
       it "includes the template and per-build-arg env checks" do
-        names = described_class.doctor(mode, project.config.sbx, project.root).map(&:name)
+        names = described_class.doctor(
+          mode,
+          project.config.sbx,
+          project.root
+        ).map(&:name)
 
         expect(names).to include("template", "env:MY_BUILD_ARG")
       end

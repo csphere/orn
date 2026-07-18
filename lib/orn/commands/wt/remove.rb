@@ -7,7 +7,12 @@ module Orn
       # remote branches. Batch: one branch's failure is reported but does not
       # stop the rest.
       class Remove
-        Result = Data.define(:branch, :worktree_removed, :branch_deleted, :remote_branch_deleted) do
+        Result = Data.define(
+          :branch,
+          :worktree_removed,
+          :branch_deleted,
+          :remote_branch_deleted
+        ) do
           def to_json_hash
             {
               "branch" => branch,
@@ -35,15 +40,32 @@ module Orn
           project = Orn::Git::Project.discover
           confirm_prunes(project, branches) if prune && !force && !@output_mode.json
 
-          results, errors = remove_multiple(project, branches, prune)
+          results, errors = remove_multiple(
+            project,
+            branches,
+            prune
+          )
           json = results.map(&:to_json_hash)
-          Commands::Output.finish_multi_branch(@output_mode, json, errors, branches.length)
+          Commands::Output.finish_multi_branch(
+            @output_mode,
+            json,
+            errors,
+            branches.length
+          )
         end
 
         def remove_multiple(project, branches, prune)
           printer = lambda(&:print_summary)
-          Commands::Output.run_multi_branch(@output_mode, branches, printer) do |branch|
-            run_inner(project, branch, prune)
+          Commands::Output.run_multi_branch(
+            @output_mode,
+            branches,
+            printer
+          ) do |branch|
+            run_inner(
+              project,
+              branch,
+              prune
+            )
           end
         end
 
@@ -52,7 +74,11 @@ module Orn
         # the worktree being removed; a missing worktree is not an error, so
         # prune-only invocations work.
         def run_inner(project, branch, prune)
-          reject_base_prune!(project, branch, prune)
+          reject_base_prune!(
+            project,
+            branch,
+            prune
+          )
           reject_inside_worktree!(project, branch)
 
           worktree = Orn::Git::Worktree.new(

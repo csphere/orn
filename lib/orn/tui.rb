@@ -54,7 +54,12 @@ module Orn
       windows = result.stdout.lines.map(&:chomp)
       return if windows.length <= 1
 
-      apply_window_order(cmd, session, windows, desired_order(windows, base_branch))
+      apply_window_order(
+        cmd,
+        session,
+        windows,
+        desired_order(windows, base_branch)
+      )
     end
 
     # The target window order: the TUI window first, then the base branch, then

@@ -7,7 +7,11 @@ module Orn
     # is a follow-up. Batch: one branch's failure is reported but does not
     # stop the rest.
     class Remove
-      Result = Data.define(:sandbox_removed, :window_closed, :wt) do
+      Result = Data.define(
+        :sandbox_removed,
+        :window_closed,
+        :wt
+      ) do
         def branch
           wt.branch
         end
@@ -39,7 +43,9 @@ module Orn
         sandbox_removed = teardown_sandbox(project, branch)
         window_closed = close_window(session, branch)
         wt_result = Wt::Remove.new(output_mode: @output_mode)
-          .run_inner(project, branch, prune)
+          .run_inner(project,
+            branch,
+            prune)
         Result.new(
           sandbox_removed: sandbox_removed,
           window_closed: window_closed,
@@ -52,9 +58,18 @@ module Orn
         project = Orn::Git::Project.discover
         confirm_prunes(project, branches) if prune && !force && !@output_mode.json
 
-        results, errors = remove_multiple(project, branches, prune)
+        results, errors = remove_multiple(
+          project,
+          branches,
+          prune
+        )
         json = results.map(&:to_json_hash)
-        Commands::Output.finish_multi_branch(@output_mode, json, errors, branches.length)
+        Commands::Output.finish_multi_branch(
+          @output_mode,
+          json,
+          errors,
+          branches.length
+        )
       end
 
       private
@@ -69,16 +84,32 @@ module Orn
       end
 
       def close_window(session, branch)
-        return false unless Orn::Tmux.window_exists?(@output_mode, session, branch)
+        return false unless Orn::Tmux.window_exists?(
+          @output_mode,
+          session,
+          branch
+        )
 
-        Orn::Tmux.kill_window(@output_mode, session, branch)
+        Orn::Tmux.kill_window(
+          @output_mode,
+          session,
+          branch
+        )
         true
       end
 
       def remove_multiple(project, branches, prune)
         printer = lambda(&:print_summary)
-        Commands::Output.run_multi_branch(@output_mode, branches, printer) do |branch|
-          run_inner(project, branch, prune)
+        Commands::Output.run_multi_branch(
+          @output_mode,
+          branches,
+          printer
+        ) do |branch|
+          run_inner(
+            project,
+            branch,
+            prune
+          )
         end
       end
 

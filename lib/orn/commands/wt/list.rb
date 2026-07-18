@@ -20,7 +20,11 @@ module Orn
               "worktrees" => result.worktrees
             )
           else
-            Commands::Output.worktree_table(result.repo, ["Branch"], result.worktrees.map { |branch| [branch] })
+            Commands::Output.worktree_table(
+              result.repo,
+              ["Branch"],
+              result.worktrees.map { |branch| [branch] }
+            )
           end
         end
 

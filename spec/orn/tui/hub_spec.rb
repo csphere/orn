@@ -37,21 +37,57 @@ module Orn
       describe ".cycle_index" do
         it "wraps forward and backward from a visible tab" do
           aggregate_failures do
-            expect(described_class.cycle_index(3, 2, true)).to eq(0)
-            expect(described_class.cycle_index(3, 0, false)).to eq(2)
-            expect(described_class.cycle_index(3, 0, true)).to eq(1)
+            expect(
+              described_class.cycle_index(
+                3,
+                2,
+                true
+              )
+            ).to eq(0)
+            expect(
+              described_class.cycle_index(
+                3,
+                0,
+                false
+              )
+            ).to eq(2)
+            expect(
+              described_class.cycle_index(
+                3,
+                0,
+                true
+              )
+            ).to eq(1)
           end
         end
 
         it "starts from the ends when no tab is visible" do
           aggregate_failures do
-            expect(described_class.cycle_index(3, nil, true)).to eq(0)
-            expect(described_class.cycle_index(3, nil, false)).to eq(2)
+            expect(
+              described_class.cycle_index(
+                3,
+                nil,
+                true
+              )
+            ).to eq(0)
+            expect(
+              described_class.cycle_index(
+                3,
+                nil,
+                false
+              )
+            ).to eq(2)
           end
         end
 
         it "is nil when there are no tabs" do
-          expect(described_class.cycle_index(0, nil, true)).to be_nil
+          expect(
+            described_class.cycle_index(
+              0,
+              nil,
+              true
+            )
+          ).to be_nil
         end
       end
 

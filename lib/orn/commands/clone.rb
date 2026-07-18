@@ -18,7 +18,11 @@ module Orn
 
         @output_mode.status("Cloning orn project: #{project_name}\n")
         Dir.mkdir(project_name)
-        scaffold_or_cleanup(project_name, url, base)
+        scaffold_or_cleanup(
+          project_name,
+          url,
+          base
+        )
         print_next_steps(project_name, base)
         nil
       end
@@ -35,7 +39,13 @@ module Orn
       private
 
       def scaffold_or_cleanup(project_dir, url, base)
-        Setup.clone_into(@output_mode, project_dir, project_dir, url, base)
+        Setup.clone_into(
+          @output_mode,
+          project_dir,
+          project_dir,
+          url,
+          base
+        )
       rescue StandardError
         FileUtils.rm_rf(project_dir)
         raise

@@ -22,7 +22,11 @@ module Orn
       # Draw a stateful widget (`List`) into `rect`, letting it update `state`
       # (scroll offset).
       def render_stateful_widget(widget, rect, state)
-        widget.render(rect, @buffer, state)
+        widget.render(
+          rect,
+          @buffer,
+          state
+        )
       end
     end
   end

@@ -58,12 +58,28 @@ RSpec.describe Orn::Tmux::Layout do
     end
 
     it "stacks three panes vertically in one column", :aggregate_failures do
-      plan = described_class.plan_columns([col("a", "b", "c")])
+      plan = described_class.plan_columns(
+        [col(
+          "a",
+          "b",
+          "c"
+        )]
+      )
 
       expect(plan.splits).to eq(
         [
-          split(:vertical, 0, 67, 1),
-          split(:vertical, 1, 50, 2)
+          split(
+            :vertical,
+            0,
+            67,
+            1
+          ),
+          split(
+            :vertical,
+            1,
+            50,
+            2
+          )
         ]
       )
       expect(plan.commands).to eq([pane_command(0, "a"), pane_command(1, "b"), pane_command(2, "c")])
@@ -75,9 +91,24 @@ RSpec.describe Orn::Tmux::Layout do
 
       expect(plan.splits).to eq(
         [
-          split(:horizontal, 0, 50, 1),
-          split(:vertical, 0, 50, 2),
-          split(:vertical, 1, 50, 3)
+          split(
+            :horizontal,
+            0,
+            50,
+            1
+          ),
+          split(
+            :vertical,
+            0,
+            50,
+            2
+          ),
+          split(
+            :vertical,
+            1,
+            50,
+            3
+          )
         ]
       )
       expect(plan.commands).to eq(
@@ -89,15 +120,46 @@ RSpec.describe Orn::Tmux::Layout do
     end
 
     it "handles three columns with varying pane counts", :aggregate_failures do
-      plan = described_class.plan_columns([col("a"), col("b", "c"), col("d", "e", "f")])
+      plan = described_class.plan_columns(
+        [col("a"), col("b", "c"), col(
+          "d",
+          "e",
+          "f"
+        )]
+      )
 
       expect(plan.splits).to eq(
         [
-          split(:horizontal, 0, 67, 1),
-          split(:horizontal, 1, 50, 2),
-          split(:vertical, 1, 50, 3),
-          split(:vertical, 2, 67, 4),
-          split(:vertical, 4, 50, 5)
+          split(
+            :horizontal,
+            0,
+            67,
+            1
+          ),
+          split(
+            :horizontal,
+            1,
+            50,
+            2
+          ),
+          split(
+            :vertical,
+            1,
+            50,
+            3
+          ),
+          split(
+            :vertical,
+            2,
+            67,
+            4
+          ),
+          split(
+            :vertical,
+            4,
+            50,
+            5
+          )
         ]
       )
       expect(plan.commands.map(&:pane)).to eq([0, 1, 3, 2, 4, 5])
@@ -106,7 +168,14 @@ RSpec.describe Orn::Tmux::Layout do
     it "creates panes but no commands for bare terminals" do
       plan = described_class.plan_columns([col(""), col("")])
 
-      expect(plan.splits).to eq([split(:horizontal, 0, 50, 1)])
+      expect(plan.splits).to eq(
+        [split(
+          :horizontal,
+          0,
+          50,
+          1
+        )]
+      )
       expect(plan.commands).to be_empty
     end
 
@@ -128,7 +197,14 @@ RSpec.describe Orn::Tmux::Layout do
     it "splits two rows of panes vertically", :aggregate_failures do
       plan = described_class.plan_rows([row_panes("top"), row_panes("bottom")])
 
-      expect(plan.splits).to eq([split(:vertical, 0, 50, 1)])
+      expect(plan.splits).to eq(
+        [split(
+          :vertical,
+          0,
+          50,
+          1
+        )]
+      )
       expect(plan.commands).to eq([pane_command(0, "top"), pane_command(1, "bottom")])
     end
 
@@ -142,10 +218,30 @@ RSpec.describe Orn::Tmux::Layout do
 
       expect(plan.splits).to eq(
         [
-          split(:vertical, 0, 50, 1),
-          split(:horizontal, 1, 50, 2),
-          split(:vertical, 1, 50, 3),
-          split(:vertical, 2, 50, 4)
+          split(
+            :vertical,
+            0,
+            50,
+            1
+          ),
+          split(
+            :horizontal,
+            1,
+            50,
+            2
+          ),
+          split(
+            :vertical,
+            1,
+            50,
+            3
+          ),
+          split(
+            :vertical,
+            2,
+            50,
+            4
+          )
         ]
       )
       expect(plan.commands).to eq(
@@ -168,18 +264,51 @@ RSpec.describe Orn::Tmux::Layout do
 
       expect(plan.splits).to eq(
         [
-          split(:vertical, 0, 67, 1),
-          split(:vertical, 1, 50, 2),
-          split(:horizontal, 1, 50, 3)
+          split(
+            :vertical,
+            0,
+            67,
+            1
+          ),
+          split(
+            :vertical,
+            1,
+            50,
+            2
+          ),
+          split(
+            :horizontal,
+            1,
+            50,
+            3
+          )
         ]
       )
       expect(plan.commands.map(&:pane)).to eq([0, 1, 3, 2])
     end
 
     it "stacks multiple panes in a single row" do
-      plan = described_class.plan_rows([row_panes("a", "b", "c")])
+      plan = described_class.plan_rows(
+        [row_panes(
+          "a",
+          "b",
+          "c"
+        )]
+      )
 
-      expect(plan.splits).to eq([split(:vertical, 0, 67, 1), split(:vertical, 1, 50, 2)])
+      expect(plan.splits).to eq(
+        [split(
+          :vertical,
+          0,
+          67,
+          1
+        ), split(
+          :vertical,
+          1,
+          50,
+          2
+        )]
+      )
       expect(plan.commands.map(&:pane)).to eq([0, 1, 2])
     end
 

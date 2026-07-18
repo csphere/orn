@@ -13,7 +13,13 @@ module Orn
 
       # Context bundle threaded through the provisioning helpers, so none of them
       # needs a long positional parameter list.
-      Context = Data.define(:output_mode, :project, :branch, :sbx_config, :agent_type)
+      Context = Data.define(
+        :output_mode,
+        :project,
+        :branch,
+        :sbx_config,
+        :agent_type
+      )
 
       # Case 4 with `--sbx`: validate config/trust/preflight, create the
       # worktree, then provision the sandbox and window under a rollback guard.
@@ -21,9 +27,18 @@ module Orn
         sbx_config = project.config.require_sbx!
         Orn::Trust.check_sbx_trust(project.root, sbx_config)
         agent_type = sbx_config.require_agent_type!
-        Orn::Sandbox.preflight(output_mode, sbx_config, project.root)
+        Orn::Sandbox.preflight(
+          output_mode,
+          sbx_config,
+          project.root
+        )
 
-        wt_result = Wt::New.create(output_mode, project, branch, base_override)
+        wt_result = Wt::New.create(
+          output_mode,
+          project,
+          branch,
+          base_override
+        )
         context = Context.new(
           output_mode: output_mode,
           project: project,
@@ -66,16 +81,29 @@ module Orn
         state[:sandbox_created] = true
 
         run_setup(context, name)
-        open_window(context, name, state)
+        open_window(
+          context,
+          name,
+          state
+        )
         host_ports = publish_ports(context, name)
-        start_services(context.output_mode, context.sbx_config, name)
+        start_services(
+          context.output_mode,
+          context.sbx_config,
+          name
+        )
         host_ports
       end
 
       def run_setup(context, name)
         return if context.sbx_config.setup.empty?
 
-        Orn::Sandbox.run_setup(context.output_mode, name, context.sbx_config.setup, context.sbx_config.env)
+        Orn::Sandbox.run_setup(
+          context.output_mode,
+          name,
+          context.sbx_config.setup,
+          context.sbx_config.env
+        )
       end
 
       def open_window(context, name, state)
@@ -95,7 +123,10 @@ module Orn
         return [] if context.sbx_config.ports.empty?
 
         Orn::Sandbox.setup_ports(
-          context.output_mode, name, context.sbx_config.ports, File.join(context.project.root, ".orn")
+          context.output_mode,
+          name,
+          context.sbx_config.ports,
+          File.join(context.project.root, ".orn")
         )
       end
 
@@ -103,7 +134,12 @@ module Orn
         return unless sbx_config&.start
 
         output_mode.status("Starting services in '#{name}': #{sbx_config.start}")
-        Orn::Sandbox.exec_detached(output_mode, name, sbx_config.start, sbx_config.env)
+        Orn::Sandbox.exec_detached(
+          output_mode,
+          name,
+          sbx_config.start,
+          sbx_config.env
+        )
       end
 
       # Case 2 when the branch's sandbox still exists: reopen the window with the
@@ -114,11 +150,24 @@ module Orn
 
         layout, layout_source = project.config.effective_sbx_layout
         Orn::Tmux.open_window_with_layout(
-          output_mode, project, branch, layout, layout_source, template_vars: { "sandbox" => sbx_name }
+          output_mode,
+          project,
+          branch,
+          layout,
+          layout_source,
+          template_vars: { "sandbox" => sbx_name }
         )
 
-        host_ports = Orn::Sandbox.republish_ports(output_mode, sbx_name, File.join(project.root, ".orn"))
-        start_services(output_mode, sbx_config, sbx_name)
+        host_ports = Orn::Sandbox.republish_ports(
+          output_mode,
+          sbx_name,
+          File.join(project.root, ".orn")
+        )
+        start_services(
+          output_mode,
+          sbx_config,
+          sbx_name
+        )
 
         Result.new(
           branch: branch,
@@ -154,7 +203,11 @@ module Orn
       end
 
       def safe_kill_window(context, session)
-        Orn::Tmux.kill_window(context.output_mode, session, context.branch)
+        Orn::Tmux.kill_window(
+          context.output_mode,
+          session,
+          context.branch
+        )
       rescue Orn::Error
         nil
       end

@@ -55,11 +55,26 @@ module Orn
       def self.render_table(headers, rows)
         widths = column_widths(headers, rows)
         [
-          border("╭", "┬", "╮", widths),
+          border(
+            "╭",
+            "┬",
+            "╮",
+            widths
+          ),
           row_line(headers, widths),
-          border("├", "┼", "┤", widths),
+          border(
+            "├",
+            "┼",
+            "┤",
+            widths
+          ),
           *rows.map { |row| row_line(row, widths) },
-          border("╰", "┴", "╯", widths)
+          border(
+            "╰",
+            "┴",
+            "╯",
+            widths
+          )
         ].join("\n")
       end
 
@@ -79,7 +94,9 @@ module Orn
         "│#{padded.join("│")}│"
       end
 
-      private_class_method :column_widths, :border, :row_line
+      private_class_method :column_widths,
+        :border,
+        :row_line
     end
   end
 end

@@ -4,14 +4,26 @@ RSpec.describe Orn::Commands::Output do
   describe ".worktree_table" do
     context "with no rows" do
       it "prints a not-found notice" do
-        expect { described_class.worktree_table("repo", ["Branch"], []) }
+        expect do
+          described_class.worktree_table(
+            "repo",
+            ["Branch"],
+            []
+          )
+        end
           .to output("No worktrees found\n").to_stdout
       end
     end
 
     context "with rows" do
       it "prints a bordered table headed by the repo" do
-        expect { described_class.worktree_table("myrepo", ["Branch"], [["main"], ["feature/x"]]) }
+        expect do
+          described_class.worktree_table(
+            "myrepo",
+            ["Branch"],
+            [["main"], ["feature/x"]]
+          )
+        end
           .to output(%r{Worktrees in myrepo.*Branch.*main.*feature/x}m).to_stdout
       end
     end

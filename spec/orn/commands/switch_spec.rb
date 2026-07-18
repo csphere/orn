@@ -9,7 +9,14 @@ RSpec.describe Orn::Commands::Switch do
     remote = make_remote_with_branch(seed_branch)
     project = make_bare_project
     add_origin(project, remote)
-    File.write(File.join(project, ".orn", "config.yaml"), "git:\n  base: main\n")
+    File.write(
+      File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      ),
+      "git:\n  base: main\n"
+    )
     project
   end
 
@@ -24,7 +31,14 @@ RSpec.describe Orn::Commands::Switch do
     remote = make_remote_with_branch(seed_branch)
     project = make_bare_project
     add_origin(project, remote)
-    File.write(File.join(project, ".orn", "config.yaml"), config)
+    File.write(
+      File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      ),
+      config
+    )
     load_project(project)
   end
 
@@ -110,21 +124,42 @@ RSpec.describe Orn::Commands::Switch do
     it "fails when there is no [sbx] section" do
       project = sbx_project("feature/other", "git:\n  base: main\n")
 
-      expect { command.perform(project, "feature/new", nil, true) }
+      expect do
+        command.perform(
+          project,
+          "feature/new",
+          nil,
+          true
+        )
+      end
         .to raise_error(Orn::Error, /No sbx section.*config\.yaml/m)
     end
 
     it "fails when [sbx] has no agent_type" do
       project = sbx_project("feature/other", "sbx: {}\n")
 
-      expect { command.perform(project, "feature/new", nil, true) }
+      expect do
+        command.perform(
+          project,
+          "feature/new",
+          nil,
+          true
+        )
+      end
         .to raise_error(Orn::Error, /agent_type/)
     end
 
     it "does not require [sbx] config in plain mode" do
       project = make_project(register_temp_dir(Dir.mktmpdir("orn-switch")), "git:\n  base: main\n")
 
-      expect { command.perform(project, "feature/new", nil, false) }
+      expect do
+        command.perform(
+          project,
+          "feature/new",
+          nil,
+          false
+        )
+      end
         .to raise_error(Orn::Error) { |error| expect(error.message).not_to include("sbx") }
     end
   end
@@ -136,22 +171,43 @@ RSpec.describe Orn::Commands::Switch do
       root = standard_project("feature/other")
       project = load_project(root)
 
-      result = command.perform(project, "feature/fresh", nil, false)
+      result = command.perform(
+        project,
+        "feature/fresh",
+        nil,
+        false
+      )
       session = Orn::Session.session_name(project)
 
       aggregate_failures do
         expect(result.action).to eq(:created)
         expect(File).to be_directory(File.join(root, "feature/fresh"))
-        expect(Orn::Tmux.window_exists?(Orn::OutputMode.quiet, session, "feature/fresh")).to be(true)
+        expect(
+          Orn::Tmux.window_exists?(
+            Orn::OutputMode.quiet,
+            session,
+            "feature/fresh"
+          )
+        ).to be(true)
       end
     end
 
     it "just selects the window when it already exists" do
       root = standard_project("feature/other")
       project = load_project(root)
-      command.perform(project, "feature/fresh", nil, false)
+      command.perform(
+        project,
+        "feature/fresh",
+        nil,
+        false
+      )
 
-      result = command.perform(project, "feature/fresh", nil, false)
+      result = command.perform(
+        project,
+        "feature/fresh",
+        nil,
+        false
+      )
 
       expect(result.action).to eq(:switched)
     end

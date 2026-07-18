@@ -7,7 +7,11 @@ module Orn
       # state. Best-effort: `removed` is false when no sandbox existed, and the
       # ports file is deleted either way.
       class Remove
-        Result = Data.define(:name, :branch, :removed) do
+        Result = Data.define(
+          :name,
+          :branch,
+          :removed
+        ) do
           def to_json_hash
             {
               "name" => name,

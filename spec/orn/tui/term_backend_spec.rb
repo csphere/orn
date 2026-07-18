@@ -36,7 +36,12 @@ module Orn
           height: 1
         )
         buffer = Buffer.new(area)
-        buffer.set_line(0, 0, Line.raw("hi"), 3)
+        buffer.set_line(
+          0,
+          0,
+          Line.raw("hi"),
+          3
+        )
 
         output = backend.render(buffer)
 

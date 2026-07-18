@@ -18,7 +18,15 @@ module Orn
       has_remote = worktree.remote_branch_exists?("origin", branch)
       return if !has_local && !has_remote
 
-      confirmed = with_stdin_stderr { |reader, writer| prune(branch, has_local, has_remote, reader, writer) }
+      confirmed = with_stdin_stderr do |reader, writer|
+        prune(
+          branch,
+          has_local,
+          has_remote,
+          reader,
+          writer
+        )
+      end
       raise Orn::Error, "Aborted" unless confirmed
 
       nil

@@ -19,7 +19,11 @@ module Orn
     private
 
     def path
-      File.join(Orn.root, "templates", @name)
+      File.join(
+        Orn.root,
+        "templates",
+        @name
+      )
     end
   end
 end

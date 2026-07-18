@@ -9,7 +9,14 @@ module Orn
     # follow-up.
     class Switch
       # How far switch had to go to land on the branch.
-      Result = Data.define(:branch, :action, :base, :worktree_path, :sandbox_name, :host_ports) do
+      Result = Data.define(
+        :branch,
+        :action,
+        :base,
+        :worktree_path,
+        :sandbox_name,
+        :host_ports
+      ) do
         # A minimal result with all optional fields empty.
         def self.simple(branch, action)
           new(
@@ -48,8 +55,16 @@ module Orn
         wt_path = project.worktree_path(branch)
 
         # Case 1: tmux window exists, just switch to it.
-        if Orn::Tmux.window_exists?(@output_mode, session, branch)
-          Orn::Tmux.select_window(@output_mode, session, branch)
+        if Orn::Tmux.window_exists?(
+          @output_mode,
+          session,
+          branch
+        )
+          Orn::Tmux.select_window(
+            @output_mode,
+            session,
+            branch
+          )
           return Result.simple(branch, :switched)
         end
 
@@ -64,16 +79,34 @@ module Orn
           output_mode: @output_mode
         )
         if worktree.remote_branch_exists?("origin", branch)
-          Wt::New.create(@output_mode, project, branch, nil)
-          Orn::Tmux.open_window(@output_mode, project, branch)
+          Wt::New.create(
+            @output_mode,
+            project,
+            branch,
+            nil
+          )
+          Orn::Tmux.open_window(
+            @output_mode,
+            project,
+            branch
+          )
           return Result.simple(branch, :fetched)
         end
 
         # Case 4: branch doesn't exist anywhere, create from base.
         if sbx
-          SwitchSandbox.create_with_sandbox(@output_mode, project, branch, base_override)
+          SwitchSandbox.create_with_sandbox(
+            @output_mode,
+            project,
+            branch,
+            base_override
+          )
         else
-          create_plain(project, branch, base_override)
+          create_plain(
+            project,
+            branch,
+            base_override
+          )
         end
       end
 
@@ -83,7 +116,12 @@ module Orn
 
         project = Orn::Git::Project.discover
         project = Orn::Session.check_collision(@output_mode, project)
-        result = perform(project, branch, base_override, sbx)
+        result = perform(
+          project,
+          branch,
+          base_override,
+          sbx
+        )
         emit(result)
       end
 
@@ -95,17 +133,35 @@ module Orn
         @output_mode.status("Reopening window for #{branch}...")
         sbx_name = project.sandbox_name(branch)
         if Orn::Sandbox.exists?(@output_mode, sbx_name)
-          return SwitchSandbox.reopen_with_sandbox(@output_mode, project, branch, sbx_name)
+          return SwitchSandbox.reopen_with_sandbox(
+            @output_mode,
+            project,
+            branch,
+            sbx_name
+          )
         end
 
-        Orn::Tmux.open_window(@output_mode, project, branch)
+        Orn::Tmux.open_window(
+          @output_mode,
+          project,
+          branch
+        )
         Result.simple(branch, :reopened)
       end
 
       # Case 4 without a sandbox: new worktree from base plus a tmux window.
       def create_plain(project, branch, base_override)
-        wt_result = Wt::New.create(@output_mode, project, branch, base_override)
-        Orn::Tmux.open_window(@output_mode, project, branch)
+        wt_result = Wt::New.create(
+          @output_mode,
+          project,
+          branch,
+          base_override
+        )
+        Orn::Tmux.open_window(
+          @output_mode,
+          project,
+          branch
+        )
         Result.new(
           branch: wt_result.branch,
           action: :created,

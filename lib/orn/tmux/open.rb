@@ -22,8 +22,19 @@ module Orn
     # Open the window with an explicit layout and template variables, checking
     # trust for `layout_source` first.
     def self.open_window_with_layout(output_mode, project, branch, layout, layout_source, template_vars: {})
-      trusted = Orn::Trust.check_trust(output_mode, project.root, layout, layout_source)
-      open_checked_window(output_mode, project, branch, trusted, template_vars)
+      trusted = Orn::Trust.check_trust(
+        output_mode,
+        project.root,
+        layout,
+        layout_source
+      )
+      open_checked_window(
+        output_mode,
+        project,
+        branch,
+        trusted,
+        template_vars
+      )
     end
 
     # Open a worktree window without ever prompting for trust approval;
@@ -31,9 +42,18 @@ module Orn
     # would garble the screen.
     def self.open_window_non_interactive(output_mode, project, branch)
       trusted = Orn::Trust.check_trust_non_interactive(
-        output_mode, project.root, project.config.layout, project.config.layout_source
+        output_mode,
+        project.root,
+        project.config.layout,
+        project.config.layout_source
       )
-      open_checked_window(output_mode, project, branch, trusted, {})
+      open_checked_window(
+        output_mode,
+        project,
+        branch,
+        trusted,
+        {}
+      )
     end
 
     # Create the worktree window once the layout has passed a trust check.

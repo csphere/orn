@@ -10,14 +10,23 @@ module Orn
       # One planned split-window call: split `target`, giving the new pane
       # (`result`) `percentage`% of the space. `direction` is :horizontal (new
       # pane beside the target, `-h`) or :vertical (below, `-v`).
-      Split = Data.define(:direction, :target, :percentage, :result)
+      Split = Data.define(
+        :direction,
+        :target,
+        :percentage,
+        :result
+      )
 
       # A command to type into a pane once splits are done and its shell is ready.
       PaneCommand = Data.define(:pane, :command)
 
       # Ordered splits and pane commands realizing a Layout; `focus_pane` gets
       # the final select-pane.
-      Plan = Data.define(:splits, :commands, :focus_pane)
+      Plan = Data.define(
+        :splits,
+        :commands,
+        :focus_pane
+      )
 
       # Size for the next split when `remaining` panes still have to fit in the
       # space being divided: the new pane takes remaining / (remaining + 1)
@@ -58,7 +67,11 @@ module Orn
         def plan_columns(columns)
           return empty_plan if columns.empty?
 
-          column_roots = chain_split(0, columns.length, :horizontal)
+          column_roots = chain_split(
+            0,
+            columns.length,
+            :horizontal
+          )
           columns.each_with_index { |column, index| plan_pane_stack(column_roots[index], column.panes) }
           finish
         end
@@ -66,7 +79,11 @@ module Orn
         def plan_rows(rows)
           return empty_plan if rows.empty?
 
-          row_roots = chain_split(0, rows.length, :vertical)
+          row_roots = chain_split(
+            0,
+            rows.length,
+            :vertical
+          )
           rows.each_with_index { |row, index| plan_row(row_roots[index], row) }
           finish
         end
@@ -79,14 +96,22 @@ module Orn
             return
           end
 
-          column_roots = chain_split(root, row.columns.length, :horizontal)
+          column_roots = chain_split(
+            root,
+            row.columns.length,
+            :horizontal
+          )
           row.columns.each_with_index { |column, index| plan_pane_stack(column_roots[index], column.panes) }
         end
 
         # Splits `root` vertically into one pane per command, records the pane
         # group, and queues the non-empty commands.
         def plan_pane_stack(root, pane_commands)
-          panes = chain_split(root, pane_commands.length, :vertical)
+          panes = chain_split(
+            root,
+            pane_commands.length,
+            :vertical
+          )
           @pane_grid << panes
           pane_commands.each_with_index do |command, index|
             next if command.empty?

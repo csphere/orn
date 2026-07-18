@@ -25,7 +25,12 @@ RSpec.describe Orn::Commands::Setup do
       config = described_class.serialize_global_config
 
       expect(YAML.safe_load(config)["orn_version"]).to eq(Orn::VERSION)
-      expect(config).to include("tui:", "scan_roots", "scan_depth", "session: orn")
+      expect(config).to include(
+        "tui:",
+        "scan_roots",
+        "scan_depth",
+        "session: orn"
+      )
       expect(config).not_to include("git:\n  base")
     end
   end
@@ -35,14 +40,25 @@ RSpec.describe Orn::Commands::Setup do
       content = described_class.generate_claude_md("acme-api", "develop")
 
       expect(content).to start_with("#")
-      expect(content).to include("acme-api", "develop/", ".bare", "gitdir", "worktree")
+      expect(content).to include(
+        "acme-api",
+        "develop/",
+        ".bare",
+        "gitdir",
+        "worktree"
+      )
     end
   end
 
   describe ".bootstrap_global_config" do
     def bootstrap(global_dir, input)
       writer = StringIO.new
-      described_class.bootstrap_global_config(Orn::OutputMode.quiet, global_dir, StringIO.new(input), writer)
+      described_class.bootstrap_global_config(
+        Orn::OutputMode.quiet,
+        global_dir,
+        StringIO.new(input),
+        writer
+      )
       writer.string
     end
 

@@ -5,7 +5,11 @@ module Orn
     # Resolved tui settings, read from the global config only (there is no
     # per-project TUI config). Unlike ConfigInfo's TuiInfo, these are plain
     # resolved values without source provenance, for the TUI to consume.
-    GlobalTuiConfig = Data.define(:session, :scan_roots, :scan_depth) do
+    GlobalTuiConfig = Data.define(
+      :session,
+      :scan_roots,
+      :scan_depth
+    ) do
       def self.load
         load_from(Config.global_config_dir)
       end
@@ -44,7 +48,9 @@ module Orn
         []
       end
 
-      private_class_method :tui_section, :scan_roots_from, :current_directory_roots
+      private_class_method :tui_section,
+        :scan_roots_from,
+        :current_directory_roots
     end
   end
 end

@@ -18,11 +18,23 @@ RSpec.describe Orn::Commands::Sbx::Remove do
           container: 3000
         )]
       )
-      expect(File).to exist(File.join(orn_dir, "sandbox", "#{name}.ports"))
+      expect(File).to exist(
+        File.join(
+          orn_dir,
+          "sandbox",
+          "#{name}.ports"
+        )
+      )
 
       Orn::Sandbox.remove_ports_file(orn_dir, name)
 
-      expect(File).not_to exist(File.join(orn_dir, "sandbox", "#{name}.ports"))
+      expect(File).not_to exist(
+        File.join(
+          orn_dir,
+          "sandbox",
+          "#{name}.ports"
+        )
+      )
     end
   end
 end

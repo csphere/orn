@@ -7,7 +7,11 @@ module Orn
       # worktree from the remote branch when it only exists on origin.
       # Worktree-only (no tmux window).
       class Open
-        Result = Data.define(:branch, :path, :created)
+        Result = Data.define(
+          :branch,
+          :path,
+          :created
+        )
 
         # Returns the existing worktree path, or fetches and creates the worktree
         # when the branch exists only on origin; raises when the branch exists in
@@ -28,7 +32,12 @@ module Orn
             output_mode: output_mode
           )
           if worktree.remote_branch_exists?("origin", branch)
-            created = New.create(output_mode, project, branch, nil)
+            created = New.create(
+              output_mode,
+              project,
+              branch,
+              nil
+            )
             return Result.new(
               branch: branch,
               path: created.worktree_path,
@@ -50,7 +59,11 @@ module Orn
           Orn::Git::BranchName.new(branch).validate!
 
           project = Orn::Git::Project.discover
-          result = self.class.resolve(@output_mode, project, branch)
+          result = self.class.resolve(
+            @output_mode,
+            project,
+            branch
+          )
           emit(result)
         end
 

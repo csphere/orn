@@ -168,7 +168,12 @@ module Orn
 
       describe ".ahead_behind" do
         it "returns zeros for an invalid path" do
-          counts = described_class.ahead_behind(Orn::OutputMode.quiet, "/tmp/nonexistent", "feature", "main")
+          counts = described_class.ahead_behind(
+            Orn::OutputMode.quiet,
+            "/tmp/nonexistent",
+            "feature",
+            "main"
+          )
 
           expect(counts).to eq([0, 0])
         end
@@ -181,13 +186,24 @@ module Orn
           remote = make_remote_with_branch(branch)
           root = make_bare_project
           add_origin(root, remote)
-          File.write(File.join(root, ".orn", "config.yaml"), "git:\n  base: main\n")
+          File.write(
+            File.join(
+              root,
+              ".orn",
+              "config.yaml"
+            ),
+            "git:\n  base: main\n"
+          )
           worktree = Orn::Git::Worktree.new(
             root: root,
             output_mode: Orn::OutputMode.quiet
           )
           worktree.fetch("origin", "main")
-          worktree.add(File.join(root, "main"), "main", "origin/main")
+          worktree.add(
+            File.join(root, "main"),
+            "main",
+            "origin/main"
+          )
           root
         end
 
@@ -207,7 +223,13 @@ module Orn
 
           app.confirm_new_branch
 
-          expect(File).to exist(File.join(root, "feature/remote-only", "g.txt"))
+          expect(File).to exist(
+            File.join(
+              root,
+              "feature/remote-only",
+              "g.txt"
+            )
+          )
         end
 
         it "creates a worktree off base when the branch is not on the remote" do
@@ -219,7 +241,13 @@ module Orn
 
           aggregate_failures do
             expect(File).to be_directory(File.join(root, "feature/brand-new"))
-            expect(File).not_to exist(File.join(root, "feature/brand-new", "g.txt"))
+            expect(File).not_to exist(
+              File.join(
+                root,
+                "feature/brand-new",
+                "g.txt"
+              )
+            )
           end
         end
       end

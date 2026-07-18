@@ -17,8 +17,18 @@ module Orn
       def draw(frame, app)
         chunks = split_chunks(frame.area, !app.error.nil?)
         frame.render_widget(Paragraph.line(Line.styled(" orn", Style.default.bold)), chunks[0])
-        render_tree(frame, app, chunks[1])
-        render_error(frame, app, chunks[2]) unless app.error.nil?
+        render_tree(
+          frame,
+          app,
+          chunks[1]
+        )
+        unless app.error.nil?
+          render_error(
+            frame,
+            app,
+            chunks[2]
+          )
+        end
         frame.render_widget(Paragraph.new(help_lines), chunks[3])
       end
 
@@ -41,15 +51,36 @@ module Orn
         end
 
         selected = app.list_state.selected
-        items = rows.each_with_index.map { |row, i| ListItem.new(row_line(app, row, selected == i)) }
-        frame.render_stateful_widget(List.new(items), chunk, app.list_state)
+        items = rows.each_with_index.map do |row, i|
+          ListItem.new(
+            row_line(
+              app,
+              row,
+              selected == i
+            )
+          )
+        end
+        frame.render_stateful_widget(
+          List.new(items),
+          chunk,
+          app.list_state
+        )
       end
 
       def row_line(app, row, is_selected)
         if row.repo?
-          repo_line(app, app.entries[row.repo_index], is_selected)
+          repo_line(
+            app,
+            app.entries[row.repo_index],
+            is_selected
+          )
         else
-          worktree_line(app, row.repo_index, row.wt_index, is_selected)
+          worktree_line(
+            app,
+            row.repo_index,
+            row.wt_index,
+            is_selected
+          )
         end
       end
 
@@ -70,7 +101,13 @@ module Orn
         session_indicator = entry.session_alive ? "\u{25cf}" : "\u{25cb}"
 
         spans = [Span.styled(" #{expand_marker} #{entry.display_name.ljust(28)} ", style)]
-        append_repo_agent(spans, app, entry, style, is_selected)
+        append_repo_agent(
+          spans,
+          app,
+          entry,
+          style,
+          is_selected
+        )
         counts = "#{session_indicator} #{entry.window_count.to_s.rjust(2)} active  #{entry.worktree_count} wt"
         spans.push(Span.styled(counts, style))
         Line.from(spans)
@@ -92,13 +129,27 @@ module Orn
         worktree = entry.worktrees[wt_idx]
         style = row_style(is_selected)
 
-        gutter, gutter_style = tab_gutter(app, entry, worktree, style)
+        gutter, gutter_style = tab_gutter(
+          app,
+          entry,
+          worktree,
+          style
+        )
         spans = [
           Span.styled(" #{gutter} ", gutter_style),
           Span.styled(worktree_columns(worktree), style)
         ]
-        append_sandbox_badge(spans, worktree, is_selected)
-        append_worktree_agent(spans, app, worktree, is_selected)
+        append_sandbox_badge(
+          spans,
+          worktree,
+          is_selected
+        )
+        append_worktree_agent(
+          spans,
+          app,
+          worktree,
+          is_selected
+        )
         Line.from(spans)
       end
 

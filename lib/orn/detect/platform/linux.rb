@@ -20,7 +20,11 @@ module Orn
           tpgid = parse_tpgid(child_stat)
           return nil if tpgid.nil?
 
-          processes = collect_group(child_pid, child_stat, tpgid)
+          processes = collect_group(
+            child_pid,
+            child_stat,
+            tpgid
+          )
           return nil if processes.empty?
 
           Orn::Detect::ForegroundJob.new(
@@ -110,7 +114,10 @@ module Orn
           nil
         end
 
-        private_class_method :collect_group, :read_stat, :proc_pids, :read_argv
+        private_class_method :collect_group,
+          :read_stat,
+          :proc_pids,
+          :read_argv
       end
     end
   end

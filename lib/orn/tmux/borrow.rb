@@ -12,7 +12,11 @@ module Orn
     OPT_HOME_WINDOW = "@orn_home_window"
 
     # A pane currently borrowed into a hub window, identified by its tags.
-    BorrowedPane = Data.define(:pane_id, :home_session, :home_window)
+    BorrowedPane = Data.define(
+      :pane_id,
+      :home_session,
+      :home_window
+    )
 
     # Move `src_pane` into a horizontal split of `dst`, giving it `percentage`%
     # of the width. `dst` is any tmux target (pane id or session:window). When
@@ -20,7 +24,14 @@ module Orn
     def self.join_pane(output_mode, src_pane, dst, percentage, focus)
       args = ["join-pane", "-h"]
       args << "-d" unless focus
-      args.push("-s", src_pane, "-t", dst, "-l", "#{percentage}%")
+      args.push(
+        "-s",
+        src_pane,
+        "-t",
+        dst,
+        "-l",
+        "#{percentage}%"
+      )
       tmux_exec(output_mode, *args)
     end
 
@@ -43,9 +54,25 @@ module Orn
       cwd = pane_current_path(output_mode, pane)
       raise Orn::Error, "cannot determine cwd of pane #{pane}" if cwd.nil?
 
-      result = tmux_run(output_mode, "new-session", "-d", "-s", session, "-c", cwd, "-P", "-F", "\#{window_id}")
+      result = tmux_run(
+        output_mode,
+        "new-session",
+        "-d",
+        "-s",
+        session,
+        "-c",
+        cwd,
+        "-P",
+        "-F",
+        "\#{window_id}"
+      )
       placeholder = result.stdout.strip
-      break_pane(output_mode, pane, session, name)
+      break_pane(
+        output_mode,
+        pane,
+        session,
+        name
+      )
       tmux_exec(output_mode, "kill-window", "-t", placeholder)
     end
 
@@ -75,7 +102,13 @@ module Orn
       # \#{...} are literal tmux tokens; the inner #{OPT_*} interpolate the
       # option names.
       format = "\#{pane_id}\t\#{#{OPT_HOME_SESSION}}\t\#{#{OPT_HOME_WINDOW}}"
-      result = tmux_output(output_mode, "list-panes", "-a", "-F", format)
+      result = tmux_output(
+        output_mode,
+        "list-panes",
+        "-a",
+        "-F",
+        format
+      )
       return [] unless result&.success?
 
       parse_borrowed_lines(result.stdout)
@@ -104,7 +137,14 @@ module Orn
     # The active pane id in a window, if the window exists.
     def self.active_pane(output_mode, session, window)
       target = window_target(session, window)
-      result = tmux_output(output_mode, "list-panes", "-t", target, "-F", "\#{pane_id}\t\#{?pane_active,1,0}")
+      result = tmux_output(
+        output_mode,
+        "list-panes",
+        "-t",
+        target,
+        "-F",
+        "\#{pane_id}\t\#{?pane_active,1,0}"
+      )
       return nil unless result&.success?
 
       active_line = result.stdout.lines.map(&:chomp).find { |line| line.end_with?("\t1") }
@@ -114,7 +154,14 @@ module Orn
     # The session and window containing `pane`. Targets the pane explicitly so
     # it works without an attached client (e.g. a detached test server).
     def self.current_session_window(output_mode, pane)
-      result = tmux_output(output_mode, "display-message", "-p", "-t", pane, "\#{session_name}\t\#{window_name}")
+      result = tmux_output(
+        output_mode,
+        "display-message",
+        "-p",
+        "-t",
+        pane,
+        "\#{session_name}\t\#{window_name}"
+      )
       return nil unless result&.success?
 
       session, window = result.stdout.strip.split("\t", 2)
@@ -145,7 +192,14 @@ module Orn
     # The current working directory of a pane's shell. Used to recreate a
     # session that borrowing destroyed, at the pane's original path.
     def self.pane_current_path(output_mode, pane)
-      result = tmux_output(output_mode, "display-message", "-p", "-t", pane, "\#{pane_current_path}")
+      result = tmux_output(
+        output_mode,
+        "display-message",
+        "-p",
+        "-t",
+        pane,
+        "\#{pane_current_path}"
+      )
       return nil unless result&.success?
 
       path = result.stdout.strip

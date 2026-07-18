@@ -17,33 +17,66 @@ RSpec.describe "orn end-to-end", :system do
 
   before do
     FileUtils.mkdir_p(File.join(xdg, "orn"))
-    File.write(File.join(xdg, "orn", "default.yaml"), "")
+    File.write(
+      File.join(
+        xdg,
+        "orn",
+        "default.yaml"
+      ),
+      ""
+    )
   end
 
   after { FileUtils.remove_entry(xdg, true) }
 
   def orn(*args, chdir:)
-    Open3.capture3({ "XDG_CONFIG_HOME" => xdg }, "orn", *args.map(&:to_s), chdir: chdir)
+    Open3.capture3(
+      { "XDG_CONFIG_HOME" => xdg },
+      "orn",
+      *args.map(&:to_s),
+      chdir: chdir
+    )
   end
 
   it "initializes a bare-worktree project" do
     Dir.mktmpdir("orn-e2e-project") do |dir|
-      _stdout, stderr, status = orn("init", "--base", "main", chdir: dir)
+      _stdout, stderr, status = orn(
+        "init",
+        "--base",
+        "main",
+        chdir: dir
+      )
 
       aggregate_failures do
         expect(status).to be_success, "orn init failed: #{stderr}"
         expect(File).to be_directory(File.join(dir, ".bare"))
         expect(File).to be_directory(File.join(dir, "main"))
-        expect(File).to exist(File.join(dir, ".orn", "config.yaml"))
+        expect(File).to exist(
+          File.join(
+            dir,
+            ".orn",
+            "config.yaml"
+          )
+        )
       end
     end
   end
 
   it "lists the base worktree after init" do
     Dir.mktmpdir("orn-e2e-project") do |dir|
-      orn("init", "--base", "main", chdir: dir)
+      orn(
+        "init",
+        "--base",
+        "main",
+        chdir: dir
+      )
 
-      stdout, stderr, status = orn("wt", "list", "--json", chdir: dir)
+      stdout, stderr, status = orn(
+        "wt",
+        "list",
+        "--json",
+        chdir: dir
+      )
 
       aggregate_failures do
         expect(status).to be_success, "orn wt list failed: #{stderr}"
@@ -54,9 +87,18 @@ RSpec.describe "orn end-to-end", :system do
 
   it "shows configuration with source annotations" do
     Dir.mktmpdir("orn-e2e-project") do |dir|
-      orn("init", "--base", "main", chdir: dir)
+      orn(
+        "init",
+        "--base",
+        "main",
+        chdir: dir
+      )
 
-      stdout, stderr, status = orn("config", "show", chdir: File.join(dir, "main"))
+      stdout, stderr, status = orn(
+        "config",
+        "show",
+        chdir: File.join(dir, "main")
+      )
 
       aggregate_failures do
         expect(status).to be_success, "orn config show failed: #{stderr}"

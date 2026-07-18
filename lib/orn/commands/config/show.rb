@@ -103,7 +103,13 @@ module Orn
             layout.value.columns.each { |column| lines << annotate("    - panes: #{seq(column.panes)}", layout.source) }
           else
             lines << "  rows:"
-            layout.value.rows.each { |row| append_row(lines, row, layout.source) }
+            layout.value.rows.each do |row|
+              append_row(
+                lines,
+                row,
+                layout.source
+              )
+            end
           end
         end
 

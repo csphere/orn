@@ -91,7 +91,15 @@ module Orn
       # resolves.
       def self.state_path
         base = Orn::Fs.xdg_dir("XDG_STATE_HOME", ".local/state")
-        base ? File.join(base, "orn", "tui.json") : "/tmp/orn-tui-state.json"
+        if base
+          File.join(
+            base,
+            "orn",
+            "tui.json"
+          )
+        else
+          "/tmp/orn-tui-state.json"
+        end
       end
 
       def self.timestamp_now

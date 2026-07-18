@@ -10,7 +10,11 @@ module Orn
   module Symlink
     # One resolved symlink entry: its destination name and the absolute
     # source/destination paths, after trimming and traversal validation.
-    ResolvedEntry = Data.define(:dest_name, :src, :dst)
+    ResolvedEntry = Data.define(
+      :dest_name,
+      :src,
+      :dst
+    )
 
     # Rejects absolute paths and any ".." component so config entries cannot
     # escape the project directory.
@@ -35,8 +39,17 @@ module Orn
         warn "warning: base worktree '#{base}' not found at #{base_wt}, skipping worktree symlinks"
       end
 
-      resolve_symlink_entries(project_root, wt_path, base, config).each do |entry|
-        create_one(entry, created, skipped)
+      resolve_symlink_entries(
+        project_root,
+        wt_path,
+        base,
+        config
+      ).each do |entry|
+        create_one(
+          entry,
+          created,
+          skipped
+        )
       end
 
       [created, skipped]
@@ -44,14 +57,25 @@ module Orn
 
     # Whether `path` is ignored by git in wt_path.
     def self.gitignored?(output_mode, wt_path, path)
-      result = git_output(output_mode, wt_path, "check-ignore", "-q", path)
+      result = git_output(
+        output_mode,
+        wt_path,
+        "check-ignore",
+        "-q",
+        path
+      )
       result ? result.success? : false
     end
 
     # Destination names for symlinks that would actually be created: the source
     # exists and nothing occupies the destination yet.
     def self.collect_symlink_destinations(project_root, wt_path, base, config)
-      resolve_symlink_entries(project_root, wt_path, base, config).filter_map do |entry|
+      resolve_symlink_entries(
+        project_root,
+        wt_path,
+        base,
+        config
+      ).filter_map do |entry|
         next unless File.exist?(entry.src)
         next if File.exist?(entry.dst) || File.symlink?(entry.dst)
 
@@ -60,7 +84,13 @@ module Orn
     end
 
     def self.find_unignored(output_mode, wt_path, destinations)
-      destinations.reject { |destination| gitignored?(output_mode, wt_path, destination) }
+      destinations.reject do |destination|
+        gitignored?(
+          output_mode,
+          wt_path,
+          destination
+        )
+      end
     end
 
     # Appends `paths` to the worktree's .gitignore (creating it if needed), then
@@ -72,7 +102,12 @@ module Orn
       paths.each { |path| content += "#{path}\n" }
       File.write(gitignore_path, content)
 
-      result = git_output(output_mode, wt_path, "add", ".gitignore")
+      result = git_output(
+        output_mode,
+        wt_path,
+        "add",
+        ".gitignore"
+      )
       raise Orn::Error, "Failed to run git add .gitignore" if result.nil?
       raise Orn::Error, "Failed to stage .gitignore: #{result.stderr.strip}" unless result.success?
 
@@ -83,11 +118,25 @@ module Orn
     # block (which auto-adds, prompts, or raises), then creates the symlinks.
     def self.apply(output_mode, root, wt_path, base, config)
       if !config.base.empty? || !config.root.empty?
-        destinations = collect_symlink_destinations(root, wt_path, base, config)
-        unignored = find_unignored(output_mode, wt_path, destinations)
+        destinations = collect_symlink_destinations(
+          root,
+          wt_path,
+          base,
+          config
+        )
+        unignored = find_unignored(
+          output_mode,
+          wt_path,
+          destinations
+        )
         yield(unignored) if block_given? && !unignored.empty?
       end
-      create_symlinks(root, wt_path, base, config)
+      create_symlinks(
+        root,
+        wt_path,
+        base,
+        config
+      )
       nil
     end
 
@@ -111,7 +160,16 @@ module Orn
     # Resolves the base-worktree and root symlink entries from `config`. Base
     # entries are dropped entirely when the base worktree directory is missing.
     def self.resolve_symlink_entries(project_root, wt_path, base, config)
-      base_entries(project_root, wt_path, base, config) + root_entries(project_root, wt_path, config)
+      base_entries(
+        project_root,
+        wt_path,
+        base,
+        config
+      ) + root_entries(
+        project_root,
+        wt_path,
+        config
+      )
     end
 
     def self.base_entries(project_root, wt_path, base, config)

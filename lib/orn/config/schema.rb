@@ -123,10 +123,22 @@ module Orn
     Sourced = Data.define(:value, :source)
 
     # Resolved tui values (each a Sourced), read from the global config only.
-    TuiInfo = Data.define(:session, :scan_roots, :scan_depth)
+    TuiInfo = Data.define(
+      :session,
+      :scan_roots,
+      :scan_depth
+    )
 
     # One config file's values as parsed and normalized, before merging.
-    RawConfig = Data.define(:base, :session, :columns, :rows, :symlinks, :sbx, :tui)
+    RawConfig = Data.define(
+      :base,
+      :session,
+      :columns,
+      :rows,
+      :symlinks,
+      :sbx,
+      :tui
+    )
 
     # Full resolved configuration with per-value sources, for `orn config`.
     ConfigInfo = Data.define(
@@ -151,8 +163,16 @@ module Orn
       tui = section(hash, "tui")
 
       RawConfig.new(
-        base: optional_string(git, "base", "git.base"),
-        session: optional_string(tmux, "session", "tmux.session"),
+        base: optional_string(
+          git,
+          "base",
+          "git.base"
+        ),
+        session: optional_string(
+          tmux,
+          "session",
+          "tmux.session"
+        ),
         columns: tmux.key?("columns") ? column_list(tmux["columns"]) : nil,
         rows: tmux.key?("rows") ? row_list(tmux["rows"]) : nil,
         symlinks: hash.key?("symlinks") ? symlinks_from(hash["symlinks"]) : nil,
@@ -252,7 +272,11 @@ module Orn
       raise InvalidConfig, "symlinks.root must be a list" unless root_raw.is_a?(Array)
 
       SymlinksConfig.new(
-        base: string_list_field(raw, "base", "symlinks.base"),
+        base: string_list_field(
+          raw,
+          "base",
+          "symlinks.base"
+        ),
         root: root_raw.map { |entry| root_symlink_from(entry) }
       )
     end
@@ -276,14 +300,42 @@ module Orn
       raise InvalidConfig, "sbx must be a mapping" unless raw.is_a?(Hash)
 
       SbxConfig.new(
-        template: optional_string(raw, "template", "sbx.template"),
-        kit: optional_string(raw, "kit", "sbx.kit"),
-        kits: string_list_field(raw, "kits", "sbx.kits"),
-        cpus: optional_integer(raw, "cpus", "sbx.cpus"),
-        memory: optional_string(raw, "memory", "sbx.memory"),
-        agent_type: optional_string(raw, "agent_type", "sbx.agent_type"),
+        template: optional_string(
+          raw,
+          "template",
+          "sbx.template"
+        ),
+        kit: optional_string(
+          raw,
+          "kit",
+          "sbx.kit"
+        ),
+        kits: string_list_field(
+          raw,
+          "kits",
+          "sbx.kits"
+        ),
+        cpus: optional_integer(
+          raw,
+          "cpus",
+          "sbx.cpus"
+        ),
+        memory: optional_string(
+          raw,
+          "memory",
+          "sbx.memory"
+        ),
+        agent_type: optional_string(
+          raw,
+          "agent_type",
+          "sbx.agent_type"
+        ),
         setup: string_or_array(raw["setup"], "sbx.setup"),
-        start: optional_string(raw, "start", "sbx.start"),
+        start: optional_string(
+          raw,
+          "start",
+          "sbx.start"
+        ),
         build: raw.key?("build") ? sbx_build_from(raw["build"]) : nil,
         env: env_from(raw["env"]),
         ports: ports_from(raw["ports"]),
@@ -295,8 +347,16 @@ module Orn
       raise InvalidConfig, "sbx.build must be a mapping" unless raw.is_a?(Hash)
 
       SbxBuild.new(
-        dockerfile: optional_string(raw, "dockerfile", "sbx.build.dockerfile"),
-        build_args: string_list_field(raw, "build_args", "sbx.build.build_args")
+        dockerfile: optional_string(
+          raw,
+          "dockerfile",
+          "sbx.build.dockerfile"
+        ),
+        build_args: string_list_field(
+          raw,
+          "build_args",
+          "sbx.build.build_args"
+        )
       )
     end
 

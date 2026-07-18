@@ -13,14 +13,23 @@ module Orn
       # Advisory: false on any git failure (missing branch, git error). Not a
       # hard guarantee that the branch is absent.
       def local_branch_exists?(branch)
-        git_output("rev-parse", "--verify", "refs/heads/#{branch}").success?
+        git_output(
+          "rev-parse",
+          "--verify",
+          "refs/heads/#{branch}"
+        ).success?
       rescue Orn::Error
         false
       end
 
       # Advisory, like local_branch_exists?, but consults the remote.
       def remote_branch_exists?(remote, branch)
-        result = git_output("ls-remote", "--heads", remote, branch)
+        result = git_output(
+          "ls-remote",
+          "--heads",
+          remote,
+          branch
+        )
         result.success? && !result.stdout.strip.empty?
       rescue Orn::Error
         false
@@ -28,7 +37,11 @@ module Orn
 
       # Fetches branch from remote so it can be used as a worktree start point.
       def fetch(remote, branch)
-        git_exec("fetch", remote, branch)
+        git_exec(
+          "fetch",
+          remote,
+          branch
+        )
       end
 
       # Creates a worktree for branch, trying three strategies in order: new
@@ -39,7 +52,11 @@ module Orn
         errors = []
         succeeded = false
 
-        add_attempts(path, branch, start_point).each_with_index do |args, index|
+        add_attempts(
+          path,
+          branch,
+          start_point
+        ).each_with_index do |args, index|
           result = git_output(*args)
           if result.success?
             succeeded = true
@@ -56,24 +73,42 @@ module Orn
       # Removes the worktree at path with --force, discarding uncommitted
       # changes. The branch itself is left intact.
       def remove(path)
-        git_exec("worktree", "remove", "--force", path)
+        git_exec(
+          "worktree",
+          "remove",
+          "--force",
+          path
+        )
       end
 
       # Force-deletes the local branch; returns whether git succeeded.
       def delete_branch(branch)
-        git_output("branch", "-D", branch).success?
+        git_output(
+          "branch",
+          "-D",
+          branch
+        ).success?
       end
 
       # Deletes branch on origin; returns whether git succeeded.
       def delete_remote_branch(branch)
-        git_output("push", "origin", "--delete", branch).success?
+        git_output(
+          "push",
+          "origin",
+          "--delete",
+          branch
+        ).success?
       end
 
       # The sorted branch names of all worktrees, parsed from `git worktree
       # list --porcelain`. Skips bare/detached entries and the project root
       # itself; a failed git call yields an empty list.
       def entries
-        result = git_output("worktree", "list", "--porcelain")
+        result = git_output(
+          "worktree",
+          "list",
+          "--porcelain"
+        )
         return [] unless result.success?
 
         parse_entries(result.stdout).sort
@@ -98,7 +133,12 @@ module Orn
       end
 
       def git_exec(*args)
-        @cmd.exec("git", "-C", @root, *args)
+        @cmd.exec(
+          "git",
+          "-C",
+          @root,
+          *args
+        )
       end
 
       def add_failure_message(branch, errors)

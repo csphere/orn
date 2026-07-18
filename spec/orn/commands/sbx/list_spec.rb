@@ -7,7 +7,12 @@ RSpec.describe Orn::Commands::Sbx::List do
 
   def find_branch(project, branches, name)
     command = described_class.new(output_mode: Orn::OutputMode.quiet)
-    command.send(:find_branch_for_sandbox, project, branches, name)
+    command.send(
+      :find_branch_for_sandbox,
+      project,
+      branches,
+      name
+    )
   end
 
   describe "#find_branch_for_sandbox" do
@@ -16,20 +21,38 @@ RSpec.describe Orn::Commands::Sbx::List do
       branch = "feature/x"
       name = project.sandbox_name(branch)
 
-      expect(find_branch(project, [branch], name)).to eq(branch)
+      expect(
+        find_branch(
+          project,
+          [branch],
+          name
+        )
+      ).to eq(branch)
     end
 
     it "returns nil when no branch matches" do
       project = project_with
 
-      expect(find_branch(project, ["feature/x"], "unrelated-name")).to be_nil
+      expect(
+        find_branch(
+          project,
+          ["feature/x"],
+          "unrelated-name"
+        )
+      ).to be_nil
     end
 
     it "picks the matching branch among several" do
       project = project_with
       name = project.sandbox_name("feature/y")
 
-      expect(find_branch(project, ["feature/x", "feature/y"], name)).to eq("feature/y")
+      expect(
+        find_branch(
+          project,
+          ["feature/x", "feature/y"],
+          name
+        )
+      ).to eq("feature/y")
     end
   end
 

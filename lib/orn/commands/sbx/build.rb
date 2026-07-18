@@ -32,8 +32,18 @@ module Orn
           Orn::Sandbox.require_sbx_cli!(@output_mode)
           Orn::Trust.check_sbx_trust(project.root, sbx_config)
 
-          announce(template, dockerfile, build.build_args)
-          Orn::Sandbox.build(@output_mode, dockerfile, template, build.build_args, ".")
+          announce(
+            template,
+            dockerfile,
+            build.build_args
+          )
+          Orn::Sandbox.build(
+            @output_mode,
+            dockerfile,
+            template,
+            build.build_args,
+            "."
+          )
 
           Result.new(
             template: template,

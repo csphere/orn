@@ -23,18 +23,44 @@ module Orn
         cmd = Orn::Cmd.new(output_mode: output_mode)
 
         output_mode.status("  Cloning repository")
-        cmd.exec("git", "-C", project_dir, "clone", "--bare", url, ".bare")
+        cmd.exec(
+          "git",
+          "-C",
+          project_dir,
+          "clone",
+          "--bare",
+          url,
+          ".bare"
+        )
 
         output_mode.status("  Writing .git pointer file")
         write_git_pointer(project_dir)
 
         output_mode.status("  Configuring remote fetch refspec")
-        cmd.exec("git", "-C", project_dir, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+        cmd.exec(
+          "git",
+          "-C",
+          project_dir,
+          "config",
+          "remote.origin.fetch",
+          "+refs/heads/*:refs/remotes/origin/*"
+        )
 
         output_mode.status("  Fetching branches")
-        cmd.exec("git", "-C", project_dir, "fetch", "origin")
+        cmd.exec(
+          "git",
+          "-C",
+          project_dir,
+          "fetch",
+          "origin"
+        )
 
-        scaffold_project(output_mode, project_dir, project_name, base)
+        scaffold_project(
+          output_mode,
+          project_dir,
+          project_name,
+          base
+        )
       end
 
       # Creates the non-git parts of a new project (.orn/config.yaml, root
@@ -52,7 +78,15 @@ module Orn
         bootstrap_global_config_interactive(output_mode)
 
         output_mode.status("  Creating worktree: #{base}")
-        Orn::Cmd.new(output_mode: output_mode).exec("git", "-C", project_dir, "worktree", "add", base, base)
+        Orn::Cmd.new(output_mode: output_mode).exec(
+          "git",
+          "-C",
+          project_dir,
+          "worktree",
+          "add",
+          base,
+          base
+        )
         nil
       end
 
@@ -76,7 +110,12 @@ module Orn
       end
 
       def self.bootstrap_global_config_interactive(output_mode)
-        bootstrap_global_config(output_mode, Orn::Config.global_config_dir, $stdin, $stderr)
+        bootstrap_global_config(
+          output_mode,
+          Orn::Config.global_config_dir,
+          $stdin,
+          $stderr
+        )
       end
 
       # Offers to create the global default.yaml on first project setup. No-op
@@ -87,7 +126,11 @@ module Orn
 
         config_path = File.join(global_dir, "default.yaml")
         return if File.exist?(config_path)
-        return unless Orn::Confirm.global_config(config_path, reader, writer)
+        return unless Orn::Confirm.global_config(
+          config_path,
+          reader,
+          writer
+        )
 
         FileUtils.mkdir_p(global_dir)
         File.write(config_path, serialize_global_config)

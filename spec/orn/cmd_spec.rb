@@ -15,17 +15,35 @@ RSpec.describe Orn::Cmd do
 
     context "when the command exits nonzero" do
       it "raises with the stderr text" do
-        expect { cmd.run("sh", "-c", "echo bad >&2; exit 1") }
+        expect do
+          cmd.run(
+            "sh",
+            "-c",
+            "echo bad >&2; exit 1"
+          )
+        end
           .to raise_error(Orn::Error, /bad/)
       end
 
       it "names the program when stderr is empty" do
-        expect { cmd.run("sh", "-c", "exit 1") }
+        expect do
+          cmd.run(
+            "sh",
+            "-c",
+            "exit 1"
+          )
+        end
           .to raise_error(Orn::Error, /sh/)
       end
 
       it "reports the exit code when stderr is empty" do
-        expect { cmd.run("sh", "-c", "exit 42") }
+        expect do
+          cmd.run(
+            "sh",
+            "-c",
+            "exit 42"
+          )
+        end
           .to raise_error(Orn::Error, /42/)
       end
     end
@@ -47,7 +65,13 @@ RSpec.describe Orn::Cmd do
 
     context "when the command fails" do
       it "raises with the stderr text" do
-        expect { cmd.exec("sh", "-c", "echo oops >&2; exit 1") }
+        expect do
+          cmd.exec(
+            "sh",
+            "-c",
+            "echo oops >&2; exit 1"
+          )
+        end
           .to raise_error(Orn::Error, /oops/)
       end
     end

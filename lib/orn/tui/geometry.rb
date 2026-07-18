@@ -3,7 +3,12 @@
 module Orn
   module TUI
     # A rectangular region of the terminal, in cells.
-    Rect = Data.define(:x, :y, :width, :height) do
+    Rect = Data.define(
+      :x,
+      :y,
+      :width,
+      :height
+    ) do
       def self.zero
         new(
           x: 0,
@@ -80,7 +85,11 @@ module Orn
         sizes = solve(total)
         offset = @direction == :vertical ? area.y : area.x
         sizes.map do |size|
-          rect = slice(area, offset, size)
+          rect = slice(
+            area,
+            offset,
+            size
+          )
           offset += size
           rect
         end

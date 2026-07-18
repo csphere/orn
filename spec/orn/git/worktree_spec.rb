@@ -73,7 +73,11 @@ RSpec.describe Orn::Git::Worktree do
         worktree.fetch("origin", "feature/from-remote")
 
         path = File.join(project, "feature/from-remote")
-        worktree.add(path, "feature/from-remote", "origin/feature/from-remote")
+        worktree.add(
+          path,
+          "feature/from-remote",
+          "origin/feature/from-remote"
+        )
 
         expect(File.exist?(path)).to be(true)
         expect(File.exist?(File.join(path, "g.txt"))).to be(true)
@@ -86,10 +90,14 @@ RSpec.describe Orn::Git::Worktree do
         worktree = worktree_for(project)
         path = File.join(project, "no-such-branch")
 
-        expect { worktree.add(path, "no-such-branch", "origin/main") }
-          .to raise_error(Orn::Error) do |error|
-            expect(error.message).to include("Attempt 1:", "Attempt 2:", "Attempt 3:")
-          end
+        expect do
+          worktree.add(
+            path,
+            "no-such-branch",
+            "origin/main"
+          )
+        end
+          .to raise_error(Orn::Error, /Attempt 1:.+Attempt 2:.+Attempt 3:/m)
       end
     end
   end

@@ -39,7 +39,16 @@ module Orn
     # Inputs for the `sbx create` invocation. `worktree_path` and `bare_path`
     # are positional args after `agent_type`, in that order. `kits` defaults to
     # empty; `template`/`cpus`/`memory` are optional.
-    CreateParams = Data.define(:name, :template, :kits, :cpus, :memory, :agent_type, :worktree_path, :bare_path) do
+    CreateParams = Data.define(
+      :name,
+      :template,
+      :kits,
+      :cpus,
+      :memory,
+      :agent_type,
+      :worktree_path,
+      :bare_path
+    ) do
       def initialize(name:, agent_type:, worktree_path:, bare_path:, template: nil, kits: [], cpus: nil, memory: nil)
         super
       end
@@ -47,7 +56,12 @@ module Orn
 
     # Result of a single `doctor` environment check. `kind` is `:error`
     # (blocks sandbox creation in preflight) or `:warning` (reported only).
-    Check = Data.define(:name, :kind, :passed, :message) do
+    Check = Data.define(
+      :name,
+      :kind,
+      :passed,
+      :message
+    ) do
       def self.pass(name, message)
         new(
           name: name,
@@ -134,21 +148,43 @@ module Orn
     # Runs a single setup command inside the sandbox via `sbx exec`, blocking
     # until it exits.
     def self.exec_setup(output_mode, name, setup_cmd, env)
-      sbx_exec(output_mode, *build_exec_command(name, setup_cmd, env))
+      sbx_exec(
+        output_mode,
+        *build_exec_command(
+          name,
+          setup_cmd,
+          env
+        )
+      )
     end
 
     def self.build_exec_command(name, setup_cmd, env)
-      build_exec_command_with(["exec", name], setup_cmd, env)
+      build_exec_command_with(
+        ["exec", name],
+        setup_cmd,
+        env
+      )
     end
 
     # Runs a command inside the sandbox detached (`sbx exec -d`); used for
     # long-running services that should outlive the call.
     def self.exec_detached(output_mode, name, detached_cmd, env)
-      sbx_exec(output_mode, *build_exec_detached_command(name, detached_cmd, env))
+      sbx_exec(
+        output_mode,
+        *build_exec_detached_command(
+          name,
+          detached_cmd,
+          env
+        )
+      )
     end
 
     def self.build_exec_detached_command(name, detached_cmd, env)
-      build_exec_command_with(["exec", "-d", name], detached_cmd, env)
+      build_exec_command_with(
+        ["exec", "-d", name],
+        detached_cmd,
+        env
+      )
     end
 
     # Runs the configured setup commands in order with progress output,
@@ -162,7 +198,12 @@ module Orn
           output_mode.status("Running setup [#{index + 1}/#{total}] in '#{name}': #{command}")
         end
         begin
-          exec_setup(output_mode, name, command, env)
+          exec_setup(
+            output_mode,
+            name,
+            command,
+            env
+          )
         rescue Orn::Error
           raise Orn::Error, "Setup step #{index + 1} failed: #{command}"
         end
@@ -242,7 +283,11 @@ module Orn
       Orn::Cmd.new(output_mode: output_mode).exec("docker", *docker_args)
 
       tar_path = File.join(Dir.tmpdir, "orn-#{safe_tar_name(tag)}.tar")
-      save_and_load_template(output_mode, tag, tar_path)
+      save_and_load_template(
+        output_mode,
+        tag,
+        tar_path
+      )
       nil
     end
 
@@ -324,14 +369,30 @@ module Orn
     # Deletes the persisted ports file plus the legacy single-port `.port` file;
     # missing files are ignored.
     def self.remove_ports_file(orn_dir, name)
-      FileUtils.rm_f(File.join(orn_dir, "sandbox", "#{name}.ports"))
-      FileUtils.rm_f(File.join(orn_dir, "sandbox", "#{name}.port"))
+      FileUtils.rm_f(
+        File.join(
+          orn_dir,
+          "sandbox",
+          "#{name}.ports"
+        )
+      )
+      FileUtils.rm_f(
+        File.join(
+          orn_dir,
+          "sandbox",
+          "#{name}.port"
+        )
+      )
       nil
     end
 
     # Reads the mappings persisted by persist_ports.
     def self.read_ports(orn_dir, name)
-      path = File.join(orn_dir, "sandbox", "#{name}.ports")
+      path = File.join(
+        orn_dir,
+        "sandbox",
+        "#{name}.ports"
+      )
       parsed = JSON.parse(File.read(path))
       parsed.map do |entry|
         PortMapping.new(
@@ -350,7 +411,11 @@ module Orn
     # Runs the `doctor` checks before sandbox creation: raises on the first
     # error-level failure, reports warning-level failures, and continues.
     def self.preflight(output_mode, config, project_root)
-      checks = doctor(output_mode, config, project_root)
+      checks = doctor(
+        output_mode,
+        config,
+        project_root
+      )
       failed = checks.find { |check| !check.passed && check.kind == :error }
       if failed
         raise Orn::Error,
@@ -373,8 +438,17 @@ module Orn
 
         host = reserve_port(entry.host_range)
         output_mode.status("Publishing port #{host}:#{entry.container}...")
-        publish_port(output_mode, name, host, entry.container)
-        verify_port(host, PORT_VERIFY_TIMEOUT, PORT_VERIFY_INITIAL_BACKOFF)
+        publish_port(
+          output_mode,
+          name,
+          host,
+          entry.container
+        )
+        verify_port(
+          host,
+          PORT_VERIFY_TIMEOUT,
+          PORT_VERIFY_INITIAL_BACKOFF
+        )
         mappings.push(
           PortMapping.new(
             host: host,
@@ -382,7 +456,13 @@ module Orn
           )
         )
       end
-      persist_ports(orn_dir, name, mappings) unless mappings.empty?
+      unless mappings.empty?
+        persist_ports(
+          orn_dir,
+          name,
+          mappings
+        )
+      end
       mappings
     end
 
@@ -394,8 +474,17 @@ module Orn
 
       mappings.each do |mapping|
         output_mode.status("Publishing port #{mapping}...")
-        publish_port(output_mode, name, mapping.host, mapping.container)
-        verify_port(mapping.host, PORT_VERIFY_TIMEOUT, PORT_VERIFY_INITIAL_BACKOFF)
+        publish_port(
+          output_mode,
+          name,
+          mapping.host,
+          mapping.container
+        )
+        verify_port(
+          mapping.host,
+          PORT_VERIFY_TIMEOUT,
+          PORT_VERIFY_INITIAL_BACKOFF
+        )
       end
       mappings
     end
@@ -436,7 +525,11 @@ module Orn
     # Checks that `user.name` and `user.email` are set in the repo's own
     # `.bare/config`; host global and system git config are ignored.
     def self.git_identity_check(_output_mode, project_root)
-      config_path = File.join(project_root, ".bare", "config")
+      config_path = File.join(
+        project_root,
+        ".bare",
+        "config"
+      )
       has_name = git_config_set?(config_path, "user.name")
       has_email = git_config_set?(config_path, "user.email")
 
@@ -454,7 +547,11 @@ module Orn
 
     def self.ssh_auth_check
       if ENV.key?("SSH_AUTH_SOCK")
-        Check.warning("ssh-auth", true, "SSH_AUTH_SOCK is set")
+        Check.warning(
+          "ssh-auth",
+          true,
+          "SSH_AUTH_SOCK is set"
+        )
       else
         Check.warning(
           "ssh-auth",
@@ -470,12 +567,28 @@ module Orn
     def self.github_secret_check(output_mode)
       missing = "No github secret configured; gh CLI will not work in sandbox.\n    Run: sbx secret set -g github"
       result = sbx_secret_ls(output_mode)
-      return Check.warning("github-secret", false, missing) if result.nil? || !result.success?
+      if result.nil? || !result.success?
+        return Check.warning(
+          "github-secret",
+          false,
+          missing
+        )
+      end
 
       found = result.stdout.each_line.any? { |line| line.split.include?("github") }
-      return Check.warning("github-secret", true, "github secret configured") if found
+      if found
+        return Check.warning(
+          "github-secret",
+          true,
+          "github secret configured"
+        )
+      end
 
-      Check.warning("github-secret", false, missing)
+      Check.warning(
+        "github-secret",
+        false,
+        missing
+      )
     end
 
     def self.tool_check(output_mode, tool)
@@ -537,14 +650,25 @@ module Orn
     # cleaned up, and a failed save deletes the partial file before raising.
     def self.save_and_load_template(output_mode, tag, tar_path)
       begin
-        Orn::Cmd.new(output_mode: output_mode).exec("docker", "save", "-o", tar_path, tag)
+        Orn::Cmd.new(output_mode: output_mode).exec(
+          "docker",
+          "save",
+          "-o",
+          tar_path,
+          tag
+        )
       rescue Orn::Error
         FileUtils.rm_f(tar_path)
         raise
       end
 
       begin
-        Orn::Cmd.new(output_mode: output_mode).exec("sbx", "template", "load", tar_path)
+        Orn::Cmd.new(output_mode: output_mode).exec(
+          "sbx",
+          "template",
+          "load",
+          tar_path
+        )
       ensure
         FileUtils.rm_f(tar_path)
       end
@@ -572,7 +696,13 @@ module Orn
         "GIT_CONFIG_GLOBAL" => "/dev/null"
       }
       _stdout, _stderr, status = Open3.capture3(
-        env, "git", "config", "--file", config_path.to_s, key, chdir: Dir.tmpdir
+        env,
+        "git",
+        "config",
+        "--file",
+        config_path.to_s,
+        key,
+        chdir: Dir.tmpdir
       )
       status.success?
     rescue SystemCallError
@@ -601,7 +731,11 @@ module Orn
         args.push("env")
         env.sort.each { |key, value| args.push("#{key}=#{value}") }
       end
-      args.push("sh", "-c", shell_cmd)
+      args.push(
+        "sh",
+        "-c",
+        shell_cmd
+      )
       args
     end
 

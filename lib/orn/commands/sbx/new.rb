@@ -9,7 +9,13 @@ module Orn
       # publishes configured ports. Unlike `switch --sbx` it neither opens a tmux
       # window nor runs the start command.
       class New
-        Result = Data.define(:name, :branch, :agent_type, :template, :host_ports) do
+        Result = Data.define(
+          :name,
+          :branch,
+          :agent_type,
+          :template,
+          :host_ports
+        ) do
           # Omits nil template and empty host_ports.
           def to_json_hash
             hash = {
@@ -38,15 +44,32 @@ module Orn
           end
 
           Orn::Trust.check_sbx_trust(project.root, sbx_config)
-          Orn::Sandbox.preflight(@output_mode, sbx_config, project.root)
+          Orn::Sandbox.preflight(
+            @output_mode,
+            sbx_config,
+            project.root
+          )
 
           name = project.sandbox_name(branch)
           raise Orn::Error, "Sandbox '#{name}' already exists" if Orn::Sandbox.exists?(@output_mode, name)
 
           @output_mode.status("Creating sandbox '#{name}'...")
-          Orn::Sandbox.create(@output_mode, create_params(project, sbx_config, agent_type, name, wt_path))
+          Orn::Sandbox.create(
+            @output_mode,
+            create_params(
+              project,
+              sbx_config,
+              agent_type,
+              name,
+              wt_path
+            )
+          )
           run_setup(sbx_config, name)
-          host_ports = publish_ports(project, sbx_config, name)
+          host_ports = publish_ports(
+            project,
+            sbx_config,
+            name
+          )
 
           Result.new(
             name: name,
@@ -82,13 +105,23 @@ module Orn
         def run_setup(sbx_config, name)
           return if sbx_config.setup.empty?
 
-          Orn::Sandbox.run_setup(@output_mode, name, sbx_config.setup, sbx_config.env)
+          Orn::Sandbox.run_setup(
+            @output_mode,
+            name,
+            sbx_config.setup,
+            sbx_config.env
+          )
         end
 
         def publish_ports(project, sbx_config, name)
           return [] if sbx_config.ports.empty?
 
-          Orn::Sandbox.setup_ports(@output_mode, name, sbx_config.ports, File.join(project.root, ".orn"))
+          Orn::Sandbox.setup_ports(
+            @output_mode,
+            name,
+            sbx_config.ports,
+            File.join(project.root, ".orn")
+          )
         end
 
         def emit(result)

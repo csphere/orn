@@ -9,7 +9,12 @@ module Orn
       class List
         # `branch` is nil for sandboxes not owned by this project (serialized as
         # null); `ports` is omitted when empty.
-        Entry = Data.define(:name, :branch, :status, :ports) do
+        Entry = Data.define(
+          :name,
+          :branch,
+          :status,
+          :ports
+        ) do
           def to_json_hash
             hash = {
               "name" => name,
@@ -36,7 +41,11 @@ module Orn
 
           sandboxes = entries.map do |entry|
             ports = ports_for(orn_dir, entry.name)
-            branch = find_branch_for_sandbox(project, branches, entry.name)
+            branch = find_branch_for_sandbox(
+              project,
+              branches,
+              entry.name
+            )
             Entry.new(
               name: entry.name,
               branch: branch,

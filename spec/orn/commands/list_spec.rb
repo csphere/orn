@@ -5,13 +5,24 @@ RSpec.describe Orn::Commands::List do
     remote = make_remote_with_branch(branch)
     project = make_bare_project
     add_origin(project, remote)
-    File.write(File.join(project, ".orn", "config.yaml"), "git:\n  base: main\n")
+    File.write(
+      File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      ),
+      "git:\n  base: main\n"
+    )
     worktree = Orn::Git::Worktree.new(
       root: project,
       output_mode: Orn::OutputMode.quiet
     )
     worktree.fetch("origin", branch)
-    worktree.add(File.join(project, branch), branch, "origin/#{branch}")
+    worktree.add(
+      File.join(project, branch),
+      branch,
+      "origin/#{branch}"
+    )
     project
   end
 
@@ -43,7 +54,11 @@ RSpec.describe Orn::Commands::List do
         loaded = load_project(project)
 
         result = Dir.chdir(project) do
-          Orn::Tmux.open_window(Orn::OutputMode.quiet, loaded, "feature/listed")
+          Orn::Tmux.open_window(
+            Orn::OutputMode.quiet,
+            loaded,
+            "feature/listed"
+          )
           described_class.new(output_mode: Orn::OutputMode.quiet).run_inner(loaded)
         end
 

@@ -16,7 +16,11 @@ module GitHelpers
   # pointer file, and an empty `.orn/` directory. Returns the root path.
   def make_bare_project
     root = register_temp_dir(Dir.mktmpdir("orn-project"))
-    git("init", "--bare", File.join(root, ".bare"))
+    git(
+      "init",
+      "--bare",
+      File.join(root, ".bare")
+    )
     File.write(File.join(root, ".git"), "gitdir: ./.bare\n")
     FileUtils.mkdir_p(File.join(root, ".orn"))
     root
@@ -26,44 +30,136 @@ module GitHelpers
   # `branch` (adding g.txt) pushed to it. Returns the remote path.
   def make_remote_with_branch(branch)
     remote = register_temp_dir(Dir.mktmpdir("orn-remote"))
-    git("init", "--bare", remote)
+    git(
+      "init",
+      "--bare",
+      remote
+    )
 
     workspace = register_temp_dir(Dir.mktmpdir("orn-workspace"))
     git("init", chdir: workspace)
-    git("config", "user.email", "t@t.com", chdir: workspace)
-    git("config", "user.name", "T", chdir: workspace)
-    git("remote", "add", "origin", remote, chdir: workspace)
+    git(
+      "config",
+      "user.email",
+      "t@t.com",
+      chdir: workspace
+    )
+    git(
+      "config",
+      "user.name",
+      "T",
+      chdir: workspace
+    )
+    git(
+      "remote",
+      "add",
+      "origin",
+      remote,
+      chdir: workspace
+    )
 
     File.write(File.join(workspace, "f.txt"), "x")
-    git("add", ".", chdir: workspace)
-    git("commit", "-m", "init", chdir: workspace)
-    git("push", "origin", "HEAD:main", chdir: workspace)
+    git(
+      "add",
+      ".",
+      chdir: workspace
+    )
+    git(
+      "commit",
+      "-m",
+      "init",
+      chdir: workspace
+    )
+    git(
+      "push",
+      "origin",
+      "HEAD:main",
+      chdir: workspace
+    )
 
-    git("checkout", "-b", branch, chdir: workspace)
+    git(
+      "checkout",
+      "-b",
+      branch,
+      chdir: workspace
+    )
     File.write(File.join(workspace, "g.txt"), "y")
-    git("add", ".", chdir: workspace)
-    git("commit", "-m", "branch", chdir: workspace)
-    git("push", "origin", branch, chdir: workspace)
+    git(
+      "add",
+      ".",
+      chdir: workspace
+    )
+    git(
+      "commit",
+      "-m",
+      "branch",
+      chdir: workspace
+    )
+    git(
+      "push",
+      "origin",
+      branch,
+      chdir: workspace
+    )
 
     remote
   end
 
   def add_origin(project, remote)
-    git("remote", "add", "origin", remote, chdir: project)
+    git(
+      "remote",
+      "add",
+      "origin",
+      remote,
+      chdir: project
+    )
   end
 
   # Pushes a new `branch` (with a distinct commit) to an existing `remote`, via
   # a throwaway clone.
   def push_branch(remote, branch)
     workspace = register_temp_dir(Dir.mktmpdir("orn-push"))
-    git("clone", remote, workspace)
-    git("config", "user.email", "t@t.com", chdir: workspace)
-    git("config", "user.name", "T", chdir: workspace)
-    git("checkout", "-b", branch, chdir: workspace)
+    git(
+      "clone",
+      remote,
+      workspace
+    )
+    git(
+      "config",
+      "user.email",
+      "t@t.com",
+      chdir: workspace
+    )
+    git(
+      "config",
+      "user.name",
+      "T",
+      chdir: workspace
+    )
+    git(
+      "checkout",
+      "-b",
+      branch,
+      chdir: workspace
+    )
     File.write(File.join(workspace, "#{branch.tr("/", "-")}.txt"), "x")
-    git("add", ".", chdir: workspace)
-    git("commit", "-m", branch, chdir: workspace)
-    git("push", "origin", branch, chdir: workspace)
+    git(
+      "add",
+      ".",
+      chdir: workspace
+    )
+    git(
+      "commit",
+      "-m",
+      branch,
+      chdir: workspace
+    )
+    git(
+      "push",
+      "origin",
+      branch,
+      chdir: workspace
+    )
     nil
   end
 
@@ -71,8 +167,18 @@ module GitHelpers
   # identity, for tests that need a working tree with git available.
   def init_git_repo(path)
     git("init", chdir: path)
-    git("config", "user.email", "t@t.com", chdir: path)
-    git("config", "user.name", "T", chdir: path)
+    git(
+      "config",
+      "user.email",
+      "t@t.com",
+      chdir: path
+    )
+    git(
+      "config",
+      "user.name",
+      "T",
+      chdir: path
+    )
   end
 
   # A standard (non-bare) repo on `main` with a committed file, pushed to an
@@ -88,22 +194,67 @@ module GitHelpers
   def make_repo_with_remote_head
     dir = register_temp_dir(Dir.mktmpdir("orn-std"))
     seed_standard_repo(dir) do
-      git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main", chdir: dir)
+      git(
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        "refs/remotes/origin/main",
+        chdir: dir
+      )
     end
     dir
   end
 
   def seed_standard_repo(dir)
     remote = Dir.mktmpdir("orn-std-remote")
-    git("init", "--bare", remote)
-    git("init", "-b", "main", chdir: dir)
-    git("config", "user.email", "t@t.com", chdir: dir)
-    git("config", "user.name", "T", chdir: dir)
-    git("remote", "add", "origin", remote, chdir: dir)
+    git(
+      "init",
+      "--bare",
+      remote
+    )
+    git(
+      "init",
+      "-b",
+      "main",
+      chdir: dir
+    )
+    git(
+      "config",
+      "user.email",
+      "t@t.com",
+      chdir: dir
+    )
+    git(
+      "config",
+      "user.name",
+      "T",
+      chdir: dir
+    )
+    git(
+      "remote",
+      "add",
+      "origin",
+      remote,
+      chdir: dir
+    )
     File.write(File.join(dir, "file.txt"), "content")
-    git("add", ".", chdir: dir)
-    git("commit", "-m", "init", chdir: dir)
-    git("push", "-u", "origin", "main", chdir: dir)
+    git(
+      "add",
+      ".",
+      chdir: dir
+    )
+    git(
+      "commit",
+      "-m",
+      "init",
+      chdir: dir
+    )
+    git(
+      "push",
+      "-u",
+      "origin",
+      "main",
+      chdir: dir
+    )
     yield if block_given?
     FileUtils.remove_entry(remote)
     nil
@@ -136,7 +287,12 @@ module GitHelpers
       err: File::NULL
     }
     options[:chdir] = chdir if chdir
-    system(GIT_ISOLATION_ENV, "git", *args, **options)
+    system(
+      GIT_ISOLATION_ENV,
+      "git",
+      *args,
+**options
+    )
   end
 
   def register_temp_dir(dir)

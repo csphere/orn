@@ -50,14 +50,28 @@ RSpec.describe Orn::Symlink do
         FileUtils.mkdir_p(File.join(root, "develop"))
         config = symlinks(base: ["../../../.ssh/id_rsa"])
 
-        expect { described_class.create_symlinks(root, temp_dir("wt"), "develop", config) }
+        expect do
+          described_class.create_symlinks(
+            root,
+            temp_dir("wt"),
+            "develop",
+            config
+          )
+        end
           .to raise_error(Orn::Error, /traversal/)
       end
 
       it "rejects a root source that traverses" do
         config = symlinks(root: [root_symlink(source: "../../other/secrets")])
 
-        expect { described_class.create_symlinks(temp_dir("root"), temp_dir("wt"), "develop", config) }
+        expect do
+          described_class.create_symlinks(
+            temp_dir("root"),
+            temp_dir("wt"),
+            "develop",
+            config
+          )
+        end
           .to raise_error(Orn::Error, /traversal/)
       end
 
@@ -71,14 +85,26 @@ RSpec.describe Orn::Symlink do
           )]
         )
 
-        expect { described_class.create_symlinks(root, temp_dir("wt"), "develop", config) }
+        expect do
+          described_class.create_symlinks(
+            root,
+            temp_dir("wt"),
+            "develop",
+            config
+          )
+        end
           .to raise_error(Orn::Error, /traversal/)
       end
     end
 
     context "with an empty config" do
       it "does nothing" do
-        created, skipped = described_class.create_symlinks(temp_dir("root"), temp_dir("wt"), "develop", symlinks)
+        created, skipped = described_class.create_symlinks(
+          temp_dir("root"),
+          temp_dir("wt"),
+          "develop",
+          symlinks
+        )
 
         expect(created).to be_empty
         expect(skipped).to be_empty
@@ -112,7 +138,12 @@ RSpec.describe Orn::Symlink do
         root = temp_dir("root")
         wt = temp_dir("wt")
 
-        created, skipped = described_class.create_symlinks(root, wt, "develop", symlinks(base: [".env"]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(base: [".env"])
+        )
 
         expect(created).to be_empty
         expect(skipped).to be_empty
@@ -138,7 +169,12 @@ RSpec.describe Orn::Symlink do
         root = temp_dir("root")
         FileUtils.mkdir_p(File.join(root, "develop"))
 
-        created, skipped = described_class.create_symlinks(root, temp_dir("wt"), "develop", symlinks(base: ["", "  "]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          temp_dir("wt"),
+          "develop",
+          symlinks(base: ["", "  "])
+        )
 
         expect(created).to be_empty
         expect(skipped).to be_empty
@@ -152,7 +188,12 @@ RSpec.describe Orn::Symlink do
         File.write(File.join(base_wt, ".env"), "from-base")
         File.write(File.join(wt, ".env"), "already-here")
 
-        created, skipped = described_class.create_symlinks(root, wt, "develop", symlinks(base: [".env"]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(base: [".env"])
+        )
 
         expect(created).to be_empty
         expect(skipped).to eq([".env"])
@@ -165,9 +206,19 @@ RSpec.describe Orn::Symlink do
         base_wt = File.join(root, "develop")
         FileUtils.mkdir_p(base_wt)
         File.write(File.join(base_wt, ".env"), "content")
-        described_class.create_symlinks(root, wt, "develop", symlinks(base: [".env"]))
+        described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(base: [".env"])
+        )
 
-        created, skipped = described_class.create_symlinks(root, wt, "develop", symlinks(base: [".env"]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(base: [".env"])
+        )
 
         expect(created).to be_empty
         expect(skipped).to be_empty
@@ -181,7 +232,12 @@ RSpec.describe Orn::Symlink do
         File.write(File.join(base_wt, ".env"), "content")
         File.symlink("/tmp/somewhere-else", File.join(wt, ".env"))
 
-        created, skipped = described_class.create_symlinks(root, wt, "develop", symlinks(base: [".env"]))
+        created, skipped = described_class.create_symlinks(
+          root,
+          wt,
+          "develop",
+          symlinks(base: [".env"])
+        )
 
         expect(created).to be_empty
         expect(skipped).to eq([".env"])
@@ -259,8 +315,20 @@ RSpec.describe Orn::Symlink do
       init_git_repo(wt)
       File.write(File.join(wt, ".gitignore"), "shared_docs\n")
 
-      expect(described_class.gitignored?(mode, wt, "shared_docs")).to be(true)
-      expect(described_class.gitignored?(mode, wt, "not_ignored")).to be(false)
+      expect(
+        described_class.gitignored?(
+          mode,
+          wt,
+          "shared_docs"
+        )
+      ).to be(true)
+      expect(
+        described_class.gitignored?(
+          mode,
+          wt,
+          "not_ignored"
+        )
+      ).to be(false)
     end
   end
 
@@ -293,8 +361,22 @@ RSpec.describe Orn::Symlink do
       occupied = symlinks(root: [root_symlink(source: "_shared")])
       missing = symlinks(root: [root_symlink(source: "nonexistent")])
 
-      expect(described_class.collect_symlink_destinations(root, wt, "develop", occupied)).to be_empty
-      expect(described_class.collect_symlink_destinations(root, wt, "develop", missing)).to be_empty
+      expect(
+        described_class.collect_symlink_destinations(
+          root,
+          wt,
+          "develop",
+          occupied
+        )
+      ).to be_empty
+      expect(
+        described_class.collect_symlink_destinations(
+          root,
+          wt,
+          "develop",
+          missing
+        )
+      ).to be_empty
     end
   end
 
@@ -304,7 +386,13 @@ RSpec.describe Orn::Symlink do
       init_git_repo(wt)
       File.write(File.join(wt, ".gitignore"), "ignored_path\n")
 
-      expect(described_class.find_unignored(mode, wt, %w[ignored_path not_ignored])).to eq(["not_ignored"])
+      expect(
+        described_class.find_unignored(
+          mode,
+          wt,
+          %w[ignored_path not_ignored]
+        )
+      ).to eq(["not_ignored"])
     end
   end
 
@@ -314,7 +402,11 @@ RSpec.describe Orn::Symlink do
       init_git_repo(wt)
       File.write(File.join(wt, ".gitignore"), "existing")
 
-      described_class.add_to_gitignore_and_stage(mode, wt, ["shared_docs"])
+      described_class.add_to_gitignore_and_stage(
+        mode,
+        wt,
+        ["shared_docs"]
+      )
 
       expect(File.read(File.join(wt, ".gitignore"))).to eq("existing\nshared_docs\n")
       staged = `git -C #{wt} diff --cached --name-only`
@@ -335,8 +427,18 @@ RSpec.describe Orn::Symlink do
         )]
       )
 
-      described_class.apply(mode, root, wt, "main", config) do |unignored|
-        described_class.add_to_gitignore_and_stage(mode, wt, unignored)
+      described_class.apply(
+        mode,
+        root,
+        wt,
+        "main",
+        config
+      ) do |unignored|
+        described_class.add_to_gitignore_and_stage(
+          mode,
+          wt,
+          unignored
+        )
       end
 
       expect(File.read(File.join(wt, ".gitignore"))).to include("shared_docs")
@@ -351,7 +453,13 @@ RSpec.describe Orn::Symlink do
       FileUtils.mkdir_p(File.join(root, "_shared"))
       config = symlinks(root: [root_symlink(source: "_shared")])
 
-      described_class.apply(mode, root, wt, "main", config) { raise "should not be called" }
+      described_class.apply(
+        mode,
+        root,
+        wt,
+        "main",
+        config
+      ) { raise "should not be called" }
 
       expect(File.symlink?(File.join(wt, "_shared"))).to be(true)
     end
@@ -363,7 +471,15 @@ RSpec.describe Orn::Symlink do
       FileUtils.mkdir_p(File.join(root, "_shared"))
       config = symlinks(root: [root_symlink(source: "_shared")])
 
-      expect { described_class.apply(mode, root, wt, "main", config) { raise Orn::Error, "declined" } }
+      expect do
+        described_class.apply(
+          mode,
+          root,
+          wt,
+          "main",
+          config
+        ) { raise Orn::Error, "declined" }
+      end
         .to raise_error(Orn::Error, /declined/)
       expect(File.symlink?(File.join(wt, "_shared"))).to be(false)
     end

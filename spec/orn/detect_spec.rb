@@ -85,31 +85,74 @@ RSpec.describe Orn::Detect do
 
   describe ".identify_agent_in_job" do
     it "prefers the process group leader" do
-      j = job(100, [process(100, "claude"), process(101, "node", ["node", "/path/to/codex"])])
+      j = job(
+        100,
+        [process(100, "claude"), process(
+          101,
+          "node",
+          ["node", "/path/to/codex"]
+        )]
+      )
 
       expect(described_class.identify_agent_in_job(j).first).to eq(:claude)
     end
 
     it "falls back to a wrapped agent when the leader is a runtime" do
-      j = job(100, [process(100, "node", ["node", "/path/to/bin/codex", "--model", "gpt-5"])])
+      j = job(
+        100,
+        [process(
+          100,
+          "node",
+          ["node", "/path/to/bin/codex", "--model", "gpt-5"]
+        )]
+      )
 
       expect(described_class.identify_agent_in_job(j)).to eq([:codex, "codex"])
     end
 
     it "detects a wrapped agent in a child process" do
-      j = job(100, [process(100, "bash", ["bash"]), process(101, "node", ["node", "/path/to/bin/codex"])])
+      j = job(
+        100,
+        [process(
+          100,
+          "bash",
+          ["bash"]
+        ), process(
+          101,
+          "node",
+          ["node", "/path/to/bin/codex"]
+        )]
+      )
 
       expect(described_class.identify_agent_in_job(j).first).to eq(:codex)
     end
 
     it "ignores eval flags (subsequent args are inline code)" do
-      j = job(100, [process(100, "python3", ["python3", "-c", "print('hi')", "/tmp/codex"])])
+      j = job(
+        100,
+        [process(
+          100,
+          "python3",
+          ["python3", "-c", "print('hi')", "/tmp/codex"]
+        )]
+      )
 
       expect(described_class.identify_agent_in_job(j)).to be_nil
     end
 
     it "returns nil for shells only" do
-      j = job(100, [process(100, "bash", ["bash"]), process(101, "zsh", ["zsh"])])
+      j = job(
+        100,
+        [process(
+          100,
+          "bash",
+          ["bash"]
+        ), process(
+          101,
+          "zsh",
+          ["zsh"]
+        )]
+      )
 
       expect(described_class.identify_agent_in_job(j)).to be_nil
     end
@@ -278,7 +321,13 @@ RSpec.describe Orn::Detect do
         )
       ]
 
-      expect(described_class.detect_all_panes(mode, panes, nil)["win"].agent).to eq(:claude)
+      expect(
+        described_class.detect_all_panes(
+          mode,
+          panes,
+          nil
+        )["win"].agent
+      ).to eq(:claude)
     end
 
     it "detects each window separately" do
@@ -295,7 +344,11 @@ RSpec.describe Orn::Detect do
         )
       ]
 
-      results = described_class.detect_all_panes(mode, panes, nil)
+      results = described_class.detect_all_panes(
+        mode,
+        panes,
+        nil
+      )
 
       aggregate_failures do
         expect(results.length).to eq(2)

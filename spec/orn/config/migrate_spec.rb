@@ -39,20 +39,44 @@ RSpec.describe Orn::Config::Migrate do
     let(:seven) { Gem::Version.new("0.7.0") }
 
     it "passes when current" do
-      expect { described_class.enforce_version("0.7.0", "test.yaml", seven) }.not_to raise_error
+      expect do
+        described_class.enforce_version(
+          "0.7.0",
+          "test.yaml",
+          seven
+        )
+      end.not_to raise_error
     end
 
     it "halts when behind, pointing at the migrate command" do
-      expect { described_class.enforce_version("0.6.0", "test.yaml", seven) }
+      expect do
+        described_class.enforce_version(
+          "0.6.0",
+          "test.yaml",
+          seven
+        )
+      end
         .to raise_error(Orn::Error, /behind.*orn config migrate/m)
     end
 
     it "passes when ahead" do
-      expect { described_class.enforce_version("0.8.0", "test.yaml", seven) }.not_to raise_error
+      expect do
+        described_class.enforce_version(
+          "0.8.0",
+          "test.yaml",
+          seven
+        )
+      end.not_to raise_error
     end
 
     it "passes when missing" do
-      expect { described_class.enforce_version(nil, "test.yaml", seven) }.not_to raise_error
+      expect do
+        described_class.enforce_version(
+          nil,
+          "test.yaml",
+          seven
+        )
+      end.not_to raise_error
     end
   end
 
@@ -257,7 +281,11 @@ RSpec.describe Orn::Config::Migrate do
 
       described_class.migrate_file(path, dry_run: false)
 
-      expect(File.read(path)).to include("git:", "tmux:", "orn_version")
+      expect(File.read(path)).to include(
+        "git:",
+        "tmux:",
+        "orn_version"
+      )
     end
 
     it "creates a backup with the original contents" do

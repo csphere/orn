@@ -29,7 +29,11 @@ module Orn
       end
 
       # One structural edit: rename a key within a section.
-      RenameInSection = Data.define(:section, :old_key, :new_key) do
+      RenameInSection = Data.define(
+        :section,
+        :old_key,
+        :new_key
+      ) do
         def describe(table)
           nested = table[section]
           return unless nested.is_a?(Hash) && nested.key?(old_key)
@@ -54,11 +58,20 @@ module Orn
       MigrationPlan = Data.define(:to_version, :descriptions)
 
       # How a config's orn_version compares to the binary version.
-      VersionCheck = Data.define(:kind, :config, :binary)
+      VersionCheck = Data.define(
+        :kind,
+        :config,
+        :binary
+      )
 
       # Outcome of migrate_file, serialized for `orn config migrate` output.
       MigrateFileResult = Data.define(
-        :path, :from_version, :to_version, :changes, :backup_path, :up_to_date
+        :path,
+        :from_version,
+        :to_version,
+        :changes,
+        :backup_path,
+        :up_to_date
       )
 
       # Registry of all migration steps, ordered by target version. A single
@@ -164,7 +177,11 @@ module Orn
           raise Orn::Error, "#{path}: config needs migration\n#{changes}\n\nRun `orn config migrate` to update"
         end
 
-        enforce_version(version, path, binary)
+        enforce_version(
+          version,
+          path,
+          binary
+        )
       rescue Errno::ENOENT
         nil
       end
@@ -234,12 +251,35 @@ module Orn
         version = string_version(table)
         migration_plan = plan(table, version)
 
-        return up_to_date_result(path, version, migration_plan) if migration_plan.descriptions.empty?
-        return dry_run_result(path, version, migration_plan) if dry_run
+        if migration_plan.descriptions.empty?
+          return up_to_date_result(
+            path,
+            version,
+            migration_plan
+          )
+        end
+        if dry_run
+          return dry_run_result(
+            path,
+            version,
+            migration_plan
+          )
+        end
 
         backup_path = backup(path)
-        write_migration(path, contents, table, version, migration_plan)
-        migrated_result(path, version, migration_plan, backup_path)
+        write_migration(
+          path,
+          contents,
+          table,
+          version,
+          migration_plan
+        )
+        migrated_result(
+          path,
+          version,
+          migration_plan,
+          backup_path
+        )
       rescue Errno::ENOENT
         raise Orn::Error, "failed to read #{path}"
       end

@@ -6,7 +6,9 @@ require "open3"
 # lifecycle, setup-command execution behind the trust prompt, and the
 # `switch --sbx` orchestration that provisions worktree, tmux window, and
 # sandbox together. Gated by `:sbx_system` (Docker auth) on top of `:system`.
-RSpec.describe "orn sandbox flows", :sbx_system, :system do
+RSpec.describe "orn sandbox flows",
+  :sbx_system,
+  :system do
   include_context "with a sandbox system project"
 
   describe "sandbox lifecycle" do
@@ -22,16 +24,31 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
         sbx:
           agent_type: shell
       YAML
-      orn_ok("wt", "new", branch, chdir: project)
+      orn_ok(
+        "wt",
+        "new",
+        branch,
+        chdir: project
+      )
 
-      created = orn_json("sbx", "new", branch, chdir: project)
+      created = orn_json(
+        "sbx",
+        "new",
+        branch,
+        chdir: project
+      )
       expect(created).to include(
         "name" => sandbox_name,
         "branch" => branch
       )
       expect(listed_sandbox_names(project)).to include(sandbox_name)
 
-      removal = orn_ok("sbx", "remove", branch, chdir: project)
+      removal = orn_ok(
+        "sbx",
+        "remove",
+        branch,
+        chdir: project
+      )
       expect(removal).to include("Removed sandbox")
       expect(listed_sandbox_names(project)).not_to include(sandbox_name)
     end
@@ -51,7 +68,12 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
           agent_type: shell
           setup: touch /tmp/orn-setup-marker
       YAML
-      orn_ok("wt", "new", branch, chdir: project)
+      orn_ok(
+        "wt",
+        "new",
+        branch,
+        chdir: project
+      )
 
       # Setup commands are gated on trust approval, so the first run goes
       # through a pseudo-terminal to answer the prompt.
@@ -96,7 +118,12 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
           agent_type: shell
       YAML
 
-      result = orn_json("switch", "--sbx", branch, chdir: project)
+      result = orn_json(
+        "switch",
+        "--sbx",
+        branch,
+        chdir: project
+      )
       expect(result).to include(
         "branch" => branch,
         "action" => "created",
@@ -104,7 +131,11 @@ RSpec.describe "orn sandbox flows", :sbx_system, :system do
       )
       expect_provisioned(project)
 
-      orn_ok("remove", branch, chdir: project)
+      orn_ok(
+        "remove",
+        branch,
+        chdir: project
+      )
       expect_torn_down(project)
     end
 

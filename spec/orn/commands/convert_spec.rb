@@ -33,7 +33,11 @@ RSpec.describe Orn::Commands::Convert do
 
       it "allows a detached HEAD when --base is given" do
         dir = make_standard_repo
-        git!(dir, "checkout", `git -C #{dir} rev-parse HEAD`.strip)
+        git!(
+          dir,
+          "checkout",
+          `git -C #{dir} rev-parse HEAD`.strip
+        )
 
         expect { command.check_guards(dir, "main") }.not_to raise_error
       end
@@ -62,9 +66,19 @@ RSpec.describe Orn::Commands::Convert do
 
       it "rejects a repo with extra worktrees" do
         dir = make_standard_repo
-        git!(dir, "branch", "other")
+        git!(
+          dir,
+          "branch",
+          "other"
+        )
         wt_other = File.join(register_temp_dir(Dir.mktmpdir("orn-wt")), "other")
-        git!(dir, "worktree", "add", wt_other, "other")
+        git!(
+          dir,
+          "worktree",
+          "add",
+          wt_other,
+          "other"
+        )
 
         expect { command.check_guards(dir, nil) }.to raise_error(Orn::Error, /multiple worktrees/)
       end
@@ -78,19 +92,47 @@ RSpec.describe Orn::Commands::Convert do
 
       it "rejects a repo with no origin remote" do
         dir = register_temp_dir(Dir.mktmpdir("orn-noorigin"))
-        git!(dir, "init", "-b", "main")
-        git!(dir, "config", "user.email", "t@t.com")
-        git!(dir, "config", "user.name", "T")
+        git!(
+          dir,
+          "init",
+          "-b",
+          "main"
+        )
+        git!(
+          dir,
+          "config",
+          "user.email",
+          "t@t.com"
+        )
+        git!(
+          dir,
+          "config",
+          "user.name",
+          "T"
+        )
         File.write(File.join(dir, "f.txt"), "x")
-        git!(dir, "add", ".")
-        git!(dir, "commit", "-m", "init")
+        git!(
+          dir,
+          "add",
+          "."
+        )
+        git!(
+          dir,
+          "commit",
+          "-m",
+          "init"
+        )
 
         expect { command.check_guards(dir, nil) }.to raise_error(Orn::Error, /No 'origin' remote/)
       end
 
       it "rejects a detached HEAD without --base" do
         dir = make_standard_repo
-        git!(dir, "checkout", `git -C #{dir} rev-parse HEAD`.strip)
+        git!(
+          dir,
+          "checkout",
+          `git -C #{dir} rev-parse HEAD`.strip
+        )
 
         expect { command.check_guards(dir, nil) }.to raise_error(Orn::Error, /HEAD is detached/)
       end
@@ -98,15 +140,28 @@ RSpec.describe Orn::Commands::Convert do
       it "rejects unpushed commits" do
         dir = make_standard_repo
         File.write(File.join(dir, "new.txt"), "data")
-        git!(dir, "add", ".")
-        git!(dir, "commit", "-m", "unpushed")
+        git!(
+          dir,
+          "add",
+          "."
+        )
+        git!(
+          dir,
+          "commit",
+          "-m",
+          "unpushed"
+        )
 
         expect { command.check_guards(dir, nil) }.to raise_error(Orn::Error, /unpushed commits/)
       end
 
       it "rejects local-only branches, naming them" do
         dir = make_standard_repo
-        git!(dir, "branch", "local-only")
+        git!(
+          dir,
+          "branch",
+          "local-only"
+        )
 
         expect { command.check_guards(dir, nil) }.to raise_error(Orn::Error, /Local-only branches.*local-only/m)
       end
@@ -115,30 +170,70 @@ RSpec.describe Orn::Commands::Convert do
 
   describe "#resolve_base_branch" do
     it "returns the current branch when it matches the remote default" do
-      expect(command.resolve_base_branch(make_repo_with_remote_head, nil, nil)).to eq("main")
+      expect(
+        command.resolve_base_branch(
+          make_repo_with_remote_head,
+          nil,
+          nil
+        )
+      ).to eq("main")
     end
 
     it "falls back to the current branch when no remote default is recorded" do
-      expect(command.resolve_base_branch(make_standard_repo, nil, nil)).to eq("main")
+      expect(
+        command.resolve_base_branch(
+          make_standard_repo,
+          nil,
+          nil
+        )
+      ).to eq("main")
     end
 
     it "rejects a mismatch, suggesting --base" do
       dir = make_repo_with_remote_head
-      git!(dir, "checkout", "-b", "feature/xyz")
+      git!(
+        dir,
+        "checkout",
+        "-b",
+        "feature/xyz"
+      )
 
-      expect { command.resolve_base_branch(dir, nil, nil) }
+      expect do
+        command.resolve_base_branch(
+          dir,
+          nil,
+          nil
+        )
+      end
         .to raise_error(Orn::Error, %r{feature/xyz.*main.*--base}m)
     end
 
     it "honors an explicit base over a mismatch" do
       dir = make_repo_with_remote_head
-      git!(dir, "checkout", "-b", "feature/xyz")
+      git!(
+        dir,
+        "checkout",
+        "-b",
+        "feature/xyz"
+      )
 
-      expect(command.resolve_base_branch(dir, "main", nil)).to eq("main")
+      expect(
+        command.resolve_base_branch(
+          dir,
+          "main",
+          nil
+        )
+      ).to eq("main")
     end
 
     it "validates an explicit base branch name" do
-      expect { command.resolve_base_branch(make_standard_repo, "bad..name", nil) }
+      expect do
+        command.resolve_base_branch(
+          make_standard_repo,
+          "bad..name",
+          nil
+        )
+      end
         .to raise_error(Orn::Error, /'\.\.'/)
     end
   end

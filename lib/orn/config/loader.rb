@@ -13,7 +13,12 @@ module Orn
     PROJECT_CONFIG_RELATIVE_PATH = ".orn/config.yaml"
     GLOBAL_CONFIG_FILENAME = "default.yaml"
 
-    attr_reader :base, :session, :symlinks, :layout, :layout_source, :sbx
+    attr_reader :base,
+      :session,
+      :symlinks,
+      :layout,
+      :layout_source,
+      :sbx
 
     def initialize(base:, session:, symlinks:, layout:, layout_source:, sbx:)
       @base = base

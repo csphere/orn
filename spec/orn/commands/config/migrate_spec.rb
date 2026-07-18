@@ -3,7 +3,14 @@
 RSpec.describe Orn::Commands::Config::Migrate do
   def project_with_config(yaml)
     project = make_bare_project
-    File.write(File.join(project, ".orn", "config.yaml"), yaml)
+    File.write(
+      File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      ),
+      yaml
+    )
     project
   end
 
@@ -22,7 +29,11 @@ RSpec.describe Orn::Commands::Config::Migrate do
 
       Dir.chdir(project) { command.run }
 
-      config_path = File.join(project, ".orn", "config.yaml")
+      config_path = File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      )
       aggregate_failures do
         expect(File.read(config_path)).to include("orn_version")
         expect(File).to exist("#{config_path}.bak.1")
@@ -31,7 +42,11 @@ RSpec.describe Orn::Commands::Config::Migrate do
 
     it "writes nothing on a dry run" do
       project = project_with_config("git:\n  base: main\n")
-      config_path = File.join(project, ".orn", "config.yaml")
+      config_path = File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      )
       original = File.read(config_path)
 
       Dir.chdir(project) { command(dry_run: true).run }

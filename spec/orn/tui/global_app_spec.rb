@@ -53,13 +53,25 @@ module Orn
 
       describe "#visible_rows" do
         it "hides worktrees of collapsed repos" do
-          app = app_with([entry_with_worktrees("a", %w[main feat], false), entry("b")])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main feat],
+              false
+            ), entry("b")]
+          )
 
           expect(app.visible_rows).to eq([TreeRow.repo(0), TreeRow.repo(1)])
         end
 
         it "shows worktrees of expanded repos" do
-          app = app_with([entry_with_worktrees("a", %w[main feat], true), entry("b")])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main feat],
+              true
+            ), entry("b")]
+          )
 
           expect(app.visible_rows).to eq(
             [
@@ -71,7 +83,13 @@ module Orn
 
       describe "selection movement" do
         it "traverses expanded worktrees then wraps" do
-          app = app_with([entry_with_worktrees("a", %w[main], true), entry("b")])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main],
+              true
+            ), entry("b")]
+          )
 
           aggregate_failures do
             app.move_down
@@ -127,7 +145,13 @@ module Orn
 
       describe "#toggle_expanded" do
         it "expands the selected repo" do
-          app = app_with([entry_with_worktrees("a", %w[main], false)])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main],
+              false
+            )]
+          )
           app.toggle_expanded
 
           aggregate_failures do
@@ -137,7 +161,13 @@ module Orn
         end
 
         it "collapses to the repo row from a worktree row" do
-          app = app_with([entry_with_worktrees("a", %w[main feat], true), entry("b")])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main feat],
+              true
+            ), entry("b")]
+          )
           app.selected = 2
 
           app.toggle_expanded
@@ -156,7 +186,13 @@ module Orn
         end
 
         it "keeps the selection in range after collapse" do
-          app = app_with([entry_with_worktrees("a", %w[main feat], true)])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main feat],
+              true
+            )]
+          )
           app.selected = 2
           app.entries[0].expanded = false
 
@@ -168,7 +204,17 @@ module Orn
 
       describe "#select_visible_tab_row" do
         it "moves the selection onto the visible tab's worktree row" do
-          app = app_with([entry_with_worktrees("a", %w[main feat], true), entry_with_worktrees("b", %w[main], true)])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main feat],
+              true
+            ), entry_with_worktrees(
+              "b",
+              %w[main],
+              true
+            )]
+          )
           app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "main"))
 
           app.select_visible_tab_row
@@ -177,7 +223,17 @@ module Orn
         end
 
         it "expands a collapsed owning repo" do
-          app = app_with([entry_with_worktrees("a", %w[main], true), entry_with_worktrees("b", %w[main feat], false)])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main],
+              true
+            ), entry_with_worktrees(
+              "b",
+              %w[main feat],
+              false
+            )]
+          )
           app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "feat"))
 
           app.select_visible_tab_row
@@ -189,7 +245,13 @@ module Orn
         end
 
         it "is a no-op without a visible tab" do
-          app = app_with([entry_with_worktrees("a", %w[main], true)])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main],
+              true
+            )]
+          )
           app.selected = 1
           app.sync_list_state
 
@@ -212,7 +274,13 @@ module Orn
         end
 
         it "follows a worktree across a resort" do
-          app = app_with([entry_with_worktrees("a", %w[main feat], true), entry("b")])
+          app = app_with(
+            [entry_with_worktrees(
+              "a",
+              %w[main feat],
+              true
+            ), entry("b")]
+          )
           app.selected = 2
           anchor = app.selected_identity
           app.entries.push(app.entries.shift) # b now first
@@ -270,7 +338,11 @@ module Orn
         around { |example| Dir.mktmpdir { |dir| example.metadata[:dir] = dir and example.run } }
 
         def make_bare(root, name, head: "ref: refs/heads/main\n")
-          bare = File.join(root, name, ".bare")
+          bare = File.join(
+            root,
+            name,
+            ".bare"
+          )
           FileUtils.mkdir_p(bare)
           File.write(File.join(bare, "HEAD"), head) if head
         end
@@ -298,7 +370,11 @@ module Orn
 
         it "marks a repo without HEAD as unhealthy" do |example|
           root = example.metadata[:dir]
-          make_bare(root, "broken", head: nil)
+          make_bare(
+            root,
+            "broken",
+            head: nil
+          )
 
           repos = described_class.discover_repos(config_for(root))
 
@@ -320,8 +396,22 @@ module Orn
         it "caches the session name from config" do |example|
           root = example.metadata[:dir]
           make_bare(root, "my-project")
-          FileUtils.mkdir_p(File.join(root, "my-project", ".orn"))
-          File.write(File.join(root, "my-project", ".orn", "config.yaml"), "tmux:\n  session: custom-name\n")
+          FileUtils.mkdir_p(
+            File.join(
+              root,
+              "my-project",
+              ".orn"
+            )
+          )
+          File.write(
+            File.join(
+              root,
+              "my-project",
+              ".orn",
+              "config.yaml"
+            ),
+            "tmux:\n  session: custom-name\n"
+          )
 
           repos = described_class.discover_repos(config_for(root))
 
@@ -431,7 +521,11 @@ module Orn
 
       describe ".list_worktree_rows" do
         it "is empty for a nonexistent repo" do
-          rows = described_class.list_worktree_rows(Orn::OutputMode.quiet, "/tmp/nonexistent-orn", "main")
+          rows = described_class.list_worktree_rows(
+            Orn::OutputMode.quiet,
+            "/tmp/nonexistent-orn",
+            "main"
+          )
 
           expect(rows).to be_empty
         end

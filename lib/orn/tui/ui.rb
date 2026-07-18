@@ -11,9 +11,21 @@ module Orn
       # Render the project TUI: title, worktree rows, optional error line, the
       # active modal prompt, and mode-specific help.
       def draw(frame, app)
-        chunks = split_chunks(frame.area, !app.error.nil?, !app.mode.normal?)
-        render_header(frame, app, chunks)
-        render_body(frame, app, chunks)
+        chunks = split_chunks(
+          frame.area,
+          !app.error.nil?,
+          !app.mode.normal?
+        )
+        render_header(
+          frame,
+          app,
+          chunks
+        )
+        render_body(
+          frame,
+          app,
+          chunks
+        )
       end
 
       def render_header(frame, app, chunks)
@@ -22,8 +34,20 @@ module Orn
       end
 
       def render_body(frame, app, chunks)
-        render_error(frame, app, chunks[2]) unless app.error.nil?
-        render_modal(frame, app, chunks[3]) unless app.mode.normal?
+        unless app.error.nil?
+          render_error(
+            frame,
+            app,
+            chunks[2]
+          )
+        end
+        unless app.mode.normal?
+          render_modal(
+            frame,
+            app,
+            chunks[3]
+          )
+        end
         frame.render_widget(Paragraph.line(help_line(app.mode)), chunks[4])
       end
 
@@ -52,7 +76,13 @@ module Orn
       end
 
       def entry_lines(app)
-        app.entries.each_with_index.map { |entry, index| entry_line(app, entry, index) }
+        app.entries.each_with_index.map do |entry, index|
+          entry_line(
+            app,
+            entry,
+            index
+          )
+        end
       end
 
       # One worktree row: branch, dirty/window indicators, ahead/behind counts,
@@ -65,7 +95,13 @@ module Orn
         text = " #{entry.branch.ljust(24)} #{dirty_indicator}  " \
                "#{window_indicator} #{entry.ahead}\u{2191} #{entry.behind}\u{2193}"
         spans = [Span.styled(text, style)]
-        append_agent_span(spans, app, entry, style, index)
+        append_agent_span(
+          spans,
+          app,
+          entry,
+          style,
+          index
+        )
         Line.from(spans)
       end
 

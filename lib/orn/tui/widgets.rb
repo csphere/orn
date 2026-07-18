@@ -18,7 +18,12 @@ module Orn
         @lines.each_with_index do |line, row|
           break if row >= area.height
 
-          buffer.set_line(area.x, area.y + row, line, area.width)
+          buffer.set_line(
+            area.x,
+            area.y + row,
+            line,
+            area.width
+          )
         end
       end
     end
@@ -56,10 +61,19 @@ module Orn
       def render(area, buffer, state)
         return if area.height <= 0
 
-        state.offset = self.class.follow_offset(state.offset, state.selected, area.height)
+        state.offset = self.class.follow_offset(
+          state.offset,
+          state.selected,
+          area.height
+        )
         last = [state.offset + area.height, @items.length].min
         (state.offset...last).each_with_index do |item_index, row|
-          buffer.set_line(area.x, area.y + row, @items[item_index].line, area.width)
+          buffer.set_line(
+            area.x,
+            area.y + row,
+            @items[item_index].line,
+            area.width
+          )
         end
       end
 

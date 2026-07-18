@@ -22,7 +22,11 @@ module Orn
 
         def run_inner(project)
           sbx_config = project.config.require_sbx!
-          checks = Orn::Sandbox.doctor(@output_mode, sbx_config, project.root)
+          checks = Orn::Sandbox.doctor(
+            @output_mode,
+            sbx_config,
+            project.root
+          )
           Result.new(
             checks: checks,
             all_passed: checks.all?(&:passed)

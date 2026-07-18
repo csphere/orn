@@ -5,7 +5,10 @@ module Orn
     # One terminal cell: the grapheme drawn there plus its colours and weight.
     # A blank cell is a space with the terminal-default style.
     class Cell
-      attr_accessor :symbol, :fg, :bg, :bold
+      attr_accessor :symbol,
+        :fg,
+        :bg,
+        :bold
 
       def initialize(symbol: " ", fg: Color::RESET, bg: Color::RESET, bold: false)
         @symbol = symbol

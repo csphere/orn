@@ -14,7 +14,12 @@ module Orn
         def self.foreground_process_group_id(pid)
           return nil if pid.zero?
 
-          result = run_ps("-o", "tpgid=", "-p", pid.to_s)
+          result = run_ps(
+            "-o",
+            "tpgid=",
+            "-p",
+            pid.to_s
+          )
           return nil if result.nil? || !result.success?
 
           tpgid = Integer(result.stdout.strip, exception: false)
@@ -29,7 +34,12 @@ module Orn
           tpgid = foreground_process_group_id(child_pid)
           return nil if tpgid.nil?
 
-          result = run_ps("-o", "pid=,comm=,args=", "-g", tpgid.to_s)
+          result = run_ps(
+            "-o",
+            "pid=,comm=,args=",
+            "-g",
+            tpgid.to_s
+          )
           return nil if result.nil? || !result.success?
 
           processes = parse_ps_group(result.stdout)

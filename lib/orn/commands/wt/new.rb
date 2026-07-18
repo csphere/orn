@@ -6,7 +6,12 @@ module Orn
       # `orn wt new`: create a worktree for a branch, from the remote branch when
       # it exists, otherwise branching off base. Worktree-only (no tmux window).
       class New
-        Result = Data.define(:branch, :base, :worktree_path, :from_remote)
+        Result = Data.define(
+          :branch,
+          :base,
+          :worktree_path,
+          :from_remote
+        )
 
         # Reusable core: create the worktree (plus symlinks) in an
         # already-discovered `project`. Shared with switch and `wt open`.
@@ -21,8 +26,20 @@ module Orn
             root: project.root,
             output_mode: output_mode
           )
-          from_remote = create_worktree(output_mode, project, worktree, branch, base)
-          apply_symlinks(output_mode, project, worktree, wt_path, base)
+          from_remote = create_worktree(
+            output_mode,
+            project,
+            worktree,
+            branch,
+            base
+          )
+          apply_symlinks(
+            output_mode,
+            project,
+            worktree,
+            wt_path,
+            base
+          )
 
           Result.new(
             branch: branch,
@@ -43,15 +60,30 @@ module Orn
           worktree.fetch("origin", branch) if from_remote
           start_point = from_remote ? "origin/#{branch}" : "origin/#{base}"
           output_mode.status("Creating worktree at #{wt_path}...")
-          worktree.add(wt_path, branch, start_point)
+          worktree.add(
+            wt_path,
+            branch,
+            start_point
+          )
           from_remote
         end
 
         def self.apply_symlinks(output_mode, project, worktree, wt_path, base)
           symlinks = project.config.symlinks
           output_mode.status("Creating symlinks...") if !symlinks.base.empty? || !symlinks.root.empty?
-          Orn::Symlink.apply(output_mode, project.root, wt_path, base, symlinks) do |unignored|
-            handle_unignored(output_mode, worktree, wt_path, unignored)
+          Orn::Symlink.apply(
+            output_mode,
+            project.root,
+            wt_path,
+            base,
+            symlinks
+          ) do |unignored|
+            handle_unignored(
+              output_mode,
+              worktree,
+              wt_path,
+              unignored
+            )
           end
         end
 
@@ -59,7 +91,12 @@ module Orn
         # them; otherwise (and in JSON mode) remove the new worktree and abort.
         def self.handle_unignored(output_mode, worktree, wt_path, unignored)
           if !output_mode.json && $stdin.tty?
-            resolve_unignored_interactively(output_mode, worktree, wt_path, unignored)
+            resolve_unignored_interactively(
+              output_mode,
+              worktree,
+              wt_path,
+              unignored
+            )
           else
             safe_remove(worktree, wt_path)
             raise Orn::Error, unignored_message(unignored)
@@ -67,9 +104,19 @@ module Orn
         end
 
         def self.resolve_unignored_interactively(output_mode, worktree, wt_path, unignored)
-          confirmed = Orn::Confirm.with_stdin_stderr { |reader, writer| Orn::Confirm.gitignore(unignored, reader, writer) }
+          confirmed = Orn::Confirm.with_stdin_stderr do |reader, writer|
+            Orn::Confirm.gitignore(
+              unignored,
+              reader,
+              writer
+            )
+          end
           if confirmed
-            Orn::Symlink.add_to_gitignore_and_stage(output_mode, wt_path, unignored)
+            Orn::Symlink.add_to_gitignore_and_stage(
+              output_mode,
+              wt_path,
+              unignored
+            )
           else
             safe_remove(worktree, wt_path)
             raise Orn::Error, "Aborted"
@@ -99,7 +146,12 @@ module Orn
           Orn::Git::BranchName.new(base_override).validate! if base_override
 
           project = Orn::Git::Project.discover
-          result = self.class.create(@output_mode, project, branch, base_override)
+          result = self.class.create(
+            @output_mode,
+            project,
+            branch,
+            base_override
+          )
           emit(result)
         end
 

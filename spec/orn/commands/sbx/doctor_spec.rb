@@ -20,7 +20,11 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
       names = command.run_inner(project).checks.map(&:name)
 
       aggregate_failures do
-        expect(names).to include("sbx", "docker", "template")
+        expect(names).to include(
+          "sbx",
+          "docker",
+          "template"
+        )
         if Orn::Sandbox.send(:macos?)
           expect(names).to include("colima")
         else

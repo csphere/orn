@@ -23,7 +23,13 @@ module Orn
       data_dir = approval_data_dir
       raise Orn::Error, "Could not determine data directory for pane command approval" if data_dir.nil?
 
-      check_trust_with(output_mode, project_root, layout, source, data_dir)
+      check_trust_with(
+        output_mode,
+        project_root,
+        layout,
+        source,
+        data_dir
+      )
     end
 
     # Like check_trust, but never prompts: untrusted project pane commands fail
@@ -33,11 +39,25 @@ module Orn
       data_dir = approval_data_dir
       raise Orn::Error, "Could not determine data directory for pane command approval" if data_dir.nil?
 
-      check_trust_inner(output_mode, project_root, layout, source, data_dir, interactive: false)
+      check_trust_inner(
+        output_mode,
+        project_root,
+        layout,
+        source,
+        data_dir,
+        interactive: false
+      )
     end
 
     def self.check_trust_with(output_mode, project_root, layout, source, data_dir)
-      check_trust_inner(output_mode, project_root, layout, source, data_dir, interactive: interactive?)
+      check_trust_inner(
+        output_mode,
+        project_root,
+        layout,
+        source,
+        data_dir,
+        interactive: interactive?
+      )
     end
 
     def self.check_trust_inner(output_mode, project_root, layout, source, data_dir, interactive:)
@@ -126,11 +146,20 @@ module Orn
       data_dir = approval_data_dir
       raise Orn::Error, "Could not determine data directory for sandbox command approval" if data_dir.nil?
 
-      check_sbx_trust_with(project_root, sbx, data_dir)
+      check_sbx_trust_with(
+        project_root,
+        sbx,
+        data_dir
+      )
     end
 
     def self.check_sbx_trust_with(project_root, sbx, data_dir)
-      check_sbx_trust_inner(project_root, sbx, data_dir, interactive?)
+      check_sbx_trust_inner(
+        project_root,
+        sbx,
+        data_dir,
+        interactive?
+      )
     end
 
     def self.check_sbx_trust_inner(project_root, sbx, data_dir, interactive)
@@ -223,7 +252,15 @@ module Orn
     # ~/.local/share/orn/approved. nil when neither is available.
     def self.approval_data_dir
       base = Orn::Fs.xdg_dir("XDG_DATA_HOME", ".local/share")
-      base.nil? ? nil : File.join(base, "orn", "approved")
+      if base.nil?
+        nil
+      else
+        File.join(
+          base,
+          "orn",
+          "approved"
+        )
+      end
     end
 
     # Like approval_path, but with an sbx- prefix so sandbox and pane approvals

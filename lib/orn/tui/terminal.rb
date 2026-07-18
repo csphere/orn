@@ -69,7 +69,9 @@ module Orn
       # that carries no key press.
       Resize = Data.define(:width, :height)
 
-      attr_reader :area, :buffer, :clears
+      attr_reader :area,
+        :buffer,
+        :clears
 
       def initialize(width, height)
         @area = Rect.new(
@@ -203,7 +205,11 @@ module Orn
       def render(buffer)
         area = buffer.area
         rows = (0...area.height).map do |row|
-          "\e[#{row + 1};1H#{render_row(buffer, area, row)}\e[K"
+          "\e[#{row + 1};1H#{render_row(
+            buffer,
+            area,
+            row
+          )}\e[K"
         end
         rows.join
       end

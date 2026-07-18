@@ -2,7 +2,12 @@
 
 require "orn"
 
-Dir[File.join(__dir__, "support", "**", "*.rb")].each { |file| require file }
+Dir[File.join(
+  __dir__,
+  "support",
+  "**",
+  "*.rb"
+)].each { |file| require file }
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

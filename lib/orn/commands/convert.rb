@@ -22,7 +22,11 @@ module Orn
       end
 
       def run_in(dir, base)
-        convert(dir, base, check_guards(dir, base))
+        convert(
+          dir,
+          base,
+          check_guards(dir, base)
+        )
       end
 
       # Runs every conversion precondition, failing fast on the first violation,
@@ -97,7 +101,12 @@ module Orn
       end
 
       def check_origin_remote!(dir)
-        result = git_output(dir, "config", "--get", "remote.origin.url")
+        result = git_output(
+          dir,
+          "config",
+          "--get",
+          "remote.origin.url"
+        )
         return result.stdout.strip if result.success?
 
         raise Orn::Error, "No 'origin' remote configured; add one with: git remote add origin <url>"
@@ -106,7 +115,12 @@ module Orn
       # Returns the current branch name, nil when HEAD is detached but `base` was
       # given, and raises when detached without `base`.
       def check_head_not_detached!(dir, base)
-        result = git_output(dir, "symbolic-ref", "--short", "HEAD")
+        result = git_output(
+          dir,
+          "symbolic-ref",
+          "--short",
+          "HEAD"
+        )
         return result.stdout.strip if result.success?
         return nil unless base.nil?
 
@@ -116,7 +130,12 @@ module Orn
       # Fails when HEAD is ahead of its upstream. Passes silently when HEAD has
       # no upstream (that case is caught by check_no_local_only_branches!).
       def check_no_unpushed_commits!(dir)
-        result = git_output(dir, "log", "@{upstream}..HEAD", "--oneline")
+        result = git_output(
+          dir,
+          "log",
+          "@{upstream}..HEAD",
+          "--oneline"
+        )
         return unless result.success? && !result.stdout.strip.empty?
 
         raise Orn::Error, "Branch has unpushed commits; push them before converting"
@@ -140,7 +159,11 @@ module Orn
       # The remote default branch from refs/remotes/origin/HEAD, or nil when the
       # symref is not set locally.
       def read_remote_default_branch(dir)
-        result = git_output(dir, "symbolic-ref", "refs/remotes/origin/HEAD")
+        result = git_output(
+          dir,
+          "symbolic-ref",
+          "refs/remotes/origin/HEAD"
+        )
         return nil unless result.success?
 
         prefix = "refs/remotes/origin/"
@@ -152,7 +175,11 @@ module Orn
       # into a fresh dir, and restores the backup on failure. The backup is kept
       # on success so the user can recover gitignored files.
       def convert(dir, base, guards)
-        base_branch = resolve_base_branch(dir, base, guards.current_branch)
+        base_branch = resolve_base_branch(
+          dir,
+          base,
+          guards.current_branch
+        )
         project_name = Orn::Commands::Clone.derive_project_name(guards.origin_url)
         dir_name = directory_name(dir)
         backup_path = File.join(File.dirname(dir), "#{dir_name}.pre-orn")
@@ -163,13 +190,25 @@ module Orn
         FileUtils.mv(dir, backup_path)
         Dir.mkdir(dir)
 
-        clone_or_restore(dir, project_name, guards.origin_url, base_branch, backup_path)
+        clone_or_restore(
+          dir,
+          project_name,
+          guards.origin_url,
+          base_branch,
+          backup_path
+        )
         print_next_steps(dir_name, base_branch)
         nil
       end
 
       def clone_or_restore(dir, project_name, origin_url, base_branch, backup_path)
-        Setup.clone_into(@output_mode, dir, project_name, origin_url, base_branch)
+        Setup.clone_into(
+          @output_mode,
+          dir,
+          project_name,
+          origin_url,
+          base_branch
+        )
       rescue StandardError
         FileUtils.rm_rf(dir)
         restore_backup!(backup_path, dir)
@@ -204,7 +243,12 @@ module Orn
       end
 
       def git_run(dir, *args)
-        @cmd.run("git", "-C", dir, *args)
+        @cmd.run(
+          "git",
+          "-C",
+          dir,
+          *args
+        )
       end
 
       def git_output(dir, *args)

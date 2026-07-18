@@ -91,7 +91,11 @@ module Orn
       # the global TUI); `relaunch_suffix` is appended to the re-exec command
       # (" -g" for the global TUI).
       def bootstrap_tui(output, session, cwd, default_window_name:, reorder_base:, relaunch_suffix:)
-        return if reuse_existing_window(output, session, reorder_base)
+        return if reuse_existing_window(
+          output,
+          session,
+          reorder_base
+        )
 
         tui_cmd = Orn::TUI.relaunch_command(relaunch_suffix)
         if ENV["TMUX"]
@@ -104,23 +108,47 @@ module Orn
             reorder_base: reorder_base
           )
         else
-          launch_session(session, cwd, tui_cmd)
+          launch_session(
+            session,
+            cwd,
+            tui_cmd
+          )
         end
       end
 
       # Select the live `orn` window if one is already running; otherwise kill a
       # stale one. Returns true when an existing live window was selected.
       def reuse_existing_window(output, session, reorder_base)
-        return false unless Orn::Tmux.window_exists?(output, session, TUI_WINDOW)
+        return false unless Orn::Tmux.window_exists?(
+          output,
+          session,
+          TUI_WINDOW
+        )
 
-        if Orn::Tmux.pane_command(output, session, TUI_WINDOW) == "orn"
-          Orn::TUI.reorder_windows(output, session, reorder_base)
-          Orn::Tmux.select_window(output, session, TUI_WINDOW)
+        if Orn::Tmux.pane_command(
+          output,
+          session,
+          TUI_WINDOW
+        ) == "orn"
+          Orn::TUI.reorder_windows(
+            output,
+            session,
+            reorder_base
+          )
+          Orn::Tmux.select_window(
+            output,
+            session,
+            TUI_WINDOW
+          )
           return true
         end
 
         begin
-          Orn::Tmux.kill_window(output, session, TUI_WINDOW)
+          Orn::Tmux.kill_window(
+            output,
+            session,
+            TUI_WINDOW
+          )
         rescue Orn::Error
           nil
         end
@@ -130,18 +158,50 @@ module Orn
       # From inside tmux: add the `orn` window to the (ensured) session and
       # select it.
       def launch_window(output, session, cwd, tui_cmd, default_window_name:, reorder_base:)
-        Orn::Tmux.ensure_session(output, session, cwd, default_window_name)
-        Orn::Cmd.new(output_mode: output).exec(
-          "tmux", "new-window", "-a", "-t", "#{session}:", "-n", TUI_WINDOW, "-c", cwd.to_s, tui_cmd
+        Orn::Tmux.ensure_session(
+          output,
+          session,
+          cwd,
+          default_window_name
         )
-        Orn::TUI.reorder_windows(output, session, reorder_base)
-        Orn::Tmux.select_window(output, session, TUI_WINDOW)
+        Orn::Cmd.new(output_mode: output).exec(
+          "tmux",
+          "new-window",
+          "-a",
+          "-t",
+          "#{session}:",
+          "-n",
+          TUI_WINDOW,
+          "-c",
+          cwd.to_s,
+          tui_cmd
+        )
+        Orn::TUI.reorder_windows(
+          output,
+          session,
+          reorder_base
+        )
+        Orn::Tmux.select_window(
+          output,
+          session,
+          TUI_WINDOW
+        )
       end
 
       # From outside tmux: create a new session running the TUI and attach to it
       # (blocks until the session exits).
       def launch_session(session, cwd, tui_cmd)
-        ok = system("tmux", "new-session", "-s", session, "-n", TUI_WINDOW, "-c", cwd.to_s, tui_cmd)
+        ok = system(
+          "tmux",
+          "new-session",
+          "-s",
+          session,
+          "-n",
+          TUI_WINDOW,
+          "-c",
+          cwd.to_s,
+          tui_cmd
+        )
         raise Orn::Error, "tmux session exited with an error" unless ok
       end
 

@@ -15,12 +15,22 @@ module Orn
       class InvalidManifest < StandardError; end
 
       # Text inputs rules are evaluated against.
-      DetectionInput = Data.define(:screen, :osc_title, :osc_progress)
+      DetectionInput = Data.define(
+        :screen,
+        :osc_title,
+        :osc_progress
+      )
 
       # Result of manifest evaluation: the derived state, which kinds of visible
       # evidence backed it, and whether the caller should keep its previous
       # state (`skip_state_update`, e.g. a transcript viewer).
-      AgentDetection = Data.define(:state, :visible_idle, :visible_blocker, :visible_working, :skip_state_update) do
+      AgentDetection = Data.define(
+        :state,
+        :visible_idle,
+        :visible_blocker,
+        :visible_working,
+        :skip_state_update
+      ) do
         # Fallback when no rule matches or no manifest is available.
         def self.idle
           new(
@@ -35,7 +45,14 @@ module Orn
 
       # A boolean matcher node: leaves (`contains`/`regex`/`line_regex`)
       # combined with nested `all`/`any`/`not_gate` gates.
-      Gate = Data.define(:all, :any, :not_gate, :contains, :regex, :line_regex)
+      Gate = Data.define(
+        :all,
+        :any,
+        :not_gate,
+        :contains,
+        :regex,
+        :line_regex
+      )
 
       # One detection rule: its matcher gate over a screen `region`, mapping to
       # a `state`. Among matching rules the highest `priority` wins.
@@ -52,10 +69,21 @@ module Orn
       )
 
       # A compiled gate: `contains` needles lowercased, patterns built to Regexp.
-      CompiledGate = Data.define(:all, :any, :not_gate, :contains, :regex, :line_regex)
+      CompiledGate = Data.define(
+        :all,
+        :any,
+        :not_gate,
+        :contains,
+        :regex,
+        :line_regex
+      )
 
       # A parsed manifest: id, aliases, and rules.
-      ParsedManifest = Data.define(:id, :aliases, :rules)
+      ParsedManifest = Data.define(
+        :id,
+        :aliases,
+        :rules
+      )
 
       # A parsed manifest paired with its per-rule compiled gates.
       Loaded = Data.define(:rules, :compiled_gates)
@@ -109,10 +137,18 @@ module Orn
 
         loaded.rules.each_with_index do |rule, index|
           text, lower = region_cache[rule.region] ||= begin
-            region = region_with_lines(input, lines, rule.region)
+            region = region_with_lines(
+              input,
+              lines,
+              rule.region
+            )
             [region, region.downcase]
           end
-          next unless gate_matches?(loaded.compiled_gates[index], text, lower)
+          next unless gate_matches?(
+            loaded.compiled_gates[index],
+            text,
+            lower
+          )
 
           matched = rule if matched.nil? || matched.priority < rule.priority
         end
@@ -162,7 +198,11 @@ module Orn
         dir = Orn::Config.global_config_dir
         return nil if dir.nil?
 
-        path = File.join(dir, "agent-detection", "#{agent}.yaml")
+        path = File.join(
+          dir,
+          "agent-detection",
+          "#{agent}.yaml"
+        )
         return nil unless File.exist?(path)
 
         manifest = parse_manifest(YAML.safe_load_file(path))
@@ -199,7 +239,11 @@ module Orn
       def self.parse_manifest(raw)
         raise InvalidManifest, "manifest must be a mapping" unless raw.is_a?(Hash)
 
-        reject_unknown_keys(raw, MANIFEST_KEYS, "manifest")
+        reject_unknown_keys(
+          raw,
+          MANIFEST_KEYS,
+          "manifest"
+        )
         id = raw["id"]
         raise InvalidManifest, "manifest id must be a string" unless id.is_a?(String)
 
@@ -218,7 +262,11 @@ module Orn
       def self.parse_rule(raw)
         raise InvalidManifest, "rule must be a mapping" unless raw.is_a?(Hash)
 
-        reject_unknown_keys(raw, RULE_KEYS, "rule")
+        reject_unknown_keys(
+          raw,
+          RULE_KEYS,
+          "rule"
+        )
         id = raw["id"]
         raise InvalidManifest, "rule id must be a string" unless id.is_a?(String)
 
@@ -228,7 +276,11 @@ module Orn
         Rule.new(
           id: id,
           state: parse_state(raw["state"]),
-          priority: parse_int(raw["priority"], 0, "priority"),
+          priority: parse_int(
+            raw["priority"],
+            0,
+            "priority"
+          ),
           region: region,
           gate: gate_from(raw),
           **rule_flags(raw)
@@ -247,7 +299,11 @@ module Orn
       def self.parse_gate(raw)
         raise InvalidManifest, "gate must be a mapping" unless raw.is_a?(Hash)
 
-        reject_unknown_keys(raw, GATE_KEYS, "gate")
+        reject_unknown_keys(
+          raw,
+          GATE_KEYS,
+          "gate"
+        )
         gate_from(raw)
       end
 
@@ -326,7 +382,12 @@ module Orn
         validate_skip_state_update(rule)
         validate_region_name(rule.region, rule.id)
         begin
-          validate_gate(rule.gate, "rule", 0, complexity)
+          validate_gate(
+            rule.gate,
+            "rule",
+            0,
+            complexity
+          )
           compile_gate(rule.gate)
         rescue InvalidManifest => e
           raise InvalidManifest, "rule #{rule.id} has invalid matcher gates: #{e.message}"
@@ -356,26 +417,74 @@ module Orn
       # requirement of at least one positive matcher (pure-`not` matches too
       # broadly to be intentional).
       def self.validate_gate(gate, context, depth, complexity)
-        check_gate_budget(gate, context, depth, complexity)
+        check_gate_budget(
+          gate,
+          context,
+          depth,
+          complexity
+        )
         raise InvalidManifest, "#{context} must contain a positive matcher" unless positive_matcher?(gate)
 
-        gate.all.each { |nested| validate_gate(nested, "all gate", depth + 1, complexity) }
-        gate.any.each { |nested| validate_gate(nested, "any gate", depth + 1, complexity) }
+        gate.all.each do |nested|
+          validate_gate(
+            nested,
+            "all gate",
+            depth + 1,
+            complexity
+          )
+        end
+        gate.any.each do |nested|
+          validate_gate(
+            nested,
+            "any gate",
+            depth + 1,
+            complexity
+          )
+        end
         gate.not_gate.each do |nested|
           raise InvalidManifest, "#{context} contains an empty not gate" unless any_matcher?(nested)
 
-          validate_not_gate(nested, depth + 1, complexity)
+          validate_not_gate(
+            nested,
+            depth + 1,
+            complexity
+          )
         end
       end
 
       # Validate a gate nested under `not`, where any matcher suffices.
       def self.validate_not_gate(gate, depth, complexity)
-        check_gate_budget(gate, "not gate", depth, complexity)
+        check_gate_budget(
+          gate,
+          "not gate",
+          depth,
+          complexity
+        )
         raise InvalidManifest, "not gate must contain a matcher" unless any_matcher?(gate)
 
-        gate.all.each { |nested| validate_gate(nested, "not all gate", depth + 1, complexity) }
-        gate.any.each { |nested| validate_gate(nested, "not any gate", depth + 1, complexity) }
-        gate.not_gate.each { |nested| validate_not_gate(nested, depth + 1, complexity) }
+        gate.all.each do |nested|
+          validate_gate(
+            nested,
+            "not all gate",
+            depth + 1,
+            complexity
+          )
+        end
+        gate.any.each do |nested|
+          validate_gate(
+            nested,
+            "not any gate",
+            depth + 1,
+            complexity
+          )
+        end
+        gate.not_gate.each do |nested|
+          validate_not_gate(
+            nested,
+            depth + 1,
+            complexity
+          )
+        end
       end
 
       def self.check_gate_budget(gate, context, depth, complexity)
@@ -386,7 +495,11 @@ module Orn
           raise InvalidManifest, "manifest exceeds max gate count #{MAX_TOTAL_GATES}"
         end
 
-        validate_matcher_limits(gate, context, complexity)
+        validate_matcher_limits(
+          gate,
+          context,
+          complexity
+        )
       end
 
       def self.validate_matcher_limits(gate, context, complexity)
@@ -450,7 +563,15 @@ module Orn
       # the whole region, `line_regex` on at least one line, `all` needs every
       # nested gate, non-empty `any` needs one, no `not_gate` may match.
       def self.gate_matches?(gate, text, lower_text)
-        leaf_matches?(gate, text, lower_text) && nested_matches?(gate, text, lower_text)
+        leaf_matches?(
+          gate,
+          text,
+          lower_text
+        ) && nested_matches?(
+          gate,
+          text,
+          lower_text
+        )
       end
 
       def self.leaf_matches?(gate, text, lower_text)
@@ -460,9 +581,25 @@ module Orn
       end
 
       def self.nested_matches?(gate, text, lower_text)
-        gate.all.all? { |nested| gate_matches?(nested, text, lower_text) } &&
-          any_gate_matches?(gate, text, lower_text) &&
-          gate.not_gate.none? { |nested| gate_matches?(nested, text, lower_text) }
+        gate.all.all? do |nested|
+          gate_matches?(
+            nested,
+            text,
+            lower_text
+          )
+        end &&
+          any_gate_matches?(
+            gate,
+            text,
+            lower_text
+          ) &&
+          gate.not_gate.none? do |nested|
+            gate_matches?(
+              nested,
+              text,
+              lower_text
+            )
+          end
       end
 
       def self.line_regex_matches?(gate, text)
@@ -475,19 +612,33 @@ module Orn
       # A non-empty `any` needs one nested gate to match; an empty `any` is
       # vacuously true.
       def self.any_gate_matches?(gate, text, lower_text)
-        gate.any.empty? || gate.any.any? { |nested| gate_matches?(nested, text, lower_text) }
+        gate.any.empty? || gate.any.any? do |nested|
+          gate_matches?(
+            nested,
+            text,
+            lower_text
+          )
+        end
       end
 
       # For tests: match a compiled gate against text (lowercasing internally).
       def self.gate_matches_text?(gate, text)
-        gate_matches?(gate, text, text.downcase)
+        gate_matches?(
+          gate,
+          text,
+          text.downcase
+        )
       end
 
       # --- Region extraction ---
 
       # For tests: extract a region from an input using a fresh line split.
       def self.region(input, spec)
-        region_with_lines(input, split_lines(input.screen), spec)
+        region_with_lines(
+          input,
+          split_lines(input.screen),
+          spec
+        )
       end
 
       # Extract the text a rule's `region` spec refers to. `lines` must be
@@ -499,9 +650,17 @@ module Orn
         return input.osc_progress if trimmed == "osc_progress"
 
         content = input.screen
-        box_region(content, lines, trimmed) ||
+        box_region(
+          content,
+          lines,
+          trimmed
+        ) ||
           marker_region(content, trimmed) ||
-          parameterized_region(content, lines, trimmed)
+          parameterized_region(
+            content,
+            lines,
+            trimmed
+          )
       end
 
       def self.box_region(content, lines, trimmed)
@@ -522,10 +681,22 @@ module Orn
 
       def self.parameterized_region(content, lines, trimmed)
         count = region_count(trimmed, "bottom_lines")
-        return bottom_lines(content, lines, count) unless count.nil?
+        unless count.nil?
+          return bottom_lines(
+            content,
+            lines,
+            count
+          )
+        end
 
         count = region_count(trimmed, "bottom_non_empty_lines")
-        return bottom_non_empty_lines(content, lines, count) unless count.nil?
+        unless count.nil?
+          return bottom_non_empty_lines(
+            content,
+            lines,
+            count
+          )
+        end
 
         ""
       end
@@ -537,13 +708,21 @@ module Orn
         rest = spec[name.length..]
         return nil unless rest.start_with?("(") && rest.end_with?(")")
 
-        count = Integer(rest[1...-1], 10, exception: false)
+        count = Integer(
+          rest[1...-1],
+          10,
+          exception: false
+        )
         count.nil? || count.negative? ? nil : count
       end
 
       # The suffix of `content` starting at the `count`-th line from the bottom.
       def self.bottom_lines(content, lines, count)
-        slice_from_line_index(content, lines, [lines.length - count, 0].max)
+        slice_from_line_index(
+          content,
+          lines,
+          [lines.length - count, 0].max
+        )
       end
 
       # The suffix starting at the `count`-th non-empty line from the bottom;
@@ -553,7 +732,11 @@ module Orn
         chosen = non_empty.last(count).first
         return "" if chosen.nil?
 
-        slice_from_line_index(content, lines, chosen)
+        slice_from_line_index(
+          content,
+          lines,
+          chosen
+        )
       end
 
       # The lines between the prompt box's top border and the next horizontal
@@ -562,10 +745,18 @@ module Orn
         top = prompt_box_top_border_index(lines)
         return nil if top.nil?
 
-        start = line_start_offset(content, lines, top + 1)
+        start = line_start_offset(
+          content,
+          lines,
+          top + 1
+        )
         relative = lines[(top + 1)..].index { |line| horizontal_rule?(line) }
         end_index = relative.nil? ? lines.length : top + 1 + relative
-        finish = line_start_offset(content, lines, end_index)
+        finish = line_start_offset(
+          content,
+          lines,
+          end_index
+        )
         content[[start, content.length].min...[finish, content.length].min]
       end
 
@@ -575,7 +766,11 @@ module Orn
         top = prompt_box_top_border_index(lines)
         return content if top.nil?
 
-        content[0...[line_start_offset(content, lines, top), content.length].min]
+        content[0...[line_start_offset(
+          content,
+          lines,
+          top
+        ), content.length].min]
       end
 
       # Content after the last horizontal rule line; the whole content when none.
@@ -642,7 +837,11 @@ module Orn
       end
 
       def self.slice_from_line_index(content, lines, index)
-        content[[line_start_offset(content, lines, index), content.length].min..]
+        content[[line_start_offset(
+          content,
+          lines,
+          index
+        ), content.length].min..]
       end
 
       # Character offset where line `index` starts, assuming one-char `\n`

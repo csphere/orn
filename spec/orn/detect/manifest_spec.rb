@@ -195,7 +195,13 @@ RSpec.describe Orn::Detect::Manifest do
     end
 
     it "returns the title field for osc_title" do
-      expect(region_of("screen", "osc_title", title: "the title")).to eq("the title")
+      expect(
+        region_of(
+          "screen",
+          "osc_title",
+          title: "the title"
+        )
+      ).to eq("the title")
     end
 
     it "returns content after the last marker line for after_last_prompt_marker" do

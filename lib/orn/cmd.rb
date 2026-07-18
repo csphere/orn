@@ -9,7 +9,11 @@ module Orn
   class Cmd
     # The captured result of a subprocess. A nonzero exit is not an error;
     # callers inspect `success?` themselves.
-    Result = Data.define(:stdout, :stderr, :status) do
+    Result = Data.define(
+      :stdout,
+      :stderr,
+      :status
+    ) do
       def success?
         status.zero?
       end

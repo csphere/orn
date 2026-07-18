@@ -136,7 +136,14 @@ RSpec.describe Orn::Tmux do
     let(:one_pane_layout) { Orn::Config::Layout.of_columns([]) }
 
     def create_window_in(path, session, window, layout)
-      described_class.create_window(output_mode, session, window, path, layout, default_window_name: window)
+      described_class.create_window(
+        output_mode,
+        session,
+        window,
+        path,
+        layout,
+        default_window_name: window
+      )
     end
 
     def pane_ids(session)
@@ -145,22 +152,61 @@ RSpec.describe Orn::Tmux do
 
     it "adds a window to an existing session and can remove it" do
       Dir.mktmpdir do |path|
-        described_class.ensure_session(output_mode, session, path)
-        expect(described_class.window_exists?(output_mode, session, "feature")).to be(false)
+        described_class.ensure_session(
+          output_mode,
+          session,
+          path
+        )
+        expect(
+          described_class.window_exists?(
+            output_mode,
+            session,
+            "feature"
+          )
+        ).to be(false)
 
-        described_class.create_window(output_mode, session, "feature", path, columns_layout)
+        described_class.create_window(
+          output_mode,
+          session,
+          "feature",
+          path,
+          columns_layout
+        )
 
         expect(described_class.list_windows(output_mode, session)).to include("feature")
-        expect(described_class.window_exists?(output_mode, session, "feature")).to be(true)
+        expect(
+          described_class.window_exists?(
+            output_mode,
+            session,
+            "feature"
+          )
+        ).to be(true)
 
-        described_class.kill_window(output_mode, session, "feature")
-        expect(described_class.window_exists?(output_mode, session, "feature")).to be(false)
+        described_class.kill_window(
+          output_mode,
+          session,
+          "feature"
+        )
+        expect(
+          described_class.window_exists?(
+            output_mode,
+            session,
+            "feature"
+          )
+        ).to be(false)
       end
     end
 
     it "creates the seed window directly when it is the default window" do
       Dir.mktmpdir do |path|
-        described_class.create_window(output_mode, session, "main", path, columns_layout, default_window_name: "main")
+        described_class.create_window(
+          output_mode,
+          session,
+          "main",
+          path,
+          columns_layout,
+          default_window_name: "main"
+        )
 
         expect(described_class.list_windows(output_mode, session)).to eq(["main"])
       end
@@ -172,7 +218,12 @@ RSpec.describe Orn::Tmux do
 
     it "lists pane metadata for a session" do
       Dir.mktmpdir do |path|
-        create_window_in(path, session, "feature", columns_layout)
+        create_window_in(
+          path,
+          session,
+          "feature",
+          columns_layout
+        )
 
         feature_panes = described_class.list_panes_metadata(output_mode, session)
 
@@ -188,7 +239,12 @@ RSpec.describe Orn::Tmux do
 
     it "lists all panes across the server tagged with their session" do
       Dir.mktmpdir do |path|
-        create_window_in(path, session, "feature", columns_layout)
+        create_window_in(
+          path,
+          session,
+          "feature",
+          columns_layout
+        )
 
         panes = described_class.list_all_panes_metadata(output_mode)
 
@@ -205,7 +261,12 @@ RSpec.describe Orn::Tmux do
 
     it "captures a pane's visible contents as a string" do
       Dir.mktmpdir do |path|
-        create_window_in(path, session, "feature", columns_layout)
+        create_window_in(
+          path,
+          session,
+          "feature",
+          columns_layout
+        )
         pane_id = pane_ids(session).first
 
         expect(described_class.capture_pane(output_mode, pane_id)).to be_a(String)
@@ -214,10 +275,25 @@ RSpec.describe Orn::Tmux do
 
     it "tags a pane, lists it as borrowed, then clears the tags" do
       Dir.mktmpdir do |path|
-        create_window_in(path, "home-sess", "home-win", one_pane_layout)
+        create_window_in(
+          path,
+          "home-sess",
+          "home-win",
+          one_pane_layout
+        )
         pane = pane_ids("home-sess").first
-        described_class.set_pane_option(output_mode, pane, described_class::OPT_HOME_SESSION, "home-sess")
-        described_class.set_pane_option(output_mode, pane, described_class::OPT_HOME_WINDOW, "home-win")
+        described_class.set_pane_option(
+          output_mode,
+          pane,
+          described_class::OPT_HOME_SESSION,
+          "home-sess"
+        )
+        described_class.set_pane_option(
+          output_mode,
+          pane,
+          described_class::OPT_HOME_WINDOW,
+          "home-win"
+        )
 
         expect(described_class.list_borrowed_panes(output_mode)).to contain_exactly(
           described_class::BorrowedPane.new(
@@ -227,15 +303,28 @@ RSpec.describe Orn::Tmux do
           )
         )
 
-        described_class.unset_pane_option(output_mode, pane, described_class::OPT_HOME_SESSION)
-        described_class.unset_pane_option(output_mode, pane, described_class::OPT_HOME_WINDOW)
+        described_class.unset_pane_option(
+          output_mode,
+          pane,
+          described_class::OPT_HOME_SESSION
+        )
+        described_class.unset_pane_option(
+          output_mode,
+          pane,
+          described_class::OPT_HOME_WINDOW
+        )
         expect(described_class.list_borrowed_panes(output_mode)).to be_empty
       end
     end
 
     it "reports the session and window containing a pane" do
       Dir.mktmpdir do |path|
-        create_window_in(path, "sess-a", "win-a", one_pane_layout)
+        create_window_in(
+          path,
+          "sess-a",
+          "win-a",
+          one_pane_layout
+        )
         pane = pane_ids("sess-a").first
 
         expect(described_class.current_session_window(output_mode, pane)).to eq(%w[sess-a win-a])
@@ -244,34 +333,76 @@ RSpec.describe Orn::Tmux do
 
     it "returns the active pane of a window" do
       Dir.mktmpdir do |path|
-        create_window_in(path, "sess-b", "win-b", columns_layout)
+        create_window_in(
+          path,
+          "sess-b",
+          "win-b",
+          columns_layout
+        )
         panes = pane_ids("sess-b")
         described_class.select_pane(output_mode, panes.last)
 
-        expect(described_class.active_pane(output_mode, "sess-b", "win-b")).to eq(panes.last)
+        expect(
+          described_class.active_pane(
+            output_mode,
+            "sess-b",
+            "win-b"
+          )
+        ).to eq(panes.last)
       end
     end
 
     it "borrows a pane into another window and breaks it back out" do
       Dir.mktmpdir do |path|
-        create_window_in(path, "src", "work", columns_layout)
+        create_window_in(
+          path,
+          "src",
+          "work",
+          columns_layout
+        )
         borrowed = pane_ids("src").last
-        create_window_in(path, "hub", "orn", one_pane_layout)
+        create_window_in(
+          path,
+          "hub",
+          "orn",
+          one_pane_layout
+        )
 
-        described_class.join_pane(output_mode, borrowed, "hub:orn", 33, false)
+        described_class.join_pane(
+          output_mode,
+          borrowed,
+          "hub:orn",
+          33,
+          false
+        )
         expect(pane_ids("hub")).to include(borrowed)
 
-        described_class.break_pane(output_mode, borrowed, "src", "returned")
+        described_class.break_pane(
+          output_mode,
+          borrowed,
+          "src",
+          "returned"
+        )
         expect(described_class.list_windows(output_mode, "src")).to include("returned")
       end
     end
 
     it "recreates a session around a surviving pane" do
       Dir.mktmpdir do |path|
-        create_window_in(path, "orig", "w", columns_layout)
+        create_window_in(
+          path,
+          "orig",
+          "w",
+          columns_layout
+        )
         pane = pane_ids("orig").last
 
-        described_class.recreate_session_with_pane(output_mode, pane, "revived", "back")
+        described_class.recreate_session_with_pane(
+          output_mode,
+          pane,
+          "revived",
+          "back"
+        )
 
         expect(described_class.list_windows(output_mode, "revived")).to eq(["back"])
       end
@@ -279,9 +410,18 @@ RSpec.describe Orn::Tmux do
 
     it "installs a guarded root key binding and removes it" do
       Dir.mktmpdir do |path|
-        described_class.ensure_session(output_mode, "kb", path)
+        described_class.ensure_session(
+          output_mode,
+          "kb",
+          path
+        )
         condition = described_class.window_guard_condition("kb", "orn")
-        described_class.bind_key_guarded(output_mode, "M-o", condition, "display-message borrowed")
+        described_class.bind_key_guarded(
+          output_mode,
+          "M-o",
+          condition,
+          "display-message borrowed"
+        )
 
         expect(root_key_bindings).to include("M-o")
 

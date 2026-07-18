@@ -11,41 +11,113 @@ RSpec.describe Orn::Confirm do
 
   describe ".prune" do
     def prune(branch, has_local, has_remote, input)
-      capture(input) { |reader, writer| described_class.prune(branch, has_local, has_remote, reader, writer) }
+      capture(input) do |reader, writer|
+        described_class.prune(
+          branch,
+          has_local,
+          has_remote,
+          reader,
+          writer
+        )
+      end
     end
 
     context "when answered" do
       it "confirms on y/yes (case-insensitively)" do
-        expect(prune("b", true, true, "y\n").first).to be(true)
-        expect(prune("b", true, true, "yes\n").first).to be(true)
-        expect(prune("b", true, true, "Y\n").first).to be(true)
-        expect(prune("b", true, true, "YES\n").first).to be(true)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            "y\n"
+          ).first
+        ).to be(true)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            "yes\n"
+          ).first
+        ).to be(true)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            "Y\n"
+          ).first
+        ).to be(true)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            "YES\n"
+          ).first
+        ).to be(true)
       end
 
       it "denies on n, blank input, and EOF" do
-        expect(prune("b", true, true, "n\n").first).to be(false)
-        expect(prune("b", true, true, "\n").first).to be(false)
-        expect(prune("b", true, true, "").first).to be(false)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            "n\n"
+          ).first
+        ).to be(false)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            "\n"
+          ).first
+        ).to be(false)
+        expect(
+          prune(
+            "b",
+            true,
+            true,
+            ""
+          ).first
+        ).to be(false)
       end
     end
 
     context "when summarizing what will be deleted" do
       it "lists only the local branch when only it exists" do
-        _, output = prune("feature/test", true, false, "n\n")
+        _, output = prune(
+          "feature/test",
+          true,
+          false,
+          "n\n"
+        )
 
         expect(output).to include("Local branch: feature/test")
         expect(output).not_to include("Remote branch")
       end
 
       it "lists only the remote branch when only it exists" do
-        _, output = prune("feature/test", false, true, "n\n")
+        _, output = prune(
+          "feature/test",
+          false,
+          true,
+          "n\n"
+        )
 
         expect(output).not_to include("Local branch")
         expect(output).to include("Remote branch: origin/feature/test")
       end
 
       it "lists both branches and the continue prompt" do
-        _, output = prune("feature/test", true, true, "n\n")
+        _, output = prune(
+          "feature/test",
+          true,
+          true,
+          "n\n"
+        )
 
         expect(output).to include("Local branch: feature/test")
         expect(output).to include("Remote branch: origin/feature/test")
@@ -56,7 +128,13 @@ RSpec.describe Orn::Confirm do
 
   describe ".global_config" do
     def global_config(path, input)
-      capture(input) { |reader, writer| described_class.global_config(path, reader, writer) }
+      capture(input) do |reader, writer|
+        described_class.global_config(
+          path,
+          reader,
+          writer
+        )
+      end
     end
 
     it "confirms on yes and denies on no/EOF" do
@@ -76,7 +154,13 @@ RSpec.describe Orn::Confirm do
 
   describe ".gitignore" do
     def gitignore(paths, input)
-      capture(input) { |reader, writer| described_class.gitignore(paths, reader, writer) }
+      capture(input) do |reader, writer|
+        described_class.gitignore(
+          paths,
+          reader,
+          writer
+        )
+      end
     end
 
     it "confirms on y and denies on n/blank" do

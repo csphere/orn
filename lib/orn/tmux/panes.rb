@@ -26,7 +26,15 @@ module Orn
       # even with `-s`, so a bare name first matches window names in the
       # caller's current session and `-s` then widens to the wrong session.
       target = "#{session}:"
-      result = tmux_output(output_mode, "list-panes", "-s", "-t", target, "-F", PANE_FORMAT)
+      result = tmux_output(
+        output_mode,
+        "list-panes",
+        "-s",
+        "-t",
+        target,
+        "-F",
+        PANE_FORMAT
+      )
       return [] unless result&.success?
 
       parse_pane_lines(result.stdout, with_session: false)
@@ -36,7 +44,13 @@ module Orn
     # must treat that as "no information", not "no panes", since pruning state
     # against a failed listing would drop live panes.
     def self.list_all_panes_metadata(output_mode)
-      result = tmux_output(output_mode, "list-panes", "-a", "-F", PANE_FORMAT_ALL)
+      result = tmux_output(
+        output_mode,
+        "list-panes",
+        "-a",
+        "-F",
+        PANE_FORMAT_ALL
+      )
       return nil unless result&.success?
 
       parse_pane_lines(result.stdout, with_session: true)
@@ -44,7 +58,13 @@ module Orn
 
     # The visible contents of a pane as plain text; nil when the capture fails.
     def self.capture_pane(output_mode, pane_id)
-      result = tmux_output(output_mode, "capture-pane", "-p", "-t", pane_id)
+      result = tmux_output(
+        output_mode,
+        "capture-pane",
+        "-p",
+        "-t",
+        pane_id
+      )
       return nil unless result&.success?
 
       result.stdout

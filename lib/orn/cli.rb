@@ -100,7 +100,9 @@ module Orn
 
     # `hide` keeps these deprecated aliases out of help; both warn and delegate
     # to `switch`. `open` takes no base/sandbox options (matching the original).
-    desc "new BRANCH", "Deprecated: use `orn switch` instead", hide: true
+    desc "new BRANCH",
+      "Deprecated: use `orn switch` instead",
+      hide: true
     option :base, desc: "Base branch (defaults to config or 'main')"
     option :sbx,
       type: :boolean,
@@ -113,7 +115,9 @@ module Orn
           sbx: options[:sbx])
     end
 
-    desc "open BRANCH", "Deprecated: use `orn switch` instead", hide: true
+    desc "open BRANCH",
+      "Deprecated: use `orn switch` instead",
+      hide: true
     def open(branch)
       warn "warning: `orn open` is deprecated, use `orn switch` instead"
       Orn::Commands::Switch.new(output_mode: Orn::OutputMode.from_options(options)).run(branch)
@@ -161,7 +165,9 @@ module Orn
     # Hidden candidate lister for the completion scripts. `exe/orn` short-
     # circuits `orn complete` before loading Thor for speed; this arm is the
     # fallback when it is reached through the full CLI.
-    desc "complete", "List dynamic completion candidates", hide: true
+    desc "complete",
+      "List dynamic completion candidates",
+      hide: true
     def complete(*)
       Orn::Complete.print_candidates
     end

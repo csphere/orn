@@ -14,7 +14,12 @@ module Orn
       let(:buffer) { described_class.new(area) }
 
       it "writes a styled line into cells starting at the given position" do
-        buffer.set_line(0, 1, Line.styled("hi", Style.default.fg(Color::RED)), area.width)
+        buffer.set_line(
+          0,
+          1,
+          Line.styled("hi", Style.default.fg(Color::RED)),
+          area.width
+        )
 
         aggregate_failures do
           expect(buffer[[0, 1]].symbol).to eq("h")
@@ -24,7 +29,12 @@ module Orn
       end
 
       it "clips a line at the maximum width" do
-        buffer.set_line(0, 0, Line.raw("abcdef"), 3)
+        buffer.set_line(
+          0,
+          0,
+          Line.raw("abcdef"),
+          3
+        )
 
         aggregate_failures do
           expect(buffer.to_s).to include("abc")

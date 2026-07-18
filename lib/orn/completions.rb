@@ -133,6 +133,8 @@ module Orn
       FISH
     end
 
-    private_class_method :bash, :zsh, :fish
+    private_class_method :bash,
+      :zsh,
+      :fish
   end
 end

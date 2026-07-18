@@ -22,7 +22,13 @@ module Orn
     def self.create_window(output_mode, session, name, path, layout, template_vars: {}, default_window_name: nil)
       warn_if_old_tmux
 
-      first_pane = create_first_pane(output_mode, session, name, path, default_window_name)
+      first_pane = create_first_pane(
+        output_mode,
+        session,
+        name,
+        path,
+        default_window_name
+      )
       target = window_target(session, name)
 
       if layout_empty?(layout)
@@ -31,8 +37,18 @@ module Orn
       end
 
       plan = layout.columns? ? Layout.plan_columns(layout.columns) : Layout.plan_rows(layout.rows)
-      pane_ids = realize_splits(output_mode, plan, first_pane, path)
-      run_pane_commands(output_mode, plan, pane_ids, template_vars)
+      pane_ids = realize_splits(
+        output_mode,
+        plan,
+        first_pane,
+        path
+      )
+      run_pane_commands(
+        output_mode,
+        plan,
+        pane_ids,
+        template_vars
+      )
 
       tmux_exec(output_mode, "select-pane", "-t", pane_ids[plan.focus_pane])
       tmux_exec(output_mode, "select-window", "-t", target)
@@ -63,7 +79,14 @@ module Orn
     def self.pane_command(output_mode, session, window)
       target = window_target(session, window)
       # The escaped \#{...} is a literal tmux format string, not Ruby interpolation.
-      result = tmux_output(output_mode, "list-panes", "-t", target, "-F", "\#{pane_current_command}")
+      result = tmux_output(
+        output_mode,
+        "list-panes",
+        "-t",
+        target,
+        "-F",
+        "\#{pane_current_command}"
+      )
       return nil unless result&.success?
 
       result.stdout.lines.first&.chomp
@@ -82,7 +105,14 @@ module Orn
       # Trailing colon forces session interpretation, consistent with the
       # other session-level targets here.
       target = "#{session}:"
-      result = tmux_output(output_mode, "list-windows", "-t", target, "-F", "\#{window_name}")
+      result = tmux_output(
+        output_mode,
+        "list-windows",
+        "-t",
+        target,
+        "-F",
+        "\#{window_name}"
+      )
       return [] unless result&.success?
 
       result.stdout.lines.map(&:chomp)
@@ -124,7 +154,12 @@ module Orn
         return result.stdout.strip
       end
 
-      ensure_session(output_mode, session, path, default_window_name)
+      ensure_session(
+        output_mode,
+        session,
+        path,
+        default_window_name
+      )
 
       # Trailing colon forces session interpretation: a bare name is a
       # target-window, which tmux first matches against window names in the
@@ -157,7 +192,13 @@ module Orn
       pane_ids = [first_pane]
       plan.splits.each do |split|
         target_id = pane_ids[split.target]
-        new_id = split_pane(output_mode, split.direction, target_id, path, split.percentage)
+        new_id = split_pane(
+          output_mode,
+          split.direction,
+          target_id,
+          path,
+          split.percentage
+        )
         pane_ids << new_id
       end
       pane_ids
@@ -168,7 +209,11 @@ module Orn
         pane_id = pane_ids[pane_command.pane]
         command = Layout.substitute_template_vars(pane_command.command, template_vars)
         wait_for_shell(output_mode, pane_id)
-        send_keys(output_mode, pane_id, command)
+        send_keys(
+          output_mode,
+          pane_id,
+          command
+        )
       end
     end
 

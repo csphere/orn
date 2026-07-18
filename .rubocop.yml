@@ -5,6 +5,7 @@ plugins:
 require:
   - ./.rubocop/cop/orn/multi_pair_hash_line_breaks.rb
   - ./.rubocop/cop/orn/empty_lines_between_collection_items.rb
+  - ./.rubocop/cop/orn/multi_argument_line_breaks.rb
 
 AllCops:
   TargetRubyVersion: 3.3
@@ -88,6 +89,18 @@ Orn/EmptyLinesBetweenCollectionItems:
   Exclude:
     - "lib/orn/detect/manifests.rb"
 
+# Calls with more than two arguments break one argument per line. The
+# allowed methods are CLI wrappers whose arguments are shell words: read
+# as a command line, they stay inline at any count.
+Orn/MultiArgumentLineBreaks:
+  Enabled: true
+  MaxArgsOnOneLine: 2
+  AllowedMethods:
+    - tmux_exec
+    - sbx_exec
+    - git_run
+    - output
+
 Layout/FirstHashElementLineBreak:
   Enabled: true
 
@@ -133,6 +146,9 @@ Metrics/AbcSize:
 # the TUI app classes, which are large single state/action classes.
 Metrics/ClassLength:
   Max: 150
+  CountAsOne:
+    - hash
+    - method_call
   Exclude:
     - "lib/orn/config/**/*"
     - "lib/orn/tui/app.rb"

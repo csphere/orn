@@ -25,14 +25,25 @@ module Orn
 
       # An open agent tab: a worktree's agent pane currently borrowed into the
       # hub window.
-      Tab = Data.define(:root, :session, :base_branch, :branch, :pane_id)
+      Tab = Data.define(
+        :root,
+        :session,
+        :base_branch,
+        :branch,
+        :pane_id
+      )
 
       # Borrow the agent pane of `branch` into the hub window. Creates the
       # worktree window (booting its configured layout, including the agent)
       # when it does not exist yet. Raises when the branch is sandboxed and
       # closed (its reopen flow can prompt) or when no agent pane is found.
       def self.open_tab(output_mode, root:, session:, base_branch:, branch:, hub_pane:)
-        ensure_window(output_mode, root, branch, session)
+        ensure_window(
+          output_mode,
+          root,
+          branch,
+          session
+        )
 
         panes = Orn::Tmux.list_panes_metadata(output_mode, session)
         pane = Orn::Detect.choose_agent_pane(panes, branch)
@@ -45,7 +56,11 @@ module Orn
           branch: branch,
           pane_id: pane.pane_id
         )
-        show_tab(output_mode, tab, hub_pane)
+        show_tab(
+          output_mode,
+          tab,
+          hub_pane
+        )
         tab
       end
 
@@ -53,7 +68,11 @@ module Orn
       # reopen must go through `orn switch` (it can prompt, so it cannot run
       # under the TUI screen).
       def self.ensure_window(output_mode, root, branch, session)
-        return if Orn::Tmux.window_exists?(output_mode, session, branch)
+        return if Orn::Tmux.window_exists?(
+          output_mode,
+          session,
+          branch
+        )
 
         project = Orn::Git::Project.new(
           root: root,
@@ -65,16 +84,40 @@ module Orn
             "'#{branch}' uses sandbox '#{sbx_name}' and its window is closed; " \
             "run 'orn switch #{branch}' to reopen it"
         end
-        Orn::Tmux.open_window_non_interactive(output_mode, project, branch)
+        Orn::Tmux.open_window_non_interactive(
+          output_mode,
+          project,
+          branch
+        )
       end
 
       # Borrow an already-known tab pane into the hub window (used both on first
       # open and when re-showing a hidden tab).
       def self.show_tab(output_mode, tab, hub_pane)
-        Orn::Tmux.set_pane_option(output_mode, tab.pane_id, Orn::Tmux::OPT_HOME_SESSION, tab.session)
-        Orn::Tmux.set_pane_option(output_mode, tab.pane_id, Orn::Tmux::OPT_HOME_WINDOW, tab.branch)
-        Orn::Tmux.join_pane(output_mode, tab.pane_id, hub_pane, AGENT_WIDTH_PCT, true)
-        Orn::Tmux.resize_pane_width(output_mode, hub_pane, SIDEBAR_WIDTH_PCT)
+        Orn::Tmux.set_pane_option(
+          output_mode,
+          tab.pane_id,
+          Orn::Tmux::OPT_HOME_SESSION,
+          tab.session
+        )
+        Orn::Tmux.set_pane_option(
+          output_mode,
+          tab.pane_id,
+          Orn::Tmux::OPT_HOME_WINDOW,
+          tab.branch
+        )
+        Orn::Tmux.join_pane(
+          output_mode,
+          tab.pane_id,
+          hub_pane,
+          AGENT_WIDTH_PCT,
+          true
+        )
+        Orn::Tmux.resize_pane_width(
+          output_mode,
+          hub_pane,
+          SIDEBAR_WIDTH_PCT
+        )
       end
 
       # Return a tab's pane to its home window and restore window order there.
@@ -85,27 +128,57 @@ module Orn
           home_window: tab.branch
         )
         return_pane_home(output_mode, borrowed)
-        Orn::TUI.reorder_windows(output_mode, tab.session, tab.base_branch)
+        Orn::TUI.reorder_windows(
+          output_mode,
+          tab.session,
+          tab.base_branch
+        )
       end
 
       # Return a borrowed pane to its home window, recreating the window (and,
       # if borrowing it emptied the whole session, the session itself) when
       # needed.
       def self.return_pane_home(output_mode, borrowed)
-        if Orn::Tmux.window_exists?(output_mode, borrowed.home_session, borrowed.home_window)
+        if Orn::Tmux.window_exists?(
+          output_mode,
+          borrowed.home_session,
+          borrowed.home_window
+        )
           target = "#{borrowed.home_session}:#{borrowed.home_window}"
-          Orn::Tmux.join_pane(output_mode, borrowed.pane_id, target, 50, false)
+          Orn::Tmux.join_pane(
+            output_mode,
+            borrowed.pane_id,
+            target,
+            50,
+            false
+          )
         elsif Orn::Session.session_exists?(output_mode, borrowed.home_session)
-          Orn::Tmux.break_pane(output_mode, borrowed.pane_id, borrowed.home_session, borrowed.home_window)
+          Orn::Tmux.break_pane(
+            output_mode,
+            borrowed.pane_id,
+            borrowed.home_session,
+            borrowed.home_window
+          )
         else
           # Borrowing the only pane of the only window in home_session kills the
           # session outright, so there is nothing left to break-pane into.
           Orn::Tmux.recreate_session_with_pane(
-            output_mode, borrowed.pane_id, borrowed.home_session, borrowed.home_window
+            output_mode,
+            borrowed.pane_id,
+            borrowed.home_session,
+            borrowed.home_window
           )
         end
-        Orn::Tmux.unset_pane_option(output_mode, borrowed.pane_id, Orn::Tmux::OPT_HOME_SESSION)
-        Orn::Tmux.unset_pane_option(output_mode, borrowed.pane_id, Orn::Tmux::OPT_HOME_WINDOW)
+        Orn::Tmux.unset_pane_option(
+          output_mode,
+          borrowed.pane_id,
+          Orn::Tmux::OPT_HOME_SESSION
+        )
+        Orn::Tmux.unset_pane_option(
+          output_mode,
+          borrowed.pane_id,
+          Orn::Tmux::OPT_HOME_WINDOW
+        )
       end
 
       # Return every tagged pane home. Run at TUI startup so panes stranded by a
@@ -143,10 +216,30 @@ module Orn
         condition = Orn::Tmux.window_guard_condition(hub_session, hub_window)
         cycle_next = "send-keys -t #{hub_pane} #{CYCLE_NEXT_INPUT}"
         cycle_prev = "send-keys -t #{hub_pane} #{CYCLE_PREV_INPUT}"
-        Orn::Tmux.bind_key_guarded(output_mode, KEY_FOCUS_SIDEBAR, condition, "select-pane -t #{hub_pane}")
-        Orn::Tmux.bind_key_guarded(output_mode, KEY_FOCUS_AGENT, condition, "select-pane -t #{agent_pane}")
-        Orn::Tmux.bind_key_guarded(output_mode, KEY_CYCLE_NEXT, condition, cycle_next)
-        Orn::Tmux.bind_key_guarded(output_mode, KEY_CYCLE_PREV, condition, cycle_prev)
+        Orn::Tmux.bind_key_guarded(
+          output_mode,
+          KEY_FOCUS_SIDEBAR,
+          condition,
+          "select-pane -t #{hub_pane}"
+        )
+        Orn::Tmux.bind_key_guarded(
+          output_mode,
+          KEY_FOCUS_AGENT,
+          condition,
+          "select-pane -t #{agent_pane}"
+        )
+        Orn::Tmux.bind_key_guarded(
+          output_mode,
+          KEY_CYCLE_NEXT,
+          condition,
+          cycle_next
+        )
+        Orn::Tmux.bind_key_guarded(
+          output_mode,
+          KEY_CYCLE_PREV,
+          condition,
+          cycle_prev
+        )
       end
 
       # Unbind every hub key binding; failures are ignored.

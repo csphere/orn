@@ -45,7 +45,11 @@ module Orn
     ForegroundJob = Data.define(:process_group_id, :processes)
 
     # One process within a ForegroundJob; `argv` is nil when unreadable.
-    ForegroundProcess = Data.define(:pid, :name, :argv)
+    ForegroundProcess = Data.define(
+      :pid,
+      :name,
+      :argv
+    )
 
     # Detection result for one pane: the agent (or nil) and its state.
     PaneAgentState = Data.define(:agent, :state)
@@ -234,7 +238,11 @@ module Orn
       panes.each do |pane|
         next if results[pane.window_name]&.agent
 
-        results[pane.window_name] = detect_pane(output_mode, pane, sbx_agent_type)
+        results[pane.window_name] = detect_pane(
+          output_mode,
+          pane,
+          sbx_agent_type
+        )
       end
       results
     end

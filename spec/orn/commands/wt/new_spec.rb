@@ -5,7 +5,14 @@ RSpec.describe Orn::Commands::Wt::New do
     remote = make_remote_with_branch(branch)
     project = make_bare_project
     add_origin(project, remote)
-    File.write(File.join(project, ".orn", "config.yaml"), "git:\n  base: main\n")
+    File.write(
+      File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      ),
+      "git:\n  base: main\n"
+    )
     project
   end
 
@@ -20,19 +27,35 @@ RSpec.describe Orn::Commands::Wt::New do
     it "creates a worktree tracking the remote branch when it exists" do
       root = standard_project("feature/existing")
 
-      result = described_class.create(Orn::OutputMode.quiet, load_project(root), "feature/existing", nil)
+      result = described_class.create(
+        Orn::OutputMode.quiet,
+        load_project(root),
+        "feature/existing",
+        nil
+      )
 
       aggregate_failures do
         expect(result.from_remote).to be(true)
         expect(result.branch).to eq("feature/existing")
-        expect(File).to exist(File.join(root, "feature/existing", "g.txt"))
+        expect(File).to exist(
+          File.join(
+            root,
+            "feature/existing",
+            "g.txt"
+          )
+        )
       end
     end
 
     it "creates a worktree off base when the branch is new" do
       root = standard_project("feature/other")
 
-      result = described_class.create(Orn::OutputMode.quiet, load_project(root), "feature/brand-new", nil)
+      result = described_class.create(
+        Orn::OutputMode.quiet,
+        load_project(root),
+        "feature/brand-new",
+        nil
+      )
 
       aggregate_failures do
         expect(result.from_remote).to be(false)
@@ -45,7 +68,14 @@ RSpec.describe Orn::Commands::Wt::New do
       root = standard_project("feature/existing")
       FileUtils.mkdir_p(File.join(root, "feature/existing"))
 
-      expect { described_class.create(Orn::OutputMode.quiet, load_project(root), "feature/existing", nil) }
+      expect do
+        described_class.create(
+          Orn::OutputMode.quiet,
+          load_project(root),
+          "feature/existing",
+          nil
+        )
+      end
         .to raise_error(Orn::Error, /already exists/)
     end
   end

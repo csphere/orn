@@ -52,7 +52,11 @@ module Orn
         return Commands::Output.print_json(result.to_json_hash) if @output_mode.json
 
         rows = result.worktrees.map { |entry| [entry.branch, entry.has_window ? "window" : "no window"] }
-        Commands::Output.worktree_table(result.repo, %w[Branch Status], rows)
+        Commands::Output.worktree_table(
+          result.repo,
+          %w[Branch Status],
+          rows
+        )
       end
     end
   end

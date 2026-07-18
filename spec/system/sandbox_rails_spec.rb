@@ -10,11 +10,19 @@ require "net/http"
 #
 # Heavyweight: builds a template image and creates a real sandbox, so it is
 # gated by `:sbx_system` (Docker auth) on top of `:system`.
-RSpec.describe "orn sandbox full-stack app", :sbx_system, :system do
+RSpec.describe "orn sandbox full-stack app",
+  :sbx_system,
+  :system do
   include_context "with a sandbox system project"
 
   let(:branch) { "feature/rails" }
-  let(:app_dir) { File.join(workspace, "app", branch) }
+  let(:app_dir) do
+    File.join(
+      workspace,
+      "app",
+      branch
+    )
+  end
 
   let(:project_config) do
     <<~YAML
@@ -71,7 +79,12 @@ RSpec.describe "orn sandbox full-stack app", :sbx_system, :system do
 
     # One command provisions everything: worktree, tmux window, sandbox,
     # setup (services + database), published port, detached app start.
-    result = orn_json("switch", "--sbx", branch, chdir: project)
+    result = orn_json(
+      "switch",
+      "--sbx",
+      branch,
+      chdir: project
+    )
     expect(result).to include(
       "branch" => branch,
       "sandbox_name" => sandbox_name
@@ -80,7 +93,11 @@ RSpec.describe "orn sandbox full-stack app", :sbx_system, :system do
     expect_app_healthy(result.fetch("host_ports").first.fetch("host"))
     expect_job_processed
 
-    orn_ok("remove", branch, chdir: project)
+    orn_ok(
+      "remove",
+      branch,
+      chdir: project
+    )
     expect_torn_down(project)
   end
 

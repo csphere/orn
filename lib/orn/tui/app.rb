@@ -4,7 +4,13 @@ module Orn
   module TUI
     # One worktree row: git dirtiness, tmux window presence, and ahead/behind
     # counts relative to the base branch.
-    WorktreeStatus = Data.define(:branch, :dirty, :has_window, :ahead, :behind)
+    WorktreeStatus = Data.define(
+      :branch,
+      :dirty,
+      :has_window,
+      :ahead,
+      :behind
+    )
 
     # Input mode. A non-`normal` mode renders a modal prompt line and captures
     # keys until confirmed or cancelled. `text` carries the typed branch name
@@ -45,7 +51,13 @@ module Orn
       # Cadence of agent-state detection, faster than the full worktree refresh.
       AGENT_REFRESH_INTERVAL = 1
 
-      attr_accessor :entries, :selected, :repo_name, :error, :mode, :agent_states, :spinner_tick
+      attr_accessor :entries,
+        :selected,
+        :repo_name,
+        :error,
+        :mode,
+        :agent_states,
+        :spinner_tick
       attr_reader :session, :base_branch
 
       # Build the app from a discovered project and run an initial refresh.
@@ -101,13 +113,21 @@ module Orn
 
         @selected = @entries.length - 1 if @selected >= @entries.length && !@entries.empty?
         @last_refresh = monotonic
-        Orn::TUI.reorder_windows(@output, @session, @base_branch)
+        Orn::TUI.reorder_windows(
+          @output,
+          @session,
+          @base_branch
+        )
       end
 
       # Re-detect agent state for every pane in the session.
       def refresh_agents
         panes = Orn::Tmux.list_panes_metadata(@output, @session)
-        @agent_states = Orn::Detect.detect_all_panes(@output, panes, @sbx_agent_type)
+        @agent_states = Orn::Detect.detect_all_panes(
+          @output,
+          panes,
+          @sbx_agent_type
+        )
         @last_agent_refresh = monotonic
       end
 
@@ -161,7 +181,11 @@ module Orn
         branch = entry.branch
         # Closing a worktree whose agent pane is borrowed by the hub first
         # returns the pane so the kill reaches it.
-        returned = Hub.return_borrowed_for_branch(@output, @session, branch)
+        returned = Hub.return_borrowed_for_branch(
+          @output,
+          @session,
+          branch
+        )
         return if !entry.has_window && !returned
 
         kill_window_and_refresh(branch)
@@ -209,7 +233,11 @@ module Orn
         branch = @mode.branch
         @mode = Mode.normal
 
-        Hub.return_borrowed_for_branch(@output, @session, branch)
+        Hub.return_borrowed_for_branch(
+          @output,
+          @session,
+          branch
+        )
         return if window_kill_failed?(branch)
 
         remove_worktree(branch)
@@ -242,7 +270,12 @@ module Orn
 
       def status_for(branch, windows)
         wt_path = File.join(@root.to_s, branch)
-        ahead, behind = self.class.ahead_behind(@output, wt_path, branch, @base_branch)
+        ahead, behind = self.class.ahead_behind(
+          @output,
+          wt_path,
+          branch,
+          @base_branch
+        )
         WorktreeStatus.new(
           branch: branch,
           dirty: self.class.dirty?(@output, wt_path),
@@ -261,7 +294,12 @@ module Orn
         start_point = resolve_start_point(worktree, branch)
         return if start_point.nil?
 
-        build_worktree(worktree, branch, wt_path, start_point)
+        build_worktree(
+          worktree,
+          branch,
+          wt_path,
+          start_point
+        )
       rescue Orn::Error => e
         @error = e.message
       end
@@ -279,9 +317,23 @@ module Orn
       end
 
       def build_worktree(worktree, branch, wt_path, start_point)
-        worktree.add(wt_path, branch, start_point)
-        Orn::Symlink.apply(@output, @root, wt_path, @base_branch, @symlinks) do |unignored|
-          Orn::Symlink.add_to_gitignore_and_stage(@output, wt_path, unignored)
+        worktree.add(
+          wt_path,
+          branch,
+          start_point
+        )
+        Orn::Symlink.apply(
+          @output,
+          @root,
+          wt_path,
+          @base_branch,
+          @symlinks
+        ) do |unignored|
+          Orn::Symlink.add_to_gitignore_and_stage(
+            @output,
+            wt_path,
+            unignored
+          )
         end
         create_window(branch, wt_path)
         refresh
@@ -309,13 +361,21 @@ module Orn
       end
 
       def select_window(branch)
-        Orn::Tmux.select_window(@output, @session, branch)
+        Orn::Tmux.select_window(
+          @output,
+          @session,
+          branch
+        )
       rescue Orn::Error => e
         @error = e.message
       end
 
       def kill_window_and_refresh(branch)
-        Orn::Tmux.kill_window(@output, @session, branch)
+        Orn::Tmux.kill_window(
+          @output,
+          @session,
+          branch
+        )
         refresh
       rescue Orn::Error => e
         @error = e.message
@@ -324,9 +384,17 @@ module Orn
       # Kill the branch's window if it exists; true when that kill failed and
       # the caller should stop (the error is already recorded).
       def window_kill_failed?(branch)
-        return false unless Orn::Tmux.window_exists?(@output, @session, branch)
+        return false unless Orn::Tmux.window_exists?(
+          @output,
+          @session,
+          branch
+        )
 
-        Orn::Tmux.kill_window(@output, @session, branch)
+        Orn::Tmux.kill_window(
+          @output,
+          @session,
+          branch
+        )
         false
       rescue Orn::Error => e
         @error = e.message

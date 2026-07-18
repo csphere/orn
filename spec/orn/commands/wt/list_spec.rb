@@ -10,7 +10,11 @@ RSpec.describe Orn::Commands::Wt::List do
       output_mode: Orn::OutputMode.quiet
     )
     worktree.fetch("origin", branch)
-    worktree.add(File.join(project, branch), branch, "origin/#{branch}")
+    worktree.add(
+      File.join(project, branch),
+      branch,
+      "origin/#{branch}"
+    )
     project
   end
 
