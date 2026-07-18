@@ -46,18 +46,6 @@ RSpec.describe Orn::Commands::Wt::Remove do
         expect(result.remote_branch_deleted).to be(true)
       end
     end
-
-    context "with a blackboard entry" do
-      it "removes the entry along with the worktree" do
-        project = project_on
-        add_worktree(project, "issues/52", make_remote_with_branch("issues/52"))
-        Orn::Blackboard.create_entry(project.root, "issues/52")
-
-        command.run_inner(project, "issues/52", false)
-
-        expect(File.exist?(File.join(project.root, ".orn/blackboard/issues/52"))).to be(false)
-      end
-    end
   end
 
   describe "#remove_multiple" do

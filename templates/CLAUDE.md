@@ -16,9 +16,8 @@ This gives every branch a dedicated directory on disk with full filesystem isola
 {project_name}/
 ├── .bare/          # bare git repo (object store, refs)
 ├── .git            # pointer file (gitdir: ./.bare)
-├── .orn/           # orn config and state
-│   ├── config.yaml
-│   └── blackboard/ # agent coordination (see below)
+├── .orn/           # orn config
+│   └── config.yaml
 ├── {base}/         # base branch worktree
 ├── feature/xyz/    # feature branch worktree (example)
 └── CLAUDE.md       # this file
@@ -27,11 +26,7 @@ This gives every branch a dedicated directory on disk with full filesystem isola
 ## orn conventions
 
 - `orn clone <url> --base <branch>` clones a repo into a bare worktree project.
-- `.orn/` holds project configuration (`config.yaml`) and orn-managed state.
+- `.orn/` holds project configuration (`config.yaml`).
 - `orn switch <branch>` switches to a branch, creating the worktree if needed.
 - `orn remove <branch>` cleans up the worktree and tmux window.
 - `orn list` shows all worktrees and their status.
-
-## Agent coordination
-
-Read `.orn/blackboard/PROTOCOL.md` before starting work. Check `.orn/blackboard/` for other agents' status.

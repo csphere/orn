@@ -24,8 +24,8 @@ module Orn
 
       # Initializes an orn project in `project_dir`: refuses directories that
       # already hold .git, .bare, or .orn, creates the bare repo with an empty
-      # initial commit on `base`, then scaffolds config/blackboard/CLAUDE.md and
-      # the base worktree. Rolls everything back on failure.
+      # initial commit on `base`, then scaffolds config/CLAUDE.md and the base
+      # worktree. Rolls everything back on failure.
       def run_in(project_dir, base)
         project_name = self.class.derive_project_name(project_dir)
         reject_existing_project!(project_dir)

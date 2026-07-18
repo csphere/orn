@@ -8,8 +8,8 @@ optional dev-container sandboxes and agent detection. Config is YAML.
 
 `orn` manages the bare-worktree pattern: a bare git clone lives in `.bare/`, and
 every branch gets its own worktree directory as a sibling, sharing one object
-store. Each worktree can have a dedicated tmux window laid out from config, an
-optional sandbox (dev container), and a blackboard for agent coordination.
+store. Each worktree can have a dedicated tmux window laid out from config and
+an optional sandbox (dev container).
 
 ## Installation
 

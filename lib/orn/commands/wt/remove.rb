@@ -4,9 +4,8 @@ module Orn
   module Commands
     module Wt
       # `orn wt remove`: delete worktrees and, with --prune, their local and
-      # remote branches. Removes each branch's blackboard entry and prunes
-      # now-empty parent directories. Batch: one branch's failure is reported
-      # but does not stop the rest.
+      # remote branches. Batch: one branch's failure is reported but does not
+      # stop the rest.
       class Remove
         Result = Data.define(:branch, :worktree_removed, :branch_deleted, :remote_branch_deleted) do
           def to_json_hash
@@ -49,8 +48,7 @@ module Orn
         end
 
         # Removes one branch's worktree, then with prune its local and remote
-        # branches, plus its blackboard entry and any now-empty parent
-        # directories. Refuses to prune the base branch or to run from inside
+        # branches. Refuses to prune the base branch or to run from inside
         # the worktree being removed; a missing worktree is not an error, so
         # prune-only invocations work.
         def run_inner(project, branch, prune)
@@ -62,7 +60,6 @@ module Orn
           branch_deleted = prune ? worktree.delete_branch(branch) : false
           remote_branch_deleted = prune ? worktree.delete_remote_branch(branch) : false
 
-          Orn::Blackboard.remove_entry(project.root, branch)
           Orn::Fs.prune_empty_dirs(project.root)
 
           Result.new(

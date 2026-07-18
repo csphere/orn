@@ -26,7 +26,7 @@ RSpec.describe Orn::Commands::Init do
     end
 
     context "when the directory is empty" do
-      it "creates the bare repo, pointer, config, blackboard, CLAUDE.md, and base worktree" do
+      it "creates the bare repo, pointer, config, CLAUDE.md, and base worktree" do
         dir = project_dir
 
         command.run_in(dir, "main")
@@ -35,7 +35,6 @@ RSpec.describe Orn::Commands::Init do
           expect(File.exist?(File.join(dir, ".bare/HEAD"))).to be(true)
           expect(File.read(File.join(dir, ".git"))).to eq("gitdir: ./.bare\n")
           expect(base_config(dir).dig("git", "base")).to eq("main")
-          expect(File.exist?(File.join(dir, ".orn/blackboard/PROTOCOL.md"))).to be(true)
           expect(File.read(File.join(dir, "CLAUDE.md"))).to include(".bare", "main/")
           expect(File.exist?(File.join(dir, "main/.git"))).to be(true)
         end

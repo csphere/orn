@@ -2,8 +2,7 @@
 
 module Orn
   # A bundled template file, located by its path relative to the gem's
-  # `templates/` directory (for example "CLAUDE.md" or
-  # "blackboard/PROTOCOL.md").
+  # `templates/` directory (for example "CLAUDE.md" or "config.yaml").
   class Template
     def initialize(name)
       @name = name

@@ -36,7 +36,6 @@ RSpec.describe Orn::Commands::Setup do
 
       expect(content).to start_with("#")
       expect(content).to include("acme-api", "develop/", ".bare", "gitdir", "worktree")
-      expect(content).to include("## Agent coordination", ".orn/blackboard/PROTOCOL.md")
     end
   end
 

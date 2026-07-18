@@ -8,9 +8,8 @@ module Orn
       class New
         Result = Data.define(:branch, :base, :worktree_path, :from_remote)
 
-        # Reusable core: create the worktree (plus symlinks and blackboard
-        # entry) in an already-discovered `project`. Shared with switch and
-        # `wt open`.
+        # Reusable core: create the worktree (plus symlinks) in an
+        # already-discovered `project`. Shared with switch and `wt open`.
         def self.create(output_mode, project, branch, base_override)
           base = base_override || project.config.base
           wt_path = project.worktree_path(branch)
@@ -21,8 +20,6 @@ module Orn
           worktree = Orn::Git::Worktree.new(root: project.root, output_mode: output_mode)
           from_remote = create_worktree(output_mode, project, worktree, branch, base)
           apply_symlinks(output_mode, project, worktree, wt_path, base)
-          Orn::Blackboard.ensure_dir(project.root)
-          Orn::Blackboard.create_entry(project.root, branch)
 
           Result.new(branch: branch, base: base, worktree_path: wt_path.to_s, from_remote: from_remote)
         end

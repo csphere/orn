@@ -6,7 +6,7 @@ require "fileutils"
 module Orn
   module Commands
     # Shared scaffolding for the project-creating commands (clone, init,
-    # convert): the .git pointer file, .orn/ config, blackboard, root CLAUDE.md,
+    # convert): the .git pointer file, .orn/ config, root CLAUDE.md,
     # optional global-config bootstrap, and the base worktree.
     module Setup
       # Writes the .git pointer file that makes the project root look like a
@@ -37,17 +37,14 @@ module Orn
         scaffold_project(output_mode, project_dir, project_name, base)
       end
 
-      # Creates the non-git parts of a new project (.orn/config.yaml, blackboard,
-      # root CLAUDE.md), offers to bootstrap the global config, and adds the base
+      # Creates the non-git parts of a new project (.orn/config.yaml, root
+      # CLAUDE.md), offers to bootstrap the global config, and adds the base
       # worktree. Expects the bare repo and .git pointer to exist already.
       def self.scaffold_project(output_mode, project_dir, project_name, base)
         orn_dir = File.join(project_dir, ".orn")
         output_mode.status("  Creating .orn/config.yaml")
         FileUtils.mkdir_p(orn_dir)
         File.write(File.join(orn_dir, "config.yaml"), serialize_config(base))
-
-        output_mode.status("  Creating .orn/blackboard/")
-        Orn::Blackboard.ensure_dir(project_dir)
 
         output_mode.status("  Writing root CLAUDE.md")
         File.write(File.join(project_dir, "CLAUDE.md"), generate_claude_md(project_name, base))

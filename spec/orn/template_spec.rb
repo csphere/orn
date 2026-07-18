@@ -4,9 +4,9 @@ RSpec.describe Orn::Template do
   describe "#read" do
     context "when the template exists" do
       it "returns the file contents" do
-        content = described_class.new("blackboard/PROTOCOL.md").read
+        content = described_class.new("CLAUDE.md").read
 
-        expect(content).to include("Blackboard Protocol")
+        expect(content).to include("Bare worktree workspace")
       end
     end
 

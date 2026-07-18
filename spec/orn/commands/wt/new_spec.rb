@@ -38,14 +38,6 @@ RSpec.describe Orn::Commands::Wt::New do
       end
     end
 
-    it "creates a blackboard entry for the branch" do
-      root = standard_project("feature/other")
-
-      described_class.create(Orn::OutputMode.quiet, load_project(root), "feature/tracked", nil)
-
-      expect(File).to exist(File.join(root, ".orn", "blackboard", "feature", "tracked", "blackboard.md"))
-    end
-
     it "raises when the worktree already exists" do
       root = standard_project("feature/existing")
       FileUtils.mkdir_p(File.join(root, "feature/existing"))
