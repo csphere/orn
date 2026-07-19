@@ -13,3 +13,6 @@
 
 # This is a library gem: the resolved lockfile is not committed.
 /Gemfile.lock
+
+# Symlinked docs directory
+/doc
