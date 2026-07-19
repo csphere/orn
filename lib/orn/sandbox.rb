@@ -2,15 +2,13 @@
 
 require "fileutils"
 require "tmpdir"
-require "open3"
-require "rbconfig"
 
 module Orn
-  # Sandbox (dev container) operations: lifecycle, template builds, port
-  # publishing, and environment checks (`doctor`). Every sbx/docker/colima
-  # invocation goes through the SbxCli adapter, port handling lives in Ports,
-  # and this module holds the policy around those calls (ordering, cleanup,
-  # error wrapping) plus the public interface commands call.
+  # Sandbox (dev container) operations: the public interface commands call,
+  # plus the shared value types. Every sbx/docker/colima invocation goes
+  # through the SbxCli adapter, port handling lives in Ports, environment
+  # checks live in Doctor, and this module holds the remaining policy around
+  # those calls (setup ordering, build-arg resolution, tar cleanup).
   module Sandbox
     # A host-to-container port mapping, displayed as `host:container`.
     PortMapping = Data.define(:host, :container) do
@@ -228,169 +226,25 @@ module Orn
       )
     end
 
-    # --- Composite helpers ---
+    # --- Doctor ---
 
-    # Runs the `doctor` checks before sandbox creation: raises on the first
-    # error-level failure, reports warning-level failures, and continues.
-    def self.preflight(output_mode, config, project_root)
-      checks = doctor(
+    def self.doctor(output_mode, config, project_root)
+      Doctor.run(
         output_mode,
         config,
         project_root
       )
-      failed = checks.find { |check| !check.passed && check.kind == :error }
-      if failed
-        raise Orn::Error,
-          "Preflight check failed: #{failed.message}\n  " \
-            "Run `orn sbx doctor` for a full environment check."
-      end
-
-      checks.each do |check|
-        output_mode.status("Warning: #{check.message}") if !check.passed && check.kind == :warning
-      end
-      nil
     end
 
-    # --- Doctor ---
-
-    # Runs the full set of sandbox environment checks: required tools, colima
-    # (macOS only), git identity, template, kits, build inputs, ssh agent, and
-    # the github secret.
-    def self.doctor(output_mode, config, project_root)
-      checks = tool_and_platform_checks(output_mode)
-      checks << git_identity_check(output_mode, project_root)
-      checks.concat(config_checks(output_mode, config))
-      checks << ssh_auth_check
-      checks << github_secret_check(output_mode)
-      checks
-    end
-
-    # Required tools plus colima on macOS.
-    def self.tool_and_platform_checks(output_mode)
-      checks = [tool_check(output_mode, "sbx"), tool_check(output_mode, "docker")]
-      checks << colima_check(output_mode) if macos?
-      checks
-    end
-
-    # Template, kits, and build inputs derived from the sbx config.
-    def self.config_checks(output_mode, config)
-      checks = []
-      checks << template_check(output_mode, config.template) if config.template
-      config.all_kits.each { |kit| checks << path_check("kit:#{kit}", kit) }
-      if config.build
-        checks << path_check("dockerfile", config.build.dockerfile) if config.build.dockerfile
-        config.build.build_args.each { |arg| checks << env_check(arg) }
-      end
-      checks
-    end
-
-    # Checks that `user.name` and `user.email` are set in the repo's own
-    # `.bare/config`; host global and system git config are ignored.
-    def self.git_identity_check(_output_mode, project_root)
-      config_path = File.join(
-        project_root,
-        ".bare",
-        "config"
+    def self.preflight(output_mode, config, project_root)
+      Doctor.preflight(
+        output_mode,
+        config,
+        project_root
       )
-      has_name = git_config_set?(config_path, "user.name")
-      has_email = git_config_set?(config_path, "user.email")
-
-      if has_name && has_email
-        Check.pass("git-identity", "Git user.name and user.email configured")
-      else
-        Check.fail(
-          "git-identity",
-          "Git identity not configured in repo config.\n    " \
-            "Run: git config --local user.name \"Your Name\"\n         " \
-            "git config --local user.email \"you@example.com\""
-        )
-      end
-    end
-
-    def self.ssh_auth_check
-      if ENV.key?("SSH_AUTH_SOCK")
-        Check.warning(
-          "ssh-auth",
-          true,
-          "SSH_AUTH_SOCK is set"
-        )
-      else
-        Check.warning(
-          "ssh-auth",
-          false,
-          "SSH_AUTH_SOCK not set; agent will not be able to git push.\n    " \
-            "Commits will be available in the host worktree."
-        )
-      end
-    end
-
-    # Warns unless a `github` secret is registered per `sbx secret ls`; without
-    # it the `gh` CLI cannot authenticate inside the sandbox.
-    def self.github_secret_check(output_mode)
-      if SbxCli.secret_listed?(output_mode, "github")
-        Check.warning(
-          "github-secret",
-          true,
-          "github secret configured"
-        )
-      else
-        Check.warning(
-          "github-secret",
-          false,
-          "No github secret configured; gh CLI will not work in sandbox.\n    Run: sbx secret set -g github"
-        )
-      end
-    end
-
-    def self.tool_check(output_mode, tool)
-      if SbxCli.on_path?(output_mode, tool)
-        Check.pass(tool, "#{tool} found on PATH")
-      else
-        Check.fail(tool, "#{tool} not found on PATH")
-      end
-    end
-
-    def self.colima_check(output_mode)
-      status = SbxCli.colima_status(output_mode)
-      return Check.fail("colima", "Colima not running") unless status.running
-
-      status.arch ? Check.pass("colima", "Colima running (#{status.arch})") : Check.pass("colima", "Colima running")
-    end
-
-    def self.template_check(output_mode, template)
-      if template_present?(output_mode, template)
-        Check.pass("template", "Template '#{template}' found")
-      else
-        Check.fail("template", "Template '#{template}' not found")
-      end
-    end
-
-    def self.path_check(label, path)
-      if File.exist?(path)
-        Check.pass(label, "#{label} '#{path}' exists")
-      else
-        Check.fail(label, "#{label} '#{path}' not found")
-      end
-    end
-
-    # Testable core of env_check with an injectable variable lookup block.
-    def self.env_check_with(var, &lookup)
-      if lookup.call(var)
-        Check.pass("env:#{var}", "#{var} is set")
-      else
-        Check.fail("env:#{var}", "#{var} not set in environment")
-      end
-    end
-
-    def self.env_check(var)
-      env_check_with(var) { |name| ENV.fetch(name, nil) }
     end
 
     # --- Internal helpers ---
-
-    def self.macos?
-      RbConfig::CONFIG["host_os"].include?("darwin")
-    end
 
     def self.safe_tar_name(tag)
       tag.chars.map { |char| char.match?(/[a-zA-Z0-9]/) || char == "-" || char == "." ? char : "-" }.join
@@ -417,39 +271,7 @@ module Orn
       end
     end
 
-    def self.template_present?(output_mode, template)
-      SbxCli.template_exists?(output_mode, template)
-    rescue Orn::Error
-      false
-    end
-
-    # True when `key` is set in the given git config file; system and global
-    # config are masked out so only that file is consulted.
-    def self.git_config_set?(config_path, key)
-      env = {
-        "GIT_CONFIG_NOSYSTEM" => "1",
-        "GIT_CONFIG_GLOBAL" => "/dev/null"
-      }
-      _stdout, _stderr, status = Open3.capture3(
-        env,
-        "git",
-        "config",
-        "--file",
-        config_path.to_s,
-        key,
-        chdir: Dir.tmpdir
-      )
-      status.success?
-    rescue SystemCallError
-      false
-    end
-
-    private_class_method :tool_and_platform_checks,
-      :config_checks,
-      :macos?,
-      :safe_tar_name,
-      :save_and_load_template,
-      :template_present?,
-      :git_config_set?
+    private_class_method :safe_tar_name,
+      :save_and_load_template
   end
 end
