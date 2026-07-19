@@ -61,6 +61,23 @@ clean), window indicator, ahead/behind counts against the base branch
 (`2↑ 1↓`), a `⬚` badge when the window runs in a sandbox, and the agent
 state.
 
+```text
+ orn
+
+ ▾ app                          ●  2 active  3 wt
+     main                       ✔  ● 0↑ 0↓
+     feature/ABC-101            ✎  ● 1↑ 0↓
+     feature/ABC-207            ✔  ○ 0↑ 0↓
+ ▸ api                          ○  0 active  1 wt
+
+
+
+
+
+ enter:open  space:expand  x:hide tab
+ M-o:sidebar  M-i:agent  M-n/p:cycle  r:refresh  q:quit
+```
+
 | Key | Action |
 | --- | --- |
 | `j` / `k` (or arrows) | Move selection |
@@ -83,6 +100,22 @@ are available: `M-o` focuses the sidebar, `M-i` the agent pane, `M-n` /
 Bare `orn` inside a project opens the project dashboard: one row per
 worktree with the branch name, dirty marker, window indicator, ahead/behind
 counts against the base branch, and the agent indicator.
+
+```text
+ orn - app
+
+ main                     ✔  ● 0↑ 0↓
+ feature/ABC-101          ✎  ● 1↑ 0↓
+ feature/ABC-207          ✔  ○ 0↑ 0↓
+
+
+
+
+
+
+
+ enter:open  c:close  n:new  d:remove  r:refresh  q:quit
+```
 
 | Key | Action |
 | --- | --- |
