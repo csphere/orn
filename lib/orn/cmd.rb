@@ -23,8 +23,13 @@ module Orn
     # the test seam: specs install a scripted fake there, so callers exercise
     # Cmd's logging and error mapping without spawning subprocesses.
     class Open3Backend
-      def capture(command)
-        stdout, stderr, process_status = Open3.capture3(*command)
+      def capture(command, env: nil, chdir: nil)
+        options = chdir ? { chdir: chdir } : {}
+        stdout, stderr, process_status = Open3.capture3(
+          env || {},
+          *command,
+          **options
+        )
         Result.new(
           stdout:,
           stderr:,
@@ -41,8 +46,12 @@ module Orn
       @backend = backend
     end
 
-    def initialize(output_mode:)
+    # `env` adds environment variables for the spawned process; `chdir` runs
+    # it in another working directory.
+    def initialize(output_mode:, env: nil, chdir: nil)
       @output_mode = output_mode
+      @env = env
+      @chdir = chdir
     end
 
     # Runs the command and captures its output. A nonzero exit is returned,
@@ -71,7 +80,11 @@ module Orn
     private
 
     def capture(command)
-      self.class.backend.capture(command)
+      self.class.backend.capture(
+        command,
+        env: @env,
+        chdir: @chdir
+      )
     rescue Errno::ENOENT
       raise Orn::Error, "Failed to run #{command.first}: command not found"
     end

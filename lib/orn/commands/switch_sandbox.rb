@@ -27,7 +27,7 @@ module Orn
         sbx_config = project.config.require_sbx!
         Orn::Trust.check_sbx_trust(project.root, sbx_config)
         agent_type = sbx_config.require_agent_type!
-        Orn::Sandbox.preflight(
+        Orn::Sandbox::Doctor.preflight(
           output_mode,
           sbx_config,
           project.root
@@ -77,7 +77,7 @@ module Orn
       def provision(context, state)
         state[:name] = name = context.project.sandbox_name(context.branch)
         context.output_mode.status("Creating sandbox '#{name}'...")
-        Orn::Sandbox.create(context.output_mode, sandbox_params(context, name))
+        Orn::Sandbox::SbxCli.create(context.output_mode, sandbox_params(context, name))
         state[:sandbox_created] = true
 
         run_setup(context, name)
@@ -122,7 +122,7 @@ module Orn
       def publish_ports(context, name)
         return [] if context.sbx_config.ports.empty?
 
-        Orn::Sandbox.setup_ports(
+        Orn::Sandbox::Ports.setup_ports(
           context.output_mode,
           name,
           context.sbx_config.ports,
@@ -134,7 +134,7 @@ module Orn
         return unless sbx_config&.start
 
         output_mode.status("Starting services in '#{name}': #{sbx_config.start}")
-        Orn::Sandbox.exec_detached(
+        Orn::Sandbox::SbxCli.exec_detached(
           output_mode,
           name,
           sbx_config.start,
@@ -158,7 +158,7 @@ module Orn
           template_vars: { "sandbox" => sbx_name }
         )
 
-        host_ports = Orn::Sandbox.republish_ports(
+        host_ports = Orn::Sandbox::Ports.republish_ports(
           output_mode,
           sbx_name,
           File.join(project.root, ".orn")
@@ -213,7 +213,7 @@ module Orn
       end
 
       def safe_remove_sandbox(output_mode, name)
-        Orn::Sandbox.remove(output_mode, name)
+        Orn::Sandbox::SbxCli.remove(output_mode, name)
       rescue Orn::Error
         nil
       end

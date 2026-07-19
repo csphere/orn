@@ -10,7 +10,7 @@ RSpec.describe Orn::Commands::Sbx::Remove do
       project = make_project(root, "git:\n  base: main\n")
       orn_dir = File.join(root, ".orn")
       name = project.sandbox_name("feature/x")
-      Orn::Sandbox.persist_ports(
+      Orn::Sandbox::Ports.persist_ports(
         orn_dir,
         name,
         [
@@ -28,7 +28,7 @@ RSpec.describe Orn::Commands::Sbx::Remove do
         )
       )
 
-      Orn::Sandbox.remove_ports_file(orn_dir, name)
+      Orn::Sandbox::Ports.remove_ports_file(orn_dir, name)
 
       expect(File).not_to exist(
         File.join(

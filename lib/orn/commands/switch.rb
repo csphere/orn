@@ -132,7 +132,7 @@ module Orn
       def reopen(project, branch)
         @output_mode.status("Reopening window for #{branch}...")
         sbx_name = project.sandbox_name(branch)
-        if Orn::Sandbox.exists?(@output_mode, sbx_name)
+        if Orn::Sandbox::SbxCli.exists?(@output_mode, sbx_name)
           return SwitchSandbox.reopen_with_sandbox(
             @output_mode,
             project,

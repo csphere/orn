@@ -25,7 +25,7 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
           "docker",
           "template"
         )
-        if Orn::Sandbox.send(:macos?)
+        if Orn::Sandbox::Doctor.send(:macos?)
           expect(names).to include("colima")
         else
           expect(names).not_to include("colima")

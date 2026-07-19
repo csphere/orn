@@ -190,17 +190,17 @@ Metrics/ClassLength:
     - "lib/orn/tui/app.rb"
     - "lib/orn/tui/global_app.rb"
 
-# Deep single-responsibility modules (e.g. Symlink) run long. Sandbox is a
-# single large module (lifecycle, ports, build, doctor) and is exempt
-# entirely, like the Config namespace; the detect manifest engine and its
-# bundled data are likewise a single large module.
+# Deep single-responsibility modules (e.g. Symlink) run long. The detect
+# manifest engine and its bundled data are a single large module.
 Metrics/ModuleLength:
   Max: 150
   CountAsOne:
     - hash
     - method_call
   Exclude:
-    - "lib/orn/sandbox.rb"
+    # Flat collection of thin one-command wrappers; splitting it would spread
+    # the sbx argv conventions across files.
+    - "lib/orn/sandbox/sbx_cli.rb"
     - "lib/orn/detect/manifest.rb"
     - "lib/orn/detect/manifests.rb"
     # The tmux bootstrap plus both event loops as one entry point.

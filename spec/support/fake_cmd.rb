@@ -29,7 +29,9 @@ class FakeCmdBackend
     @responses[argv] = :missing
   end
 
-  def capture(command)
+  # Spawn options (env, chdir) are accepted to match the real backend's
+  # interface but ignored: scripts key on argv alone.
+  def capture(command, **_options)
     @invocations << command
     response = @responses[command]
     raise UnscriptedCommand, "unscripted command: #{command.join(" ")}" if response.nil?
