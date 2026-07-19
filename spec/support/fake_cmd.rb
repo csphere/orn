@@ -22,10 +22,18 @@ class FakeCmdBackend
     )
   end
 
+  # Scripts a missing binary: `capture` raises Errno::ENOENT for this argv,
+  # like Open3 does when the command is not installed, so Cmd's
+  # command-not-found mapping runs for real.
+  def script_missing(argv)
+    @responses[argv] = :missing
+  end
+
   def capture(command)
     @invocations << command
     response = @responses[command]
     raise UnscriptedCommand, "unscripted command: #{command.join(" ")}" if response.nil?
+    raise Errno::ENOENT, command.first if response == :missing
 
     response
   end

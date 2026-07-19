@@ -191,6 +191,14 @@ module Orn
           end
         end
 
+        it "returns no repos when find is not installed" do
+          with_fake_cmd do |fake|
+            fake.script_missing(find_argv("/scan"))
+
+            expect(discover("/scan")).to be_empty
+          end
+        end
+
         it "builds entries from the scan output, skipping blank lines" do
           with_fake_cmd do |fake|
             fake.script(find_argv("/scan"), stdout: "/scan/org/proj/.bare\n\n")
