@@ -58,6 +58,16 @@ RSpec.describe Orn::Commands::SwitchSandbox do
     Orn::Trust.save_approval(approval_path, Orn::Trust.sbx_fingerprint(project.config.sbx))
   end
 
+  # Swaps $stdin for a non-tty reader so the trust check takes the
+  # non-interactive path instead of prompting the terminal running the spec.
+  def with_stdin(reader)
+    original_stdin = $stdin
+    $stdin = reader
+    yield
+  ensure
+    $stdin = original_stdin
+  end
+
   def feat_path(project)
     project.worktree_path("feat")
   end
@@ -345,14 +355,16 @@ RSpec.describe Orn::Commands::SwitchSandbox do
       project = sbx_project(start_only_config)
 
       with_fake_cmd do |fake|
-        expect do
-          described_class.create_with_sandbox(
-            output_mode,
-            project,
-            "feat",
-            nil
-          )
-        end.to raise_error(Orn::Error, /untrusted sandbox commands/)
+        with_stdin(StringIO.new("")) do
+          expect do
+            described_class.create_with_sandbox(
+              output_mode,
+              project,
+              "feat",
+              nil
+            )
+          end.to raise_error(Orn::Error, /untrusted sandbox commands/)
+        end
         expect(fake.invocations).to be_empty
       end
     end
