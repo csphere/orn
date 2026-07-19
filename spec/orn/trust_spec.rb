@@ -34,13 +34,13 @@ RSpec.describe Orn::Trust do
   def make_sbx(setup: [], start: nil, build_args: [], env: {}, build: :auto)
     if build == :auto
       build = if build_args.empty?
-                nil
-              else
-                Orn::Config::SbxBuild.new(
-                  dockerfile: nil,
-                  build_args: build_args
-                )
-              end
+        nil
+      else
+        Orn::Config::SbxBuild.new(
+          dockerfile: nil,
+          build_args: build_args
+        )
+      end
     end
     Orn::Config::SbxConfig.new(
       template: nil,

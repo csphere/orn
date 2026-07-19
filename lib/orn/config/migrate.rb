@@ -124,10 +124,10 @@ module Orn
         end
 
         kind = if config == binary
-                 :match
-               else
-                 config < binary ? :behind : :ahead
-               end
+          :match
+        else
+          config < binary ? :behind : :ahead
+        end
         VersionCheck.new(
           kind: kind,
           config: config,
