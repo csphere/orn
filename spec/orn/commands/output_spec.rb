@@ -29,6 +29,39 @@ RSpec.describe Orn::Commands::Output do
     end
   end
 
+  describe ".run_multi_branch" do
+    it "skips the per-result printer in json mode" do
+      printed_results = []
+      printer = ->(result) { printed_results << result }
+
+      results, errors = described_class.run_multi_branch(
+        Orn::OutputMode.quiet,
+        ["main", "feature/x"],
+        printer
+      ) { |branch| "removed #{branch}" }
+
+      aggregate_failures do
+        expect(printed_results).to be_empty
+        expect(results).to eq(["removed main", "removed feature/x"])
+        expect(errors).to be_empty
+      end
+    end
+  end
+
+  describe ".finish_multi_branch" do
+    it "raises with the failure count when any branch errored" do
+      expect do
+        described_class.finish_multi_branch(
+          Orn::OutputMode.default,
+          [],
+          ["a: boom", "b: boom"],
+          3
+        )
+      end
+        .to raise_error(Orn::Error, "failed to remove 2 of 3 worktrees")
+    end
+  end
+
   describe ".print_json" do
     it "prints pretty-formatted JSON" do
       expect do

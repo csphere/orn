@@ -12,6 +12,17 @@ module Orn
         ]
       end
 
+      def list_windows_argv(session = "api")
+        [
+          "tmux",
+          "list-windows",
+          "-t",
+          "#{session}:",
+          "-F",
+          "\#{window_name}"
+        ]
+      end
+
       def entry(name)
         RepoEntry.new(
           display_name: name,
@@ -22,12 +33,12 @@ module Orn
         )
       end
 
-      def pane(id, session:, window: "main", command: "zsh")
+      def pane(id, session:, window: "main", command: "zsh", pid: 1, title: "")
         Orn::Tmux::PaneMetadata.new(
           session_name: session,
           window_name: window,
-          pane_pid: 1,
-          pane_title: "",
+          pane_pid: pid,
+          pane_title: title,
           pane_current_command: command,
           pane_id: id
         )
@@ -61,17 +72,7 @@ module Orn
           refreshed = nil
           with_fake_cmd do |fake|
             fake.script(list_sessions_argv, stdout: "api\t123\n")
-            fake.script(
-              [
-                "tmux",
-                "list-windows",
-                "-t",
-                "api:",
-                "-F",
-                "\#{window_name}"
-              ],
-              stdout: "orn\nmain\n"
-            )
+            fake.script(list_windows_argv, stdout: "orn\nmain\n")
             refreshed = refresh([repo]).first
           end
 
@@ -134,6 +135,146 @@ module Orn
           end
 
           expect(refreshed.session_alive).to be(false)
+        end
+
+        it "treats a missing tmux binary as no sessions" do
+          repo = entry("api").with(session_alive: true)
+
+          refreshed = nil
+          with_fake_cmd do |fake|
+            fake.script_missing(list_sessions_argv)
+            refreshed = refresh([repo]).first
+          end
+
+          expect(refreshed.session_alive).to be(false)
+        end
+
+        it "flags a worktree sandboxed when a pane in its window runs a container command" do
+          stub_host_os("linux")
+          repo = entry("api").with(
+            worktrees: [
+              WorktreeRow.new(branch: "main"),
+              WorktreeRow.new(branch: "feat")
+            ]
+          )
+          # A pid that cannot exist, so agent detection finds no foreground job
+          # and only the pane command matters.
+          container_pane = pane(
+            "%1",
+            session: "api",
+            window: "feat",
+            command: "docker",
+            pid: 4_999_999_999
+          )
+          shell_pane = pane(
+            "%2",
+            session: "api",
+            window: "main",
+            command: "zsh",
+            pid: 4_999_999_999
+          )
+
+          refreshed = nil
+          with_fake_cmd do |fake|
+            fake.script(list_sessions_argv, stdout: "api\t123\n")
+            fake.script(list_windows_argv, stdout: "main\nfeat\n")
+            refreshed = refresh(
+              [repo],
+              all_panes: [
+                container_pane,
+                shell_pane
+              ]
+            ).first
+          end
+
+          aggregate_failures do
+            expect(refreshed.worktrees[1].sandboxed).to be(true)
+            expect(refreshed.worktrees[0].sandboxed).to be(false)
+          end
+        end
+
+        it "fills git stats for an expanded repo" do
+          repo = entry("api").with(
+            expanded: true,
+            worktrees: [WorktreeRow.new(branch: "feat")]
+          )
+          worktree_path = "/tmp/nonexistent-api/feat"
+
+          refreshed = nil
+          with_fake_cmd do |fake|
+            fake.script(list_sessions_argv, stdout: "")
+            fake.script(
+              [
+                "git",
+                "-C",
+                worktree_path,
+                "status",
+                "--porcelain"
+              ],
+              stdout: " M file.txt\n"
+            )
+            fake.script(
+              [
+                "git",
+                "-C",
+                worktree_path,
+                "rev-list",
+                "--left-right",
+                "--count",
+                "feat...main"
+              ],
+              stdout: "1\t2\n"
+            )
+            refreshed = refresh([repo]).first
+          end
+
+          worktree = refreshed.worktrees[0]
+          aggregate_failures do
+            expect(worktree.dirty).to be(true)
+            expect(worktree.ahead_behind).to eq([1, 2])
+          end
+        end
+
+        it "attributes the borrowed pane's agent to its home worktree branch" do
+          repo = entry("api").with(
+            worktrees: [
+              WorktreeRow.new(branch: "main"),
+              WorktreeRow.new(branch: "feat")
+            ]
+          )
+          # The braille spinner in the OSC title marks Claude as working, so
+          # detection settles without capturing the pane's screen.
+          hub_pane = pane(
+            "%5",
+            session: "orn",
+            window: "orn",
+            command: "claude",
+            title: "⠋ claude"
+          )
+
+          refreshed = nil
+          with_fake_cmd do |fake|
+            fake.script(list_sessions_argv, stdout: "")
+            refreshed = refresh(
+              [repo],
+              tab: tab(repo.root, "feat", "%5"),
+              all_panes: [hub_pane]
+            ).first
+          end
+
+          feat_worktree = refreshed.worktrees[1]
+          aggregate_failures do
+            expect(refreshed.session_alive).to be(false)
+            expect(refreshed.aggregate_agent_state).to eq(:working)
+            expect(feat_worktree.agent).to eq(
+              Orn::Detect::PaneAgentState.new(
+                agent: :claude,
+                state: :working
+              )
+            )
+            expect(feat_worktree.sandboxed).to be(false)
+            expect(refreshed.worktrees[0].agent).to be_nil
+          end
         end
       end
 

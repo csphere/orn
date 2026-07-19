@@ -31,6 +31,22 @@ RSpec.describe Orn::Fs do
 
       expect(File.exist?(File.join(project, "feature/ABC-1234"))).to be(true)
     end
+
+    it "leaves directories in place when removal fails" do
+      project = make_bare_project
+      File.write(File.join(project, "README.md"), "top-level file, not a directory")
+      branch_dir = File.join(project, "feature")
+      FileUtils.mkdir_p(File.join(branch_dir, "old"))
+      # Read-only parent: rmdir of the empty child fails, then the parent
+      # itself fails as non-empty; both failures must be swallowed.
+      FileUtils.chmod(0o555, branch_dir)
+
+      expect { described_class.prune_empty_dirs(project) }.not_to raise_error
+
+      expect(File.directory?(File.join(branch_dir, "old"))).to be(true)
+    ensure
+      FileUtils.chmod(0o755, branch_dir) if branch_dir
+    end
   end
 
   describe ".xdg_dir" do

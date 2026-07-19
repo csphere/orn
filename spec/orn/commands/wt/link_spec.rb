@@ -1,10 +1,15 @@
 # frozen_string_literal: true
 
+require "json"
+
 RSpec.describe Orn::Commands::Wt::Link do
   subject(:command) { described_class.new(output_mode: Orn::OutputMode.default) }
 
   def project_with_base_env
-    project = make_project(make_bare_project, "git:\n  base: main\nsymlinks:\n  base:\n    - \".env\"\n")
+    # Realpath so printed paths match the root Project.discover resolves
+    # (macOS realpaths /var temp dirs to /private/var).
+    root = File.realpath(make_bare_project)
+    project = make_project(root, "git:\n  base: main\nsymlinks:\n  base:\n    - \".env\"\n")
     base_wt = File.join(project.root, "main")
     FileUtils.mkdir_p(base_wt)
     File.write(File.join(base_wt, ".env"), "SECRET=x")
@@ -39,6 +44,20 @@ RSpec.describe Orn::Commands::Wt::Link do
       FileUtils.mkdir_p(target)
 
       expect { Dir.chdir(target) { command.run } }.to output(/created: \.env/).to_stdout
+    end
+
+    it "prints the result as JSON in JSON mode" do
+      project = project_with_base_env
+      target = File.join(project.root, "feature-z")
+      FileUtils.mkdir_p(target)
+      json_command = described_class.new(output_mode: Orn::OutputMode.quiet)
+      expected_json = JSON.pretty_generate(
+        worktree_path: target,
+        created: [".env"],
+        skipped: []
+      )
+
+      expect { Dir.chdir(target) { json_command.run } }.to output("#{expected_json}\n").to_stdout
     end
   end
 end

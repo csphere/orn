@@ -7,6 +7,11 @@ RSpec.describe Orn::Commands::Clone do
       expect(described_class.derive_project_name("https://github.com/org/my-project.git")).to eq("my-project")
       expect(described_class.derive_project_name("https://github.com/org/my-project")).to eq("my-project")
     end
+
+    it "rejects a URL whose last segment leaves no name" do
+      expect { described_class.derive_project_name("https://github.com/org/.git") }
+        .to raise_error(Orn::Error, /Could not derive project name/)
+    end
   end
 
   describe "#run" do
@@ -25,6 +30,35 @@ RSpec.describe Orn::Commands::Clone do
       expect(File.read(File.join(project, ".git"))).to eq("gitdir: ./.bare\n")
       expect(File.exist?(File.join(project, ".orn/config.yaml"))).to be(true)
       expect(File.directory?(File.join(project, "main"))).to be(true)
+    end
+
+    it "removes the project directory and re-raises when the clone fails" do
+      work = register_temp_dir(Dir.mktmpdir("orn-clone-work"))
+      url = "git@host:org/my-project.git"
+      clone_argv = [
+        "git",
+        "-C",
+        "my-project",
+        "clone",
+        "--bare",
+        url,
+        ".bare"
+      ]
+
+      with_fake_cmd do |fake|
+        fake.script(
+          clone_argv,
+          stderr: "fatal: repository not found",
+          status: 128
+        )
+
+        Dir.chdir(work) do
+          expect { described_class.new(output_mode: Orn::OutputMode.quiet).run(url, "main") }
+            .to raise_error(Orn::Error, /git failed: fatal: repository not found/)
+        end
+      end
+
+      expect(File.exist?(File.join(work, "my-project"))).to be(false)
     end
 
     it "refuses to overwrite an existing directory" do

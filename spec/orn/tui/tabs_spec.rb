@@ -95,6 +95,19 @@ module Orn
           end
         end
 
+        it "reports a binding install failure but keeps the tab open and visible" do
+          hub.fail_on = [:install_bindings]
+          tabs = build_tabs
+
+          opened = open_tab(tabs, "feat")
+
+          aggregate_failures do
+            expect(opened).to be(true)
+            expect(errors).to eq(["install_bindings failed"])
+            expect(tabs.visible.branch).to eq("feat")
+          end
+        end
+
         it "refuses to open without a hub pane" do
           tabs = build_tabs(hub_pane: nil)
 

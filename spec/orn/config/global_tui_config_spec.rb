@@ -7,6 +7,27 @@ RSpec.describe Orn::Config::GlobalTuiConfig do
     dir
   end
 
+  describe ".load" do
+    it "reads tui settings from the global config directory" do
+      xdg_base = register_temp_dir(Dir.mktmpdir("orn-xdg"))
+      FileUtils.mkdir_p(File.join(xdg_base, "orn"))
+      File.write(File.join(xdg_base, "orn", "default.yaml"), "tui:\n  session: from-global\n")
+      ENV["XDG_CONFIG_HOME"] = xdg_base
+
+      expect(described_class.load.session).to eq("from-global")
+    end
+
+    it "falls back to defaults when no global directory can be resolved" do
+      ENV.delete("XDG_CONFIG_HOME")
+      ENV.delete("HOME")
+
+      config = described_class.load
+
+      expect(config.session).to eq("orn")
+      expect(config.scan_depth).to eq(3)
+    end
+  end
+
   describe ".load_from" do
     context "with no global config" do
       it "uses defaults" do
@@ -14,6 +35,14 @@ RSpec.describe Orn::Config::GlobalTuiConfig do
 
         expect(config.session).to eq("orn")
         expect(config.scan_depth).to eq(3)
+      end
+    end
+
+    context "with a global directory but no config file" do
+      it "uses defaults" do
+        empty_global = register_temp_dir(Dir.mktmpdir("orn-global"))
+
+        expect(described_class.load_from(empty_global).session).to eq("orn")
       end
     end
 
@@ -40,6 +69,18 @@ RSpec.describe Orn::Config::GlobalTuiConfig do
         global = global_with("tui:\n  session: custom\n  unknown_field: true\n")
 
         expect(described_class.load_from(global).session).to eq("custom")
+      end
+    end
+
+    context "when the current directory has been deleted" do
+      it "falls back to no scan roots" do
+        deleted_dir = Dir.mktmpdir("orn-gone")
+
+        Dir.chdir(deleted_dir) do
+          Dir.rmdir(deleted_dir)
+
+          expect(described_class.load_from(nil).scan_roots).to eq([])
+        end
       end
     end
 

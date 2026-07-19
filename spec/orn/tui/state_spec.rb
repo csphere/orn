@@ -26,6 +26,50 @@ RSpec.describe Orn::TUI::State do
 
       expect(described_class.load_from(path(example)).mru).to be_empty
     end
+
+    it "defaults mru to empty when the field is not a hash" do |example|
+      File.write(path(example), '{"mru": "bogus", "expanded": ["/a"]}')
+
+      state = described_class.load_from(path(example))
+      aggregate_failures do
+        expect(state.mru).to be_empty
+        expect(state).to be_expanded("/a")
+      end
+    end
+  end
+
+  describe ".load" do
+    it "loads from the state path and remembers it so save writes back" do |example|
+      ENV["XDG_STATE_HOME"] = example.metadata[:dir]
+      seeded = described_class.new
+      seeded.touch("/home/user/dev/orn")
+      seeded.save_to(described_class.state_path)
+
+      loaded = described_class.load
+      loaded.set_expanded("/home/user/dev/orn", true)
+      loaded.save
+
+      reloaded = described_class.load_from(described_class.state_path)
+      aggregate_failures do
+        expect(loaded.timestamp("/home/user/dev/orn")).not_to be_nil
+        expect(reloaded).to be_expanded("/home/user/dev/orn")
+      end
+    end
+  end
+
+  describe ".state_path" do
+    it "lives under XDG state when a base directory resolves" do |example|
+      ENV["XDG_STATE_HOME"] = example.metadata[:dir]
+
+      expect(described_class.state_path).to eq(File.join(example.metadata[:dir], "orn", "tui.json"))
+    end
+
+    it "falls back to /tmp when neither XDG_STATE_HOME nor HOME is set" do
+      ENV.delete("XDG_STATE_HOME")
+      ENV.delete("HOME")
+
+      expect(described_class.state_path).to eq("/tmp/orn-tui-state.json")
+    end
   end
 
   describe "mru timestamps" do
@@ -60,6 +104,14 @@ RSpec.describe Orn::TUI::State do
         expect(loaded).to be_expanded("/home/user/dev/orn")
         expect(loaded).not_to be_expanded("/home/user/dev/other")
       end
+    end
+
+    it "does not duplicate an entry expanded twice" do
+      state = described_class.new
+      state.set_expanded("/home/user/dev/orn", true)
+      state.set_expanded("/home/user/dev/orn", true)
+
+      expect(state.expanded).to eq(["/home/user/dev/orn"])
     end
 
     it "removes an entry when set to false" do
@@ -100,6 +152,12 @@ RSpec.describe Orn::TUI::State do
     end
   end
 
+  describe "#save" do
+    it "does nothing when constructed without a path" do
+      expect(described_class.new.save).to be_nil
+    end
+  end
+
   describe "#save_to" do
     it "creates parent directories" do |example|
       target = File.join(example.metadata[:dir], "deep/nested/tui.json")
@@ -107,6 +165,14 @@ RSpec.describe Orn::TUI::State do
       described_class.new.save_to(target)
 
       expect(File).to exist(target)
+    end
+
+    it "swallows the error when the target directory cannot be created" do |example|
+      blocking_file = File.join(example.metadata[:dir], "blocker")
+      File.write(blocking_file, "")
+      target = File.join(blocking_file, "tui.json")
+
+      expect(described_class.new.save_to(target)).to be_nil
     end
   end
 end

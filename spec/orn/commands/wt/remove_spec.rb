@@ -4,7 +4,9 @@ RSpec.describe Orn::Commands::Wt::Remove do
   subject(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
 
   def project_on(base = "main")
-    make_project(make_bare_project, "git:\n  base: #{base}\n")
+    # Realpath so scripted argvs match the root Project.discover resolves
+    # (macOS realpaths /var temp dirs to /private/var).
+    make_project(File.realpath(make_bare_project), "git:\n  base: #{base}\n")
   end
 
   def add_worktree(project, branch, remote)
@@ -20,6 +22,80 @@ RSpec.describe Orn::Commands::Wt::Remove do
       "origin/#{branch}"
     )
     worktree
+  end
+
+  describe "#run" do
+    def run_from(project, run_command, branches, prune:, force:)
+      Dir.chdir(project.root) do
+        run_command.run(
+          branches,
+          prune: prune,
+          force: force
+        )
+      end
+    end
+
+    it "prompts for each branch before pruning interactively" do
+      project = project_on
+      interactive_command = described_class.new(output_mode: Orn::OutputMode.default)
+      allow(Orn::Confirm).to receive(:prune_interactive)
+
+      expect do
+        run_from(
+          project,
+          interactive_command,
+          %w[feature/a feature/b],
+          prune: true,
+          force: false
+        )
+      end.to output("No worktree found for feature/a\nNo worktree found for feature/b\n").to_stdout
+
+      expect(Orn::Confirm).to have_received(:prune_interactive).with(project.root, "feature/a")
+      expect(Orn::Confirm).to have_received(:prune_interactive).with(project.root, "feature/b")
+    end
+
+    it "skips the prompt when removal is forced" do
+      project = project_on
+      interactive_command = described_class.new(output_mode: Orn::OutputMode.default)
+      allow(Orn::Confirm).to receive(:prune_interactive)
+
+      expect do
+        run_from(
+          project,
+          interactive_command,
+          %w[feature/a],
+          prune: true,
+          force: true
+        )
+      end.to output("No worktree found for feature/a\n").to_stdout
+
+      expect(Orn::Confirm).not_to have_received(:prune_interactive)
+    end
+
+    it "skips the prompt in json mode and prints the results as JSON" do
+      project = project_on
+      allow(Orn::Confirm).to receive(:prune_interactive)
+      expected_payload = [
+        {
+          "branch" => "feature/a",
+          "worktree_removed" => false,
+          "branch_deleted" => false,
+          "remote_branch_deleted" => false
+        }
+      ]
+
+      expect do
+        run_from(
+          project,
+          command,
+          %w[feature/a],
+          prune: true,
+          force: false
+        )
+      end.to output("#{JSON.pretty_generate(expected_payload)}\n").to_stdout
+
+      expect(Orn::Confirm).not_to have_received(:prune_interactive)
+    end
   end
 
   describe "#run_inner" do
@@ -48,6 +124,37 @@ RSpec.describe Orn::Commands::Wt::Remove do
 
         expect(result.worktree_removed).to be(false)
         expect(result.branch_deleted).to be(false)
+      end
+    end
+
+    context "when run from inside the worktree being removed" do
+      it "refuses with a hint to cd out" do
+        project = project_on
+        allow(Dir).to receive(:pwd).and_return(project.worktree_path("feature/inside"))
+
+        expect do
+          command.run_inner(
+            project,
+            "feature/inside",
+            false
+          )
+        end
+          .to raise_error(Orn::Error, %r{Cannot remove worktree for 'feature/inside' while inside it})
+      end
+    end
+
+    context "when the current directory cannot be determined" do
+      it "proceeds with the removal" do
+        project = project_on
+        allow(Dir).to receive(:pwd).and_raise(Errno::ENOENT)
+
+        result = command.run_inner(
+          project,
+          "feature/nowhere",
+          false
+        )
+
+        expect(result.worktree_removed).to be(false)
       end
     end
 
@@ -121,6 +228,34 @@ RSpec.describe Orn::Commands::Wt::Remove do
       expect(results.first.worktree_removed).to be(true)
       expect(errors.length).to eq(1)
       expect(errors.first).to include("main")
+    end
+  end
+
+  describe "Result#print_summary" do
+    it "prints a line for the worktree and each deleted branch" do
+      result = described_class::Result.new(
+        branch: "feature/x",
+        worktree_removed: true,
+        branch_deleted: true,
+        remote_branch_deleted: true
+      )
+
+      expect { result.print_summary }.to output(<<~OUTPUT).to_stdout
+        Removed worktree: feature/x
+        Deleted branch: feature/x
+        Deleted remote branch: feature/x
+      OUTPUT
+    end
+
+    it "prints only the missing-worktree line when nothing was removed" do
+      result = described_class::Result.new(
+        branch: "feature/x",
+        worktree_removed: false,
+        branch_deleted: false,
+        remote_branch_deleted: false
+      )
+
+      expect { result.print_summary }.to output("No worktree found for feature/x\n").to_stdout
     end
   end
 end

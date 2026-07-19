@@ -360,6 +360,33 @@ RSpec.describe Orn::Config do
         expect(described_class.load_from(deduped, nil).sbx.all_kits).to eq(%w[ruby gh-cli])
       end
 
+      it "warns when setup is neither a string nor a list of strings" do
+        project = project_with("sbx:\n  agent_type: claude\n  setup: 42\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx\.setup must be a string or a list of strings/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when an env value is not a string" do
+        project = project_with("sbx:\n  agent_type: claude\n  env:\n    PORT: 3000\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx\.env must be a mapping of strings to strings/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when ports is neither a mapping nor a list" do
+        project = project_with("sbx:\n  template: img\n  ports: \"3000\"\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx\.ports must be a mapping or a list of mappings/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
       it "tolerates and ignores unknown top-level keys" do
         project = project_with("orn_version: \"0.7.0\"\ngit:\n  base: develop\n")
 
@@ -435,6 +462,24 @@ RSpec.describe Orn::Config do
       project = project_with("")
 
       expect { described_class.write_session(project, "victim:0") }.to raise_error(Orn::Error)
+    end
+
+    it "creates the config file when none exists" do
+      project = empty_project
+
+      described_class.write_session(project, "fresh-start")
+
+      expect(described_class.load_from(project, nil).session).to eq("fresh-start")
+    end
+
+    it "starts over from an empty mapping when the file is malformed" do
+      project = project_with("git: [broken\n")
+
+      described_class.write_session(project, "recovered")
+
+      config = described_class.load_from(project, nil)
+      expect(config.session).to eq("recovered")
+      expect(config.base).to eq("main")
     end
   end
 
