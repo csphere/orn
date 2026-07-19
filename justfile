@@ -43,6 +43,11 @@ test-host *args:
 lint:
     bundle exec rubocop
 
+# Regenerate docs/cli.md from the CLI definitions. CI fails when the checked-in
+# file does not match.
+docs:
+    bundle exec rake docs
+
 fmt:
     bundle exec rubocop --autocorrect
 

@@ -141,6 +141,10 @@ Everything the TUIs do is also a command. Global options on every command:
 `-v` / `--verbose` logs executed commands to stderr, `--json` emits
 machine-readable output.
 
+The sections below are an overview; [docs/cli.md](docs/cli.md) is the full
+flag reference, generated from the CLI definitions (`just docs`) and kept
+current by CI.
+
 ### Quick start
 
 ```bash
