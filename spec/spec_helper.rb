@@ -1,5 +1,15 @@
 # frozen_string_literal: true
 
+# Coverage is opt-in because it slows the suite: run `COVERAGE=1 bundle exec
+# rspec`. SimpleCov must start before the code under test is required.
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start do
+    enable_coverage :branch
+    add_filter "/spec/"
+  end
+end
+
 require "orn"
 
 Dir[File.join(
