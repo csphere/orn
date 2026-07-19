@@ -201,6 +201,9 @@ Metrics/ModuleLength:
     - method_call
   Exclude:
     - "lib/orn/sandbox.rb"
+    # Flat collection of thin one-command wrappers; splitting it would spread
+    # the sbx argv conventions across files.
+    - "lib/orn/sandbox/sbx_cli.rb"
     - "lib/orn/detect/manifest.rb"
     - "lib/orn/detect/manifests.rb"
     # The tmux bootstrap plus both event loops as one entry point.
