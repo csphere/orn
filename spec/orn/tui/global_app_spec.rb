@@ -238,7 +238,7 @@ module Orn
         end
       end
 
-      describe "#toggle_expanded" do
+      describe "#toggle_expanded", :real_cmd do
         it "expands the selected repo" do
           app = app_with(
             [
@@ -349,7 +349,7 @@ module Orn
         end
       end
 
-      describe "#select_visible_tab_row" do
+      describe "#select_visible_tab_row", :real_cmd do
         it "moves the selection onto the visible tab's worktree row" do
           tabs = fake_tabs
           app = app_with(

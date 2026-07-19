@@ -185,7 +185,7 @@ RSpec.describe Orn::Commands::Remove do
     end
   end
 
-  context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
+  context "with a real tmux server", :real_cmd, if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
     it "closes the tmux window and removes the worktree" do

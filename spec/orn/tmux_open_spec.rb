@@ -39,32 +39,6 @@ RSpec.describe Orn::Tmux do
     Orn::Trust.save_approval(approval_path, Orn::Trust.commands_fingerprint(commands))
   end
 
-  def with_stdin(reader)
-    original_stdin = $stdin
-    $stdin = reader
-    yield
-  ensure
-    $stdin = original_stdin
-  end
-
-  def tty_reader(input)
-    reader = StringIO.new(input)
-    reader.define_singleton_method(:tty?) { true }
-    reader
-  end
-
-  # Runs the block against a fake interactive terminal: stdin serves `input`
-  # and claims to be a tty, stderr is captured. Returns the block result and
-  # the captured prompt output.
-  def with_interactive_stdin(input, &block)
-    original_stderr = $stderr
-    $stderr = StringIO.new
-    result = with_stdin(tty_reader(input), &block)
-    [result, $stderr.string]
-  ensure
-    $stderr = original_stderr
-  end
-
   def has_session_argv
     ["tmux", "has-session", "-t", "proj"]
   end

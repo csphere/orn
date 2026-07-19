@@ -139,23 +139,19 @@ RSpec.describe Orn::Sandbox::Doctor do
     end
   end
 
-  describe ".git_identity_check" do
+  describe ".git_identity_check", :real_cmd do
     def set_git_config(root, key, value)
       config_path = File.join(
         root,
         ".bare",
         "config"
       )
-      system(
-        GitHelpers::GIT_ISOLATION_ENV,
-        "git",
+      git(
         "config",
         "--file",
         config_path,
         key,
-        value,
-        out: File::NULL,
-        err: File::NULL
+        value
       )
     end
 
@@ -394,7 +390,7 @@ RSpec.describe Orn::Sandbox::Doctor do
     end
   end
 
-  describe ".run" do
+  describe ".run", :real_cmd do
     let(:mode) { Orn::OutputMode.default }
     let(:project) { make_project(make_bare_project, config_yaml) }
     let(:config_yaml) { "sbx: {}\n" }

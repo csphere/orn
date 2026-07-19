@@ -21,7 +21,7 @@ RSpec.describe Orn::Commands::Init do
     end
   end
 
-  describe "#run_in" do
+  describe "#run_in", :real_cmd do
     subject(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
 
     before { isolate_global_config }

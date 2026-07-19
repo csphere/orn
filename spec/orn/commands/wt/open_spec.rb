@@ -2,7 +2,7 @@
 
 require "json"
 
-RSpec.describe Orn::Commands::Wt::Open do
+RSpec.describe Orn::Commands::Wt::Open, :real_cmd do
   def standard_project(branch)
     remote = make_remote_with_branch(branch)
     project = make_bare_project

@@ -344,7 +344,7 @@ RSpec.describe Orn::Commands::Sbx::New do
         .to raise_error(Orn::Error, /Worktree does not exist/)
     end
 
-    it "suggests doctor when preflight fails" do
+    it "suggests doctor when preflight fails", :real_cmd do
       project = project_with("sbx:\n  agent_type: claude\n  template: img:1\n")
       FileUtils.mkdir_p(File.join(project.root, "feature/x"))
 

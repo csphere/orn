@@ -41,6 +41,17 @@ class FakeCmdBackend
   end
 end
 
+# Backend that refuses to run anything. Installed as the default per example,
+# so a spec that reaches Orn::Cmd without opting in fails loudly instead of
+# silently spawning a real subprocess on the machine running the suite.
+class DenyCmdBackend
+  def capture(command, **_options)
+    raise "example spawned a real subprocess: #{command.join(" ")}\n" \
+      "Script it with with_fake_cmd, or tag the example `real_cmd: true` " \
+      "if it intentionally drives real binaries."
+  end
+end
+
 # Installs a FakeCmdBackend for the duration of the block, yielding it for
 # scripting and assertions.
 module FakeCmdHelpers
@@ -57,10 +68,16 @@ end
 RSpec.configure do |config|
   config.include FakeCmdHelpers
 
-  # A leaked fake would poison every later example, so the real backend is
-  # restored around each one regardless of how the example used the seam.
+  # Each example starts with the deny backend unless it opts into real
+  # subprocesses (`real_cmd: true`, or the container-gated system specs).
+  # Restoring afterwards also means a leaked fake cannot poison later
+  # examples regardless of how the example used the seam.
   config.around do |example|
     original_backend = Orn::Cmd.backend
+    real_allowed = example.metadata[:real_cmd] ||
+                   example.metadata[:system] ||
+                   example.metadata[:sbx_system]
+    Orn::Cmd.backend = DenyCmdBackend.new unless real_allowed
     example.run
   ensure
     Orn::Cmd.backend = original_backend

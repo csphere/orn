@@ -4,7 +4,7 @@ require "json"
 require "stringio"
 require "tmpdir"
 
-RSpec.describe Orn::Commands::Wt::New do
+RSpec.describe Orn::Commands::Wt::New, :real_cmd do
   def standard_project(branch = "feature/existing", config_yaml = "git:\n  base: main\n")
     remote = make_remote_with_branch(branch)
     project = make_bare_project
@@ -38,42 +38,6 @@ RSpec.describe Orn::Commands::Wt::New do
     )
     source_names.each { |name| File.write(File.join(root, name), "shared") }
     root
-  end
-
-  def with_stdin(reader)
-    original_stdin = $stdin
-    $stdin = reader
-    yield
-  ensure
-    $stdin = original_stdin
-  end
-
-  def tty_reader(input)
-    reader = StringIO.new(input)
-    reader.define_singleton_method(:tty?) { true }
-    reader
-  end
-
-  # Runs the block against a fake interactive terminal: stdin serves `input`
-  # and claims to be a tty, stderr is captured. Returns the block result and
-  # the captured prompt output.
-  def with_interactive_stdin(input, &block)
-    with_stdin_and_captured_stderr(tty_reader(input), &block)
-  end
-
-  # Runs the block with a stdin that is not a tty (like a pipe), capturing
-  # stderr. Returns the block result and the captured output.
-  def with_noninteractive_stdin(&block)
-    with_stdin_and_captured_stderr(StringIO.new, &block)
-  end
-
-  def with_stdin_and_captured_stderr(reader, &block)
-    original_stderr = $stderr
-    $stderr = StringIO.new
-    result = with_stdin(reader, &block)
-    [result, $stderr.string]
-  ensure
-    $stderr = original_stderr
   end
 
   describe ".create" do

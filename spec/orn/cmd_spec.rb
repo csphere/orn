@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Orn::Cmd do
+RSpec.describe Orn::Cmd, :real_cmd do
   subject(:cmd) { described_class.new(output_mode: Orn::OutputMode.default) }
 
   describe "#run" do

@@ -498,7 +498,7 @@ module Orn
         end
       end
 
-      describe ".ahead_behind" do
+      describe ".ahead_behind", :real_cmd do
         def rev_list_argv
           git_argv(
             "/repo/feat",
@@ -562,7 +562,7 @@ module Orn
         end
       end
 
-      describe "#confirm_new_branch", if: TmuxSpecSupport::AVAILABLE do
+      describe "#confirm_new_branch", :real_cmd, if: TmuxSpecSupport::AVAILABLE do
         include_context "with an isolated tmux server"
 
         def remote_backed_project(branch)

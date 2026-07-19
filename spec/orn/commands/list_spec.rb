@@ -33,7 +33,7 @@ RSpec.describe Orn::Commands::List do
     )
   end
 
-  context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
+  context "with a real tmux server", :real_cmd, if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
     describe "#run_inner" do

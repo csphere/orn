@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Orn::Symlink do
+RSpec.describe Orn::Symlink, :real_cmd do
   let(:mode) { Orn::OutputMode.default }
 
   def temp_dir(name)

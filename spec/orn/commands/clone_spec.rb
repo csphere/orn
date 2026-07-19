@@ -14,7 +14,7 @@ RSpec.describe Orn::Commands::Clone do
     end
   end
 
-  describe "#run" do
+  describe "#run", :real_cmd do
     it "clones a remote into a new bare-worktree project" do
       remote = make_remote_with_branch("feature/x")
       work = register_temp_dir(Dir.mktmpdir("orn-clone-work"))

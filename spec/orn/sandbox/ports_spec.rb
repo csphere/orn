@@ -11,23 +11,31 @@ RSpec.describe Orn::Sandbox::Ports do
     end
 
     it "skips an occupied port" do
-      listener = TCPServer.new("127.0.0.1", 59_300)
+      listener = TCPServer.new("127.0.0.1", 0)
+      busy_port = listener.addr[1]
 
-      found = described_class.reserve_port([59_300, 59_302])
+      found = described_class.reserve_port([busy_port, busy_port + 2])
 
       aggregate_failures do
-        expect(found).not_to eq(59_300)
-        expect(found).to be_between(59_301, 59_302)
+        expect(found).not_to eq(busy_port)
+        expect(found).to be_between(busy_port + 1, busy_port + 2)
       end
     ensure
       listener&.close
     end
 
     it "raises when the range is exhausted" do
-      first = TCPServer.new("127.0.0.1", 59_400)
-      second = TCPServer.new("127.0.0.1", 59_401)
+      first = TCPServer.new("127.0.0.1", 0)
+      start_port = first.addr[1]
+      # The neighbouring port may already be held by another process; either
+      # way the whole range stays occupied.
+      second = begin
+        TCPServer.new("127.0.0.1", start_port + 1)
+      rescue Errno::EADDRINUSE
+        nil
+      end
 
-      expect { described_class.reserve_port([59_400, 59_401]) }.to raise_error(Orn::Error, /No free port/)
+      expect { described_class.reserve_port([start_port, start_port + 1]) }.to raise_error(Orn::Error, /No free port/)
     ensure
       first&.close
       second&.close

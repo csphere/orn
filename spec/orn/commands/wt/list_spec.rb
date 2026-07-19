@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Orn::Commands::Wt::List do
+RSpec.describe Orn::Commands::Wt::List, :real_cmd do
   def project_with_worktree(branch)
     remote = make_remote_with_branch(branch)
     project = make_bare_project

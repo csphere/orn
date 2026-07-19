@@ -281,17 +281,18 @@ module GitHelpers
     )
   end
 
-  def git(*args, chdir: nil)
-    options = {
-      out: File::NULL,
-      err: File::NULL
-    }
-    options[:chdir] = chdir if chdir
+  # Runs from the temp dir by default: the suite's working directory may be a
+  # worktree whose .git pointer does not resolve (a bind mount inside the test
+  # container), and git dies on that during repo discovery even for commands
+  # that name their target with --file or an absolute path.
+  def git(*args, chdir: Dir.tmpdir)
     system(
       GIT_ISOLATION_ENV,
       "git",
       *args,
-**options
+      out: File::NULL,
+      err: File::NULL,
+      chdir: chdir
     )
   end
 

@@ -164,7 +164,7 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
     end
   end
 
-  describe "#run_inner" do
+  describe "#run_inner", :real_cmd do
     it "fails without an [sbx] section" do
       project = project_with("git:\n  base: main\n")
 

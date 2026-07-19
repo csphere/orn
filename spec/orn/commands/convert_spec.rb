@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Orn::Commands::Convert do
+RSpec.describe Orn::Commands::Convert, :real_cmd do
   subject(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
 
   def git!(dir, *args)

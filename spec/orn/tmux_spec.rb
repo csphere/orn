@@ -341,7 +341,7 @@ RSpec.describe Orn::Tmux do
     end
   end
 
-  context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
+  context "with a real tmux server", :real_cmd, if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
     let(:session) { "orn-tmux-spec" }

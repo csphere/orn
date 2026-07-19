@@ -56,7 +56,7 @@ module Orn
         end
       end
 
-      describe ".discover" do
+      describe ".discover", :real_cmd do
         around { |example| Dir.mktmpdir { |dir| example.metadata[:dir] = dir and example.run } }
 
         it "finds bare projects and names them relative to the scan root" do |example|
@@ -313,7 +313,7 @@ module Orn
         end
       end
 
-      describe ".list_worktree_rows" do
+      describe ".list_worktree_rows", :real_cmd do
         it "is empty for a nonexistent repo" do
           rows = described_class.list_worktree_rows(Orn::OutputMode.quiet, "/tmp/nonexistent-orn", "main")
 

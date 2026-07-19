@@ -2,7 +2,7 @@
 
 require "tmpdir"
 
-RSpec.describe Orn::Complete do
+RSpec.describe Orn::Complete, :real_cmd do
   def project_with_worktree(branch)
     remote = make_remote_with_branch(branch)
     project = make_bare_project

@@ -233,7 +233,7 @@ RSpec.describe Orn::Detect do
     end
   end
 
-  describe ".detect_pane" do
+  describe ".detect_pane", :real_cmd do
     let(:mode) { Orn::OutputMode.quiet }
 
     it "identifies claude from the pane command" do
@@ -317,7 +317,7 @@ RSpec.describe Orn::Detect do
     end
   end
 
-  describe ".detect_all_panes" do
+  describe ".detect_all_panes", :real_cmd do
     let(:mode) { Orn::OutputMode.quiet }
 
     it "lets the first pane with an agent win its window" do
@@ -621,7 +621,7 @@ RSpec.describe Orn::Detect do
     end
   end
 
-  describe Orn::Detect::Platform do
+  describe Orn::Detect::Platform, :real_cmd do
     describe ".host_os" do
       it "returns :other for an unsupported platform" do
         stub_host_os("freebsd")

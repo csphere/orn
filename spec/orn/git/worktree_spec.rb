@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Orn::Git::Worktree do
+RSpec.describe Orn::Git::Worktree, :real_cmd do
   def worktree_for(root)
     described_class.new(
       root: root,

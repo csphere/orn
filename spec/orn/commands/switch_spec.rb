@@ -128,7 +128,7 @@ RSpec.describe Orn::Commands::Switch do
     end
   end
 
-  describe "#perform with --sbx" do
+  describe "#perform with --sbx", :real_cmd do
     it "fails when there is no [sbx] section" do
       project = sbx_project("feature/other", "git:\n  base: main\n")
 
@@ -510,7 +510,7 @@ RSpec.describe Orn::Commands::Switch do
     end
   end
 
-  context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
+  context "with a real tmux server", :real_cmd, if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
     it "creates the worktree and its tmux window for a brand-new branch" do
