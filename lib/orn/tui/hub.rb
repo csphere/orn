@@ -82,7 +82,7 @@ module Orn
           config: Orn::Config.load(root)
         )
         sbx_name = project.sandbox_name(branch)
-        if Orn::Sandbox.exists?(output_mode, sbx_name)
+        if Orn::Sandbox::SbxCli.exists?(output_mode, sbx_name)
           raise Orn::Error,
             "'#{branch}' uses sandbox '#{sbx_name}' and its window is closed; " \
               "run 'orn switch #{branch}' to reopen it"

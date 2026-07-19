@@ -4,11 +4,11 @@ require "fileutils"
 require "tmpdir"
 
 module Orn
-  # Sandbox (dev container) operations: the public interface commands call,
-  # plus the shared value types. Every sbx/docker/colima invocation goes
-  # through the SbxCli adapter, port handling lives in Ports, environment
-  # checks live in Doctor, and this module holds the remaining policy around
-  # those calls (setup ordering, build-arg resolution, tar cleanup).
+  # Shared home for sandbox (dev container) work: the value types, the
+  # required-tool checks, and the multi-step flows (setup commands, template
+  # build). Single sbx/docker/colima invocations live in the SbxCli adapter,
+  # port handling in Ports, and environment checks in Doctor; commands call
+  # those modules directly.
   module Sandbox
     # A host-to-container port mapping, displayed as `host:container`.
     PortMapping = Data.define(:host, :container) do
@@ -115,21 +115,6 @@ module Orn
 
     # --- Lifecycle ---
 
-    def self.create(output_mode, params)
-      SbxCli.create(output_mode, params)
-    end
-
-    # Runs a command inside the sandbox detached; used for long-running
-    # services that should outlive the call.
-    def self.exec_detached(output_mode, name, detached_cmd, env)
-      SbxCli.exec_detached(
-        output_mode,
-        name,
-        detached_cmd,
-        env
-      )
-    end
-
     # Runs the configured setup commands in order with progress output,
     # stopping at the first failure.
     def self.run_setup(output_mode, name, commands, env)
@@ -152,22 +137,6 @@ module Orn
         end
       end
       nil
-    end
-
-    def self.remove(output_mode, name)
-      SbxCli.remove(output_mode, name)
-    end
-
-    def self.list(output_mode)
-      SbxCli.list(output_mode)
-    end
-
-    def self.exists?(output_mode, name)
-      SbxCli.exists?(output_mode, name)
-    end
-
-    def self.try_remove(output_mode, name)
-      SbxCli.try_remove(output_mode, name)
     end
 
     # --- Build ---
@@ -197,51 +166,6 @@ module Orn
         tar_path
       )
       nil
-    end
-
-    # --- Port management ---
-
-    def self.remove_ports_file(orn_dir, name)
-      Ports.remove_ports_file(orn_dir, name)
-    end
-
-    def self.read_ports(orn_dir, name)
-      Ports.read_ports(orn_dir, name)
-    end
-
-    def self.setup_ports(output_mode, name, ports, orn_dir)
-      Ports.setup_ports(
-        output_mode,
-        name,
-        ports,
-        orn_dir
-      )
-    end
-
-    def self.republish_ports(output_mode, name, orn_dir)
-      Ports.republish_ports(
-        output_mode,
-        name,
-        orn_dir
-      )
-    end
-
-    # --- Doctor ---
-
-    def self.doctor(output_mode, config, project_root)
-      Doctor.run(
-        output_mode,
-        config,
-        project_root
-      )
-    end
-
-    def self.preflight(output_mode, config, project_root)
-      Doctor.preflight(
-        output_mode,
-        config,
-        project_root
-      )
     end
 
     # --- Internal helpers ---

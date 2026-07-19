@@ -29,10 +29,10 @@ module Orn
           Orn::Sandbox.require_sbx_cli!(@output_mode)
 
           name = project.sandbox_name(branch)
-          removed = Orn::Sandbox.try_remove(@output_mode, name)
+          removed = Orn::Sandbox::SbxCli.try_remove(@output_mode, name)
           @output_mode.status("Removed sandbox '#{name}'") if removed
 
-          Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), name)
+          Orn::Sandbox::Ports.remove_ports_file(File.join(project.root, ".orn"), name)
 
           Result.new(
             name: name,

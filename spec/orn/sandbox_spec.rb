@@ -76,16 +76,4 @@ RSpec.describe Orn::Sandbox do
       end
     end
   end
-
-  describe ".exists? and .try_remove" do
-    let(:mode) { Orn::OutputMode.default }
-
-    it "reports a nonexistent sandbox as absent" do
-      expect(described_class.exists?(mode, "nonexistent-sandbox")).to be(false)
-    end
-
-    it "returns false from try_remove for a nonexistent sandbox" do
-      expect(described_class.try_remove(mode, "nonexistent-sandbox")).to be(false)
-    end
-  end
 end

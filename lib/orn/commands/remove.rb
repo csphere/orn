@@ -78,8 +78,8 @@ module Orn
       # (or no sbx CLI) exists; the ports file is deleted only on a real removal.
       def teardown_sandbox(project, branch)
         sbx_name = project.sandbox_name(branch)
-        removed = Orn::Sandbox.try_remove(@output_mode, sbx_name)
-        Orn::Sandbox.remove_ports_file(File.join(project.root, ".orn"), sbx_name) if removed
+        removed = Orn::Sandbox::SbxCli.try_remove(@output_mode, sbx_name)
+        Orn::Sandbox::Ports.remove_ports_file(File.join(project.root, ".orn"), sbx_name) if removed
         removed
       end
 

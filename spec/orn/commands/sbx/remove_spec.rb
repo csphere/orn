@@ -28,7 +28,7 @@ RSpec.describe Orn::Commands::Sbx::Remove do
         )
       )
 
-      Orn::Sandbox.remove_ports_file(orn_dir, name)
+      Orn::Sandbox::Ports.remove_ports_file(orn_dir, name)
 
       expect(File).not_to exist(
         File.join(

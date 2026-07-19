@@ -35,7 +35,7 @@ module Orn
         def run_inner(project)
           Orn::Sandbox.require_sbx_cli!(@output_mode)
 
-          entries = Orn::Sandbox.list(@output_mode)
+          entries = Orn::Sandbox::SbxCli.list(@output_mode)
           orn_dir = File.join(project.root, ".orn")
           branches = worktree_branches(project)
 
@@ -74,7 +74,7 @@ module Orn
         end
 
         def ports_for(orn_dir, name)
-          Orn::Sandbox.read_ports(orn_dir, name)
+          Orn::Sandbox::Ports.read_ports(orn_dir, name)
         rescue Orn::Error
           []
         end
