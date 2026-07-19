@@ -240,11 +240,7 @@ module Orn
             ],
             tabs: tabs
           )
-          open_tab_for(
-            tabs,
-            app.entries[1],
-            "main"
-          )
+          open_tab_for(tabs, app.entries[1], "main")
 
           app.select_visible_tab_row
 
@@ -268,11 +264,7 @@ module Orn
             ],
             tabs: tabs
           )
-          open_tab_for(
-            tabs,
-            app.entries[1],
-            "feat"
-          )
+          open_tab_for(tabs, app.entries[1], "feat")
 
           app.select_visible_tab_row
 

@@ -103,12 +103,12 @@ Orn/EmptyLinesBetweenCollectionItems:
   Exclude:
     - "lib/orn/detect/manifests.rb"
 
-# Calls with more than two arguments break one argument per line. The
+# Calls with more than three arguments break one argument per line. The
 # allowed methods are CLI wrappers whose arguments are shell words: read
 # as a command line, they stay inline at any count.
 Orn/MultiArgumentLineBreaks:
   Enabled: true
-  MaxArgsOnOneLine: 2
+  MaxArgsOnOneLine: 3
   AllowedMethods:
     - tmux_exec
     - sbx_exec

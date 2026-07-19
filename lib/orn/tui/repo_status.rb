@@ -18,11 +18,7 @@ module Orn
         sessions = list_sessions(output)
         repos.map do |repo|
           info = sessions.find { |session| session.name == repo.session_name }
-          borrowed = borrowed_pane_for_repo(
-            tab,
-            repo,
-            all_panes
-          )
+          borrowed = borrowed_pane_for_repo(tab, repo, all_panes)
           refreshed = if info
             alive_repo(
               output,
@@ -32,11 +28,7 @@ module Orn
               borrowed
             )
           else
-            dead_repo(
-              output,
-              repo,
-              borrowed
-            )
+            dead_repo(output, repo, borrowed)
           end
           refreshed.expanded ? with_worktree_git_stats(output, refreshed) : refreshed
         end
@@ -77,19 +69,11 @@ module Orn
       # window.
       def self.alive_repo(output, repo, info, all_panes, borrowed)
         windows = Orn::Tmux.list_windows(output, info.name)
-        repo_panes = session_panes(
-          repo,
-          all_panes,
-          borrowed
-        )
+        repo_panes = session_panes(repo, all_panes, borrowed)
         states = if repo_panes.empty?
           {}
         else
-          Orn::Detect.detect_all_panes(
-            output,
-            repo_panes,
-            repo.sbx_agent_type
-          )
+          Orn::Detect.detect_all_panes(output, repo_panes, repo.sbx_agent_type)
         end
         worktrees = repo.worktrees.map do |wt|
           worktree_with_agent(
@@ -148,20 +132,12 @@ module Orn
         )
         return cleared unless borrowed
 
-        attribute_borrowed_agent(
-          output,
-          cleared,
-          borrowed
-        )
+        attribute_borrowed_agent(output, cleared, borrowed)
       end
 
       def self.attribute_borrowed_agent(output, repo, borrowed)
         branch = borrowed.window_name
-        states = Orn::Detect.detect_all_panes(
-          output,
-          [borrowed],
-          repo.sbx_agent_type
-        )
+        states = Orn::Detect.detect_all_panes(output, [borrowed], repo.sbx_agent_type)
         worktrees = repo.worktrees.map do |wt|
           next wt unless wt.branch == branch
 

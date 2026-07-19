@@ -70,11 +70,7 @@ module Orn
         return false unless @hub_pane
 
         hide_visible
-        @hub.show_tab(
-          @output,
-          @tabs[index],
-          @hub_pane
-        )
+        @hub.show_tab(@output, @tabs[index], @hub_pane)
         @visible_index = index
         install_bindings_for_visible
         true

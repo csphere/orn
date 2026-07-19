@@ -121,11 +121,7 @@ module Orn
       # tmux data, and resort, keeping the selection anchored to the same row.
       def full_refresh
         anchor = selected_identity
-        @entries = RepoDiscovery.discover(
-          @output,
-          @config,
-          @mru_state
-        )
+        @entries = RepoDiscovery.discover(@output, @config, @mru_state)
         refresh_tmux_data
         RepoDiscovery.sort_entries(@entries)
         reanchor_selected(anchor)

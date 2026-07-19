@@ -17,11 +17,7 @@ module Orn
       end
 
       def discover(root, state: State.new)
-        described_class.discover(
-          Orn::OutputMode.quiet,
-          config_for(root),
-          state
-        )
+        described_class.discover(Orn::OutputMode.quiet, config_for(root), state)
       end
 
       def config_for(root)
@@ -33,11 +29,7 @@ module Orn
       end
 
       def make_bare(root, name, head: "ref: refs/heads/main\n")
-        bare = File.join(
-          root,
-          name,
-          ".bare"
-        )
+        bare = File.join(root, name, ".bare")
         FileUtils.mkdir_p(bare)
         File.write(File.join(bare, "HEAD"), head) if head
       end
@@ -82,11 +74,7 @@ module Orn
 
         it "marks a repo without HEAD as unhealthy" do |example|
           root = example.metadata[:dir]
-          make_bare(
-            root,
-            "broken",
-            head: nil
-          )
+          make_bare(root, "broken", head: nil)
 
           repos = discover(root)
 
@@ -109,11 +97,7 @@ module Orn
           root = example.metadata[:dir]
           make_bare(root, "my-project")
           FileUtils.mkdir_p(
-            File.join(
-              root,
-              "my-project",
-              ".orn"
-            )
+            File.join(root, "my-project", ".orn")
           )
           File.write(
             File.join(
@@ -323,11 +307,7 @@ module Orn
 
       describe ".list_worktree_rows" do
         it "is empty for a nonexistent repo" do
-          rows = described_class.list_worktree_rows(
-            Orn::OutputMode.quiet,
-            "/tmp/nonexistent-orn",
-            "main"
-          )
+          rows = described_class.list_worktree_rows(Orn::OutputMode.quiet, "/tmp/nonexistent-orn", "main")
 
           expect(rows).to be_empty
         end

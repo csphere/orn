@@ -39,11 +39,7 @@ module Orn
           bare_path = line.strip
           next if bare_path.empty?
 
-          repos << repo_entry_for(
-            bare_path,
-            root,
-            output
-          )
+          repos << repo_entry_for(bare_path, root, output)
         end
       rescue Orn::Error
         nil
@@ -63,11 +59,7 @@ module Orn
           healthy: healthy?(project_root),
           session_name: Orn::Session.session_name(project),
           base_branch: config.base,
-          worktrees: list_worktree_rows(
-            output,
-            project_root,
-            config.base
-          ),
+          worktrees: list_worktree_rows(output, project_root, config.base),
           sbx_agent_type: agent
         )
       end
@@ -95,11 +87,7 @@ module Orn
 
       # A project is healthy when `.bare/HEAD` exists and is readable.
       def self.healthy?(project_root)
-        head = File.join(
-          project_root,
-          ".bare",
-          "HEAD"
-        )
+        head = File.join(project_root, ".bare", "HEAD")
         File.file?(head) && File.readable?(head)
       end
 
@@ -125,11 +113,7 @@ module Orn
           tier_b = sort_tier(b)
           next tier_a <=> tier_b unless tier_a == tier_b
 
-          tier_order(
-            tier_a,
-            a,
-            b
-          )
+          tier_order(tier_a, a, b)
         end
       end
 

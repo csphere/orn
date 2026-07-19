@@ -147,11 +147,7 @@ module Orn
           )
 
           borrowed = described_class.borrowed_pane_for_repo(
-            tab(
-              repo.root,
-              "feat",
-              "%5"
-            ),
+            tab(repo.root, "feat", "%5"),
             repo,
             [hub_pane]
           )
@@ -167,11 +163,7 @@ module Orn
           repo = entry("api")
 
           borrowed = described_class.borrowed_pane_for_repo(
-            tab(
-              "/tmp/elsewhere",
-              "feat",
-              "%5"
-            ),
+            tab("/tmp/elsewhere", "feat", "%5"),
             repo,
             [pane("%5", session: "orn")]
           )
@@ -183,11 +175,7 @@ module Orn
           repo = entry("api")
 
           borrowed = described_class.borrowed_pane_for_repo(
-            tab(
-              repo.root,
-              "feat",
-              "%5"
-            ),
+            tab(repo.root, "feat", "%5"),
             repo,
             []
           )
@@ -208,11 +196,7 @@ module Orn
             window: "feat"
           )
 
-          panes = described_class.session_panes(
-            repo,
-            [original, own, other],
-            borrowed
-          )
+          panes = described_class.session_panes(repo, [original, own, other], borrowed)
 
           expect(panes).to eq([own, borrowed])
         end
@@ -221,11 +205,7 @@ module Orn
           repo = entry("api")
           own = pane("%6", session: "api")
 
-          panes = described_class.session_panes(
-            repo,
-            [own, pane("%7", session: "other")],
-            nil
-          )
+          panes = described_class.session_panes(repo, [own, pane("%7", session: "other")], nil)
 
           expect(panes).to eq([own])
         end
