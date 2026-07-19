@@ -348,6 +348,28 @@ RSpec.describe Orn::Sandbox do
     end
   end
 
+  describe ".create" do
+    it "raises when sbx create exits nonzero" do
+      params = Orn::Sandbox::CreateParams.new(
+        name: "my-sbx",
+        agent_type: "claude",
+        worktree_path: "/work/tree",
+        bare_path: "/project/.bare"
+      )
+
+      with_fake_cmd do |fake|
+        fake.script(
+          ["sbx", "create", "--name", "my-sbx", "claude", "/work/tree", "/project/.bare"],
+          stderr: "template not found",
+          status: 1
+        )
+
+        expect { described_class.create(Orn::OutputMode.default, params) }
+          .to raise_error(Orn::Error, /template not found/)
+      end
+    end
+  end
+
   describe ".build_exec_command" do
     it "wraps the command in sh -c without env" do
       args = described_class.build_exec_command(
