@@ -94,14 +94,9 @@ module Orn
 
     # --- Prerequisite checks ---
 
-    # True when the `sbx` CLI is on PATH.
-    def self.available?(output_mode)
-      SbxCli.on_path?(output_mode, "sbx")
-    end
-
     # Raises with an install hint when the `sbx` CLI is missing.
     def self.require_sbx_cli!(output_mode)
-      return if available?(output_mode)
+      return if SbxCli.on_path?(output_mode, "sbx")
 
       raise Orn::Error, "sbx not found on PATH\n  Install: https://docs.docker.com/reference/cli/sbx/"
     end
