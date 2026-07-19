@@ -2,66 +2,6 @@
 
 module Orn
   module TUI
-    # One discovered bare-worktree repo, with cached tmux session and agent
-    # status for the sidebar. Mutable: the refresh passes update it in place.
-    class RepoEntry
-      attr_accessor :display_name,
-        :root,
-        :healthy,
-        :session_name,
-        :base_branch,
-        :session_alive,
-        :window_count,
-        :expanded,
-        :worktrees,
-        :session_activity,
-        :mru_timestamp,
-        :aggregate_agent_state,
-        :sbx_agent_type
-
-      def initialize(display_name:, root:, healthy:, session_name:, base_branch:,
-        session_alive: false, window_count: 0, expanded: false, worktrees: [],
-        session_activity: nil, mru_timestamp: nil, aggregate_agent_state: nil, sbx_agent_type: nil)
-        @display_name = display_name
-        @root = root
-        @healthy = healthy
-        @session_name = session_name
-        @base_branch = base_branch
-        @session_alive = session_alive
-        @window_count = window_count
-        @expanded = expanded
-        @worktrees = worktrees
-        @session_activity = session_activity
-        @mru_timestamp = mru_timestamp
-        @aggregate_agent_state = aggregate_agent_state
-        @sbx_agent_type = sbx_agent_type
-      end
-
-      def worktree_count
-        @worktrees.length
-      end
-    end
-
-    # One worktree row under a repo in the global tree. `dirty`/`ahead_behind`
-    # stay nil until the owning repo is expanded (computed on demand).
-    class WorktreeRow
-      attr_accessor :branch,
-        :has_window,
-        :agent,
-        :sandboxed,
-        :dirty,
-        :ahead_behind
-
-      def initialize(branch:, has_window: false, agent: nil, sandboxed: false, dirty: nil, ahead_behind: nil)
-        @branch = branch
-        @has_window = has_window
-        @agent = agent
-        @sandboxed = sandboxed
-        @dirty = dirty
-        @ahead_behind = ahead_behind
-      end
-    end
-
     # A visible row in the flattened repo/worktree tree: a repo header or a
     # worktree under it, identified by index into `entries`.
     TreeRow = Data.define(
@@ -262,16 +202,17 @@ module Orn
         @last_focus_poll = monotonic
       end
 
-      # Re-discover repos, reapply MRU and expanded state, refresh tmux data,
-      # and resort, keeping the selection anchored to the same row.
+      # Re-discover repos (with MRU and expanded state reapplied), refresh
+      # tmux data, and resort, keeping the selection anchored to the same row.
       def full_refresh
         anchor = selected_identity
-        @entries = self.class.discover_repos(@config)
-        self.class.apply_mru(@mru_state, @entries)
-        self.class.apply_expanded(@mru_state, @entries)
+        @entries = RepoDiscovery.discover(
+          @output,
+          @config,
+          @mru_state
+        )
         refresh_tmux_data
-        self.class.prune_mru(@mru_state, @entries)
-        self.class.sort_entries(@entries)
+        RepoDiscovery.sort_entries(@entries)
         reanchor_selected(anchor)
         @last_discovery = monotonic
       end
@@ -500,170 +441,6 @@ module Orn
         length = visible_rows.length
         @selected = length - 1 if @selected >= length && length.positive?
         sync_list_state
-      end
-
-      # Scan every configured root for bare-worktree projects, disambiguating
-      # colliding display names.
-      def self.discover_repos(config)
-        output = Orn::OutputMode.quiet
-        repos = []
-        config.scan_roots.each do |root|
-          scan_root(
-            root,
-            config.scan_depth,
-            output,
-            repos
-          )
-        end
-        disambiguate_names(config.scan_roots, repos)
-        repos
-      end
-
-      # Find `.bare` directories under `root` (via `find`, up to `depth`) and
-      # append a RepoEntry for each containing project.
-      def self.scan_root(root, depth, output, repos)
-        result = Orn::Cmd.new(output_mode: output)
-          .output("find", root.to_s, "-maxdepth", depth.to_s, "-name", ".bare", "-type", "d")
-        return unless result.success?
-
-        result.stdout.lines.each do |line|
-          bare_path = line.strip
-          next if bare_path.empty?
-
-          repos << repo_entry_for(
-            bare_path,
-            root,
-            output
-          )
-        end
-      rescue Orn::Error
-        nil
-      end
-
-      def self.repo_entry_for(bare_path, scan_root, output)
-        project_root = File.dirname(bare_path)
-        config = Orn::Config.load(project_root)
-        agent = config.sbx&.agent_type && Orn::Detect.identify_agent(config.sbx.agent_type)
-        project = Orn::Git::Project.new(
-          root: project_root,
-          config: config
-        )
-        RepoEntry.new(
-          display_name: relative_display_name(project_root, scan_root),
-          root: project_root,
-          healthy: healthy?(project_root),
-          session_name: Orn::Session.session_name(project),
-          base_branch: config.base,
-          worktrees: list_worktree_rows(
-            output,
-            project_root,
-            config.base
-          ),
-          sbx_agent_type: agent
-        )
-      end
-
-      # `project_root` relative to `scan_root` when nested under it, else the
-      # absolute path.
-      def self.relative_display_name(project_root, scan_root)
-        prefix = "#{scan_root.to_s.chomp("/")}/"
-        project_root.start_with?(prefix) ? project_root[prefix.length..] : project_root
-      end
-
-      # Worktree rows for a repo, base branch first, then alphabetical.
-      def self.list_worktree_rows(output, root, base)
-        branches = Orn::Git::Worktree.new(
-          root: root,
-          output_mode: output
-        ).entries
-        sort_branches_base_first(branches, base)
-        branches.map { |branch| WorktreeRow.new(branch: branch) }
-      end
-
-      def self.sort_branches_base_first(branches, base)
-        branches.sort_by! { |branch| [branch == base ? 0 : 1, branch] }
-      end
-
-      # A project is healthy when `.bare/HEAD` exists and is readable.
-      def self.healthy?(project_root)
-        head = File.join(
-          project_root,
-          ".bare",
-          "HEAD"
-        )
-        File.file?(head) && File.readable?(head)
-      end
-
-      def self.apply_mru(state, repos)
-        repos.each { |repo| repo.mru_timestamp = state.timestamp(repo.root) }
-      end
-
-      def self.apply_expanded(state, repos)
-        repos.each { |repo| repo.expanded = state.expanded?(repo.root) }
-      end
-
-      # Drop persisted state for repos no longer discovered, and save.
-      def self.prune_mru(state, repos)
-        state.prune(repos.map(&:root))
-        state.save
-      end
-
-      # Order repos by tier: live sessions by activity (newest first), then
-      # previously entered repos by MRU timestamp, then the rest alphabetically.
-      def self.sort_entries(repos)
-        repos.sort! do |a, b|
-          tier_a = sort_tier(a)
-          tier_b = sort_tier(b)
-          next tier_a <=> tier_b unless tier_a == tier_b
-
-          tier_order(
-            tier_a,
-            a,
-            b
-          )
-        end
-      end
-
-      def self.tier_order(tier, first, second)
-        case tier
-        when 0 then (second.session_activity || 0) <=> (first.session_activity || 0)
-        when 1 then (second.mru_timestamp || "") <=> (first.mru_timestamp || "")
-        else first.display_name <=> second.display_name
-        end
-      end
-
-      # 0 = live session, 1 = previously entered (MRU), 2 = unseen.
-      def self.sort_tier(entry)
-        return 0 if entry.session_alive
-        return 1 if entry.mru_timestamp
-
-        2
-      end
-
-      # Prefix colliding display names with their scan root's basename.
-      def self.disambiguate_names(scan_roots, repos)
-        return if scan_roots.length <= 1
-
-        needs_prefix = collisions(repos)
-        repos.each_with_index do |repo, i|
-          next unless needs_prefix[i]
-
-          root = scan_roots.find { |candidate| repo.root.to_s.start_with?(candidate.to_s) }
-          repo.display_name = "#{File.basename(root.to_s)}/#{repo.display_name}" if root
-        end
-      end
-
-      def self.collisions(repos)
-        needs = Array.new(repos.length, false)
-        repos.each_index do |i|
-          ((i + 1)...repos.length).each do |j|
-            next unless repos[i].display_name == repos[j].display_name
-
-            needs[i] = true
-            needs[j] = true
-          end
-        end
-        needs
       end
 
       # Highest-priority state among panes hosting an agent (blocked > working
@@ -1065,7 +842,7 @@ module Orn
           visible,
           all_panes
         )
-        self.class.sort_entries(@entries)
+        RepoDiscovery.sort_entries(@entries)
         @last_tmux_refresh = monotonic
       end
 
