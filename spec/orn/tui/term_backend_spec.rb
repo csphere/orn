@@ -98,6 +98,59 @@ module Orn
         expect(fallback_backend.area).to eq(fallback_area)
       end
 
+      # StringIO stands in for the terminal: it answers tty? with false, so
+      # the raw!/cooked! toggles stay guarded off while the escape-sequence
+      # contract and the idempotence flags run for real.
+      describe "start/stop lifecycle" do
+        let(:output) { StringIO.new }
+        let(:io_backend) do
+          described_class.new(
+            input: StringIO.new,
+            output: output
+          )
+        end
+
+        it "enters the alt screen and hides the cursor once, even if started twice" do
+          io_backend.start
+          io_backend.start
+
+          expect(output.string).to eq("\e[?1049h\e[?25l")
+        end
+
+        it "writes nothing when stopped before it ever started" do
+          io_backend.stop
+
+          expect(output.string).to eq("")
+        end
+
+        it "restores the cursor and main screen once on stop" do
+          io_backend.start
+          io_backend.stop
+          io_backend.stop
+
+          expect(output.string).to eq("\e[?1049h\e[?25l\e[?25h\e[?1049l")
+        end
+
+        it "flushes a buffer as a home-cursor move plus the rendered rows" do
+          area = Rect.new(
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 1
+          )
+
+          io_backend.flush(Buffer.new(area))
+
+          expect(output.string).to eq("\e[H#{io_backend.render(Buffer.new(area))}")
+        end
+
+        it "clears the whole screen" do
+          io_backend.clear
+
+          expect(output.string).to eq("\e[2J")
+        end
+      end
+
       it "emits an SGR sequence carrying foreground, background, and bold" do
         cell = Cell.new(
           symbol: "x",

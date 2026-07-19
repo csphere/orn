@@ -222,6 +222,45 @@ module Orn
         end
       end
 
+      describe ".with_terminal" do
+        # The trap handler calls exit; RSpec stubs synchronize on a mutex,
+        # which Ruby forbids in trap context, so exit is intercepted with a
+        # plain singleton method and the backend records stops into an array.
+        def install_interceptors
+          stops = []
+          exit_codes = []
+          backend = scripted_terminal_backend
+          backend.define_singleton_method(:stop) { stops << :stop }
+          allow(TermBackend).to receive(:new).and_return(backend)
+          described_class.define_singleton_method(:exit) { |code| exit_codes << code }
+          [stops, exit_codes]
+        end
+
+        after do
+          described_class.singleton_class.remove_method(:exit)
+        rescue NameError
+          nil
+        end
+
+        it "restores the terminal and exits when the process is interrupted" do
+          stops, exit_codes = install_interceptors
+          stops_when_handler_ran = nil
+          preserving_signal_traps do
+            described_class.with_terminal do |_terminal|
+              Process.kill("INT", Process.pid)
+              sleep(0.01) while exit_codes.empty?
+              stops_when_handler_ran = stops.length
+            end
+          end
+
+          aggregate_failures do
+            expect(exit_codes).to eq([1])
+            expect(stops_when_handler_ran).to eq(1)
+            expect(stops.length).to eq(2)
+          end
+        end
+      end
+
       describe ".run_global_direct" do
         def borrowed_list_argv
           ["tmux", "list-panes", "-a", "-F", "\#{pane_id}\t\#{@orn_home_session}\t\#{@orn_home_window}"]
