@@ -185,6 +185,54 @@ module Orn
         end
       end
 
+      describe ".discover with scripted scan output" do
+        def find_argv(root)
+          [
+            "find",
+            root,
+            "-maxdepth",
+            "3",
+            "-name",
+            ".bare",
+            "-type",
+            "d"
+          ]
+        end
+
+        it "returns no repos when the scan command fails" do
+          with_fake_cmd do |fake|
+            fake.script(find_argv("/scan"), status: 1)
+
+            expect(discover("/scan")).to be_empty
+          end
+        end
+
+        it "builds entries from the scan output, skipping blank lines" do
+          with_fake_cmd do |fake|
+            fake.script(find_argv("/scan"), stdout: "/scan/org/proj/.bare\n\n")
+            fake.script(
+              [
+                "git",
+                "-C",
+                "/scan/org/proj",
+                "worktree",
+                "list",
+                "--porcelain"
+              ],
+              status: 1
+            )
+
+            repos = discover("/scan")
+
+            aggregate_failures do
+              expect(repos.map(&:display_name)).to eq(["org/proj"])
+              expect(repos[0].root).to eq("/scan/org/proj")
+              expect(repos[0].worktrees).to be_empty
+            end
+          end
+        end
+      end
+
       describe ".disambiguate_names" do
         it "prefixes colliding names with the scan-root basename" do
           repos = [
