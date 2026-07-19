@@ -117,7 +117,25 @@ RSpec.describe Orn::Detect::Manifest do
         "contains" => ["menu"]
       )
 
-      expect { described_class.parse_manifest(manifest) }.to raise_error(described_class::InvalidManifest)
+      expect { described_class.parse_manifest(manifest) }
+        .to raise_error(described_class::InvalidManifest, /skip_state_update without state = "unknown"/)
+    end
+
+    it "rejects skip_state_update combined with visible state evidence" do
+      manifest = rule(
+        "state" => "unknown",
+        "skip_state_update" => true,
+        "visible_working" => true,
+        "contains" => ["transcript"]
+      )
+
+      expect { described_class.parse_manifest(manifest) }
+        .to raise_error(described_class::InvalidManifest, /skip_state_update with visible state evidence/)
+    end
+
+    it "rejects a non-boolean visibility flag" do
+      expect { described_class.parse_manifest(rule("visible_idle" => "yes")) }
+        .to raise_error(described_class::InvalidManifest, /visible_idle must be a boolean/)
     end
 
     it "rejects a regex that does not compile" do
@@ -159,6 +177,25 @@ RSpec.describe Orn::Detect::Manifest do
         )
       end
         .to raise_error(described_class::InvalidManifest)
+    end
+
+    it "rejects a manifest exceeding the max total gate count" do
+      nested_gates = Array.new(520) { { "contains" => ["x"] } }
+
+      expect { described_class.parse_manifest(rule("any" => nested_gates)) }
+        .to raise_error(described_class::InvalidManifest, /max gate count 512/)
+    end
+
+    it "rejects a manifest exceeding the max total matcher count" do
+      nested_gates = Array.new(33) { { "contains" => Array.new(32) { |i| "m#{i}" } } }
+
+      expect { described_class.parse_manifest(rule("any" => nested_gates)) }
+        .to raise_error(described_class::InvalidManifest, /max matcher count 1024/)
+    end
+
+    it "rejects a matcher longer than the max length" do
+      expect { described_class.parse_manifest(rule("contains" => ["a" * 513])) }
+        .to raise_error(described_class::InvalidManifest, /max length 512/)
     end
   end
 
@@ -228,6 +265,19 @@ RSpec.describe Orn::Detect::Manifest do
       content = "no markers here\njust text"
 
       expect(region_of(content, "before_last_prompt_marker")).to eq(content)
+    end
+
+    it "returns an empty string for a region spec no extractor recognizes" do
+      aggregate_failures do
+        expect(region_of("a\nb", "mystery_region")).to eq("")
+        expect(region_of("a\nb", "bottom_lines(x)")).to eq("")
+      end
+    end
+  end
+
+  describe ".split_lines" do
+    it "splits CRLF text and drops the carriage returns" do
+      expect(described_class.split_lines("a\r\nb\r\n")).to eq(%w[a b])
     end
   end
 
@@ -333,6 +383,40 @@ RSpec.describe Orn::Detect::Manifest do
         expect(described_class.gate_matches_text?(gate, "base blocked")).to be(false)
       end
     end
+
+    it "fails a not gate only when its nested all gate fully matches" do
+      gate = compiled_first(
+        rule(
+          "contains" => ["base"],
+          "not" => [{ "all" => [{ "contains" => ["x"] }, { "contains" => ["y"] }] }]
+        )
+      )
+
+      aggregate_failures do
+        expect(described_class.gate_matches_text?(gate, "base x")).to be(true)
+        expect(described_class.gate_matches_text?(gate, "base x y")).to be(false)
+      end
+    end
+
+    it "requires the inner text when a not gate is nested inside a not gate" do
+      gate = compiled_first(
+        rule(
+          "contains" => ["base"],
+          "not" => [{ "not" => [{ "contains" => ["x"] }] }]
+        )
+      )
+
+      aggregate_failures do
+        expect(described_class.gate_matches_text?(gate, "base x")).to be(true)
+        expect(described_class.gate_matches_text?(gate, "base")).to be(false)
+      end
+    end
+
+    it "matches line_regex against CRLF-separated lines" do
+      gate = compiled_first(rule("line_regex" => ["^exact$"]))
+
+      expect(described_class.gate_matches_text?(gate, "before\r\nexact\r\nafter")).to be(true)
+    end
   end
 
   describe "priority and fallback" do
@@ -370,6 +454,126 @@ RSpec.describe Orn::Detect::Manifest do
         expect(result.state).to eq(:idle)
         expect(result.visible_idle).to be(false)
       end
+    end
+  end
+
+  describe ".evaluate_manifest" do
+    # parse_manifest rejects uncompilable patterns up front, so reaching the
+    # compile-time rescue takes a hand-built manifest that skipped validation.
+    it "reports the rule id when a gate fails to compile" do
+      bad_gate = described_class::Gate.new(
+        all: [],
+        any: [],
+        not_gate: [],
+        contains: [],
+        regex: ["("],
+        line_regex: []
+      )
+      bad_rule = described_class::Rule.new(
+        id: "broken",
+        state: :working,
+        priority: 0,
+        region: "whole_recent",
+        visible_idle: false,
+        visible_blocker: false,
+        visible_working: false,
+        skip_state_update: false,
+        gate: bad_gate
+      )
+      manifest = described_class::ParsedManifest.new(
+        id: "test",
+        aliases: [],
+        rules: [bad_rule]
+      )
+      input = described_class::DetectionInput.new(
+        screen: "",
+        osc_title: "",
+        osc_progress: ""
+      )
+
+      expect { described_class.evaluate_manifest(manifest, input) }
+        .to raise_error(described_class::InvalidManifest, /rule broken could not be compiled/)
+    end
+  end
+
+  describe "override loading" do
+    before { described_class.reset_cache! }
+    after { described_class.reset_cache! }
+
+    let(:override_yaml) do
+      <<~YAML
+        id: claude
+        rules:
+          - id: custom
+            state: working
+            priority: 100
+            contains: ["custom override marker"]
+      YAML
+    end
+
+    def write_override(yaml)
+      xdg_base = register_temp_dir(Dir.mktmpdir("orn-xdg"))
+      detection_dir = File.join(
+        xdg_base,
+        "orn",
+        "agent-detection"
+      )
+      FileUtils.mkdir_p(detection_dir)
+      File.write(File.join(detection_dir, "claude.yaml"), yaml)
+      ENV["XDG_CONFIG_HOME"] = xdg_base
+    end
+
+    def bundled_still_detects_working?
+      det(:claude, title: "\u{2802} project").state == :working
+    end
+
+    it "uses an override manifest whose id matches the agent" do
+      write_override(override_yaml)
+
+      expect(det(:claude, screen: "custom override marker").state).to eq(:working)
+    end
+
+    it "uses an override manifest that names the agent as an alias" do
+      write_override(override_yaml.sub("id: claude", "id: my-claude\naliases: [claude]"))
+
+      expect(det(:claude, screen: "custom override marker").state).to eq(:working)
+    end
+
+    it "ignores an override whose id does not match the agent" do
+      write_override(override_yaml.sub("id: claude", "id: codex"))
+
+      aggregate_failures do
+        expect(det(:claude, screen: "custom override marker").state).to eq(:idle)
+        expect(bundled_still_detects_working?).to be(true)
+      end
+    end
+
+    it "falls back to the bundled manifest when the override is not valid YAML" do
+      write_override("id: [unclosed")
+
+      expect(bundled_still_detects_working?).to be(true)
+    end
+
+    it "falls back to the bundled manifest when the override fails validation" do
+      write_override("id: claude\nrules: []\n")
+
+      aggregate_failures do
+        expect(det(:claude, screen: "custom override marker").state).to eq(:idle)
+        expect(bundled_still_detects_working?).to be(true)
+      end
+    end
+
+    it "uses the bundled manifest when no override file exists" do
+      ENV["XDG_CONFIG_HOME"] = register_temp_dir(Dir.mktmpdir("orn-xdg"))
+
+      expect(bundled_still_detects_working?).to be(true)
+    end
+
+    it "uses the bundled manifest when no global config dir can be resolved" do
+      ENV.delete("XDG_CONFIG_HOME")
+      ENV.delete("HOME")
+
+      expect(bundled_still_detects_working?).to be(true)
     end
   end
 

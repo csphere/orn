@@ -87,4 +87,43 @@ RSpec.describe Orn::Cmd do
       end
     end
   end
+
+  describe "verbose logging" do
+    subject(:verbose_cmd) do
+      described_class.new(
+        output_mode: Orn::OutputMode.new(
+          verbose: true,
+          json: false
+        )
+      )
+    end
+
+    context "when the command succeeds" do
+      it "logs the invocation and an ok line with the exit code" do
+        expect { verbose_cmd.output("echo", "hello") }
+          .to output("[cmd] echo hello\n[ok]  exit 0\n").to_stderr
+      end
+    end
+
+    context "when the command exits nonzero" do
+      it "logs each stderr line and the exit code as error lines" do
+        script = "echo first >&2; echo second >&2; exit 3"
+
+        expect { verbose_cmd.output("sh", "-c", script) }
+          .to output(
+            "[cmd] sh -c #{script}\n" \
+              "[err] first\n" \
+              "[err] second\n" \
+              "[err] exit 3\n"
+          ).to_stderr
+      end
+    end
+
+    context "when the mode is not verbose" do
+      it "logs nothing" do
+        expect { cmd.output("sh", "-c", "echo noise >&2; exit 1") }
+          .not_to output.to_stderr
+      end
+    end
+  end
 end

@@ -311,9 +311,73 @@ RSpec.describe Orn::Symlink do
         expect(skipped).to be_empty
       end
     end
+
+    context "when the filesystem rejects the link" do
+      it "wraps the error with the destination path" do
+        root = temp_dir("root")
+        wt = temp_dir("wt")
+        base_wt = File.join(root, "develop")
+        FileUtils.mkdir_p(File.join(base_wt, "nested"))
+        File.write(File.join(base_wt, "nested/config"), "shared")
+        File.write(File.join(wt, "nested"), "a file where the link's parent directory should go")
+
+        expect do
+          described_class.create_symlinks(
+            root,
+            wt,
+            "develop",
+            symlinks(base: ["nested/config"])
+          )
+        end
+          .to raise_error(Orn::Error, %r{symlink .*nested/config: })
+      end
+    end
+
+    context "when no relative path exists between source and destination" do
+      # A relative project root against an absolute worktree gives
+      # Pathname#relative_path_from nothing to relate, standing in for the
+      # cross-filesystem case.
+      it "reports that the relative path could not be computed" do
+        workspace = temp_dir("workspace")
+        wt = temp_dir("wt")
+        base_wt = File.join(workspace, "root/develop")
+        FileUtils.mkdir_p(base_wt)
+        File.write(File.join(base_wt, ".env"), "secret")
+
+        Dir.chdir(workspace) do
+          expect do
+            described_class.create_symlinks(
+              "root",
+              wt,
+              "develop",
+              symlinks(base: [".env"])
+            )
+          end
+            .to raise_error(Orn::Error, /cannot compute relative path/)
+        end
+      end
+    end
   end
 
   describe ".gitignored?" do
+    context "when git cannot run" do
+      it "treats the path as not ignored" do
+        wt = temp_dir("wt")
+
+        with_fake_cmd do |fake|
+          fake.script_missing(["git", "-C", wt, "check-ignore", "-q", "shared_docs"])
+
+          expect(
+            described_class.gitignored?(
+              mode,
+              wt,
+              "shared_docs"
+            )
+          ).to be(false)
+        end
+      end
+    end
+
     it "reflects whether git ignores the path" do
       wt = temp_dir("wt")
       init_git_repo(wt)
@@ -417,6 +481,48 @@ RSpec.describe Orn::Symlink do
       expect(File.read(File.join(wt, ".gitignore"))).to eq("existing\nshared_docs\n")
       staged = `git -C #{wt} diff --cached --name-only`
       expect(staged).to include(".gitignore")
+    end
+
+    context "when git cannot run" do
+      it "reports that git add could not run" do
+        wt = temp_dir("wt")
+
+        with_fake_cmd do |fake|
+          fake.script_missing(["git", "-C", wt, "add", ".gitignore"])
+
+          expect do
+            described_class.add_to_gitignore_and_stage(
+              mode,
+              wt,
+              ["shared_docs"]
+            )
+          end
+            .to raise_error(Orn::Error, /Failed to run git add .gitignore/)
+        end
+      end
+    end
+
+    context "when git add fails" do
+      it "reports git's stderr" do
+        wt = temp_dir("wt")
+
+        with_fake_cmd do |fake|
+          fake.script(
+            ["git", "-C", wt, "add", ".gitignore"],
+            stderr: "fatal: not a git repository\n",
+            status: 128
+          )
+
+          expect do
+            described_class.add_to_gitignore_and_stage(
+              mode,
+              wt,
+              ["shared_docs"]
+            )
+          end
+            .to raise_error(Orn::Error, /Failed to stage .gitignore: fatal: not a git repository/)
+        end
+      end
     end
   end
 

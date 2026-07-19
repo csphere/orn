@@ -52,6 +52,29 @@ module Orn
       it "returns nil for a cell outside the area" do
         expect(buffer.cell(99, 99)).to be_nil
       end
+
+      it "builds a blank buffer over the given area with Buffer.empty" do
+        empty_buffer = described_class.empty(area)
+
+        aggregate_failures do
+          expect(empty_buffer.area).to eq(area)
+          expect(empty_buffer.to_s).to eq(" " * (area.width * area.height))
+        end
+      end
+
+      it "exposes every cell in row-major order through content" do
+        buffer.set_line(
+          0,
+          0,
+          Line.raw("ab"),
+          area.width
+        )
+
+        aggregate_failures do
+          expect(buffer.content.length).to eq(area.width * area.height)
+          expect(buffer.content.first(2).map(&:symbol)).to eq(%w[a b])
+        end
+      end
     end
   end
 end

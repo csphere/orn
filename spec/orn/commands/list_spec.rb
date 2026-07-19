@@ -74,6 +74,38 @@ RSpec.describe Orn::Commands::List do
 
         expect { Dir.chdir(project) { command.run } }.to output(%r{feature/listed.*no window}m).to_stdout
       end
+
+      it "shows window in the table for a worktree with an open tmux window" do
+        project = project_with_worktree("feature/listed")
+        command = described_class.new(output_mode: Orn::OutputMode.default)
+
+        expect do
+          Dir.chdir(project) do
+            Orn::Tmux.open_window(
+              Orn::OutputMode.quiet,
+              load_project(project),
+              "feature/listed"
+            )
+            command.run
+          end
+        end.to output(%r{feature/listed\s*│\s*window\s*│}).to_stdout
+      end
+
+      it "prints the repo basename and worktree entries as JSON in JSON mode" do
+        project = project_with_worktree("feature/listed")
+        command = described_class.new(output_mode: Orn::OutputMode.quiet)
+        expected_json = JSON.pretty_generate(
+          "repo" => File.basename(project),
+          "worktrees" => [
+            {
+              "branch" => "feature/listed",
+              "has_window" => false
+            }
+          ]
+        )
+
+        expect { Dir.chdir(project) { command.run } }.to output("#{expected_json}\n").to_stdout
+      end
     end
   end
 end

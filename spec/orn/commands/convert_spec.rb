@@ -189,6 +189,24 @@ RSpec.describe Orn::Commands::Convert do
       ).to eq("main")
     end
 
+    it "ignores a remote HEAD symref outside origin's namespace" do
+      dir = make_standard_repo
+      git!(
+        dir,
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        "refs/heads/main"
+      )
+
+      expect(
+        command.resolve_base_branch(
+          dir,
+          nil,
+          nil
+        )
+      ).to eq("main")
+    end
+
     it "rejects a mismatch, suggesting --base" do
       dir = make_repo_with_remote_head
       git!(
@@ -238,6 +256,75 @@ RSpec.describe Orn::Commands::Convert do
     end
   end
 
+  # A convertible repo whose origin remote still exists, so the re-clone
+  # inside convert succeeds. Returns the repo path.
+  def make_repo_with_live_origin
+    remote = register_temp_dir(Dir.mktmpdir("orn-live-remote"))
+    git!(
+      remote,
+      "init",
+      "--bare"
+    )
+    dir = register_temp_dir(Dir.mktmpdir("orn-live"))
+    git!(
+      dir,
+      "init",
+      "-b",
+      "main"
+    )
+    git!(
+      dir,
+      "config",
+      "user.email",
+      "t@t.com"
+    )
+    git!(
+      dir,
+      "config",
+      "user.name",
+      "T"
+    )
+    git!(
+      dir,
+      "remote",
+      "add",
+      "origin",
+      remote
+    )
+    File.write(File.join(dir, "file.txt"), "content")
+    git!(
+      dir,
+      "add",
+      "."
+    )
+    git!(
+      dir,
+      "commit",
+      "-m",
+      "init"
+    )
+    git!(
+      dir,
+      "push",
+      "-u",
+      "origin",
+      "main"
+    )
+    dir
+  end
+
+  describe "#run" do
+    it "converts the current directory" do
+      dir = make_standard_repo # origin URL dangles, so clone fails
+
+      Dir.chdir(dir) do
+        expect { command.run(nil) }.to raise_error(Orn::Error, /restored/)
+      end
+
+      expect(File.exist?(File.join(dir, "file.txt"))).to be(true)
+    end
+  end
+
   describe "#run_in" do
     it "refuses to run when the backup path already exists" do
       dir = make_standard_repo
@@ -256,6 +343,35 @@ RSpec.describe Orn::Commands::Convert do
       expect(File.exist?(File.join(dir, "file.txt"))).to be(true)
       expect(File.directory?(File.join(dir, ".git"))).to be(true)
       expect(File.exist?("#{dir}.pre-orn")).to be(false)
+    end
+
+    it "reports the backup location when restoring the backup also fails" do
+      dir = make_standard_repo # origin URL dangles, so clone fails
+      backup_path = "#{dir}.pre-orn"
+      register_temp_dir(backup_path)
+      allow(FileUtils).to receive(:mv).and_call_original
+      allow(FileUtils).to receive(:mv).with(backup_path, dir).and_raise(Errno::EACCES)
+
+      expect { command.run_in(dir, nil) }
+        .to raise_error(Orn::Error, /could not restore backup.*#{Regexp.escape(backup_path)}/)
+    end
+
+    it "converts with an explicit base, keeps the backup, and prints next steps" do
+      dir = make_repo_with_live_origin
+      register_temp_dir("#{dir}.pre-orn")
+      isolate_global_config
+      dir_name = File.basename(dir)
+      status_command = described_class.new(output_mode: Orn::OutputMode.default)
+
+      next_steps = %r{Done\. Converted to orn project at \./#{Regexp.escape(dir_name)}.*Check backup for gitignored}m
+      expect { status_command.run_in(dir, "main") }
+        .to output(next_steps)
+        .to_stderr
+
+      expect(File.read(File.join(dir, ".git"))).to eq("gitdir: ./.bare\n")
+      expect(File.directory?(File.join(dir, "main"))).to be(true)
+      expect(File.exist?(File.join(dir, "main/file.txt"))).to be(true)
+      expect(File.directory?("#{dir}.pre-orn")).to be(true)
     end
   end
 end

@@ -10,6 +10,17 @@ RSpec.describe Orn::Commands::Init do
     end
   end
 
+  describe "#run" do
+    it "targets the current directory, refusing the filesystem root" do
+      command = described_class.new(output_mode: Orn::OutputMode.quiet)
+
+      Dir.chdir("/") do
+        expect { command.run("main") }
+          .to raise_error(Orn::Error, /Failed to derive project name/)
+      end
+    end
+  end
+
   describe "#run_in" do
     subject(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
 

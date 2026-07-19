@@ -58,6 +58,32 @@ RSpec.describe Orn::Trust do
     )
   end
 
+  def with_stdin(reader)
+    original_stdin = $stdin
+    $stdin = reader
+    yield
+  ensure
+    $stdin = original_stdin
+  end
+
+  def tty_reader(input)
+    reader = StringIO.new(input)
+    reader.define_singleton_method(:tty?) { true }
+    reader
+  end
+
+  # Runs the block against a fake interactive terminal: stdin serves `input`
+  # and claims to be a tty, stderr is captured. Returns the block result and
+  # the captured prompt output.
+  def with_interactive_stdin(input, &block)
+    original_stderr = $stderr
+    $stderr = StringIO.new
+    result = with_stdin(tty_reader(input), &block)
+    [result, $stderr.string]
+  ensure
+    $stderr = original_stderr
+  end
+
   describe ".extract_commands" do
     it "returns nothing for an empty columns layout" do
       expect(described_class.extract_commands(columns_layout)).to be_empty
@@ -327,6 +353,160 @@ RSpec.describe Orn::Trust do
 
       expect(result).to eq(layout)
     end
+
+    context "when stdin is a tty and the commands are unapproved" do
+      def check_interactively(input)
+        with_interactive_stdin(input) do
+          described_class.check_trust_with(
+            output_mode,
+            "/project",
+            layout,
+            :project,
+            data_dir
+          )
+        end
+      end
+
+      it "prompts, persists the approval, and returns the layout unchanged" do
+        result, prompt_output = check_interactively("y\n")
+
+        fingerprint = described_class.commands_fingerprint(["vim"])
+        approval_file = described_class.approval_path(data_dir, "/project")
+        aggregate_failures do
+          expect(result).to eq(layout)
+          expect(prompt_output).to include("pane commands that will be executed")
+          expect(prompt_output).to include("1. vim")
+          expect(prompt_output).to include("Trust these commands? [y/N]")
+          expect(described_class.approved?(approval_file, fingerprint)).to be(true)
+        end
+      end
+
+      it "does not prompt again once approved" do
+        check_interactively("y\n")
+
+        result = with_stdin(StringIO.new("")) do
+          described_class.check_trust_with(
+            output_mode,
+            "/project",
+            layout,
+            :project,
+            data_dir
+          )
+        end
+
+        expect(result).to eq(layout)
+      end
+
+      it "strips the commands when declined" do
+        result, prompt_output = check_interactively("n\n")
+
+        aggregate_failures do
+          expect(result).to eq(columns_layout(col("")))
+          expect(prompt_output).to include("Skipping pane commands (not approved)")
+        end
+      end
+
+      it "records nothing when declined, so a later non-interactive run still fails" do
+        check_interactively("n\n")
+
+        expect do
+          with_stdin(StringIO.new("")) do
+            described_class.check_trust_with(
+              output_mode,
+              "/project",
+              layout,
+              :project,
+              data_dir
+            )
+          end
+        end
+          .to raise_error(Orn::Error, /untrusted pane commands/)
+      end
+    end
+  end
+
+  describe ".check_trust" do
+    let(:output_mode) { Orn::OutputMode.default }
+    let(:layout) { columns_layout(col("vim")) }
+    let(:tmp) { Dir.mktmpdir }
+
+    after { FileUtils.remove_entry(tmp, true) }
+
+    it "raises when neither XDG_DATA_HOME nor HOME is available" do
+      ENV.delete("XDG_DATA_HOME")
+      ENV.delete("HOME")
+
+      expect do
+        described_class.check_trust(
+          output_mode,
+          "/project",
+          layout,
+          :project
+        )
+      end
+        .to raise_error(Orn::Error, /Could not determine data directory/)
+    end
+
+    it "reads approvals from $XDG_DATA_HOME/orn/approved" do
+      ENV["XDG_DATA_HOME"] = tmp
+      approved_dir = File.join(
+        tmp,
+        "orn",
+        "approved"
+      )
+      fingerprint = described_class.commands_fingerprint(["vim"])
+      described_class.save_approval(described_class.approval_path(approved_dir, "/project"), fingerprint)
+
+      result = with_stdin(StringIO.new("")) do
+        described_class.check_trust(
+          output_mode,
+          "/project",
+          layout,
+          :project
+        )
+      end
+
+      expect(result).to eq(layout)
+    end
+  end
+
+  describe ".check_trust_non_interactive" do
+    let(:output_mode) { Orn::OutputMode.default }
+    let(:tmp) { Dir.mktmpdir }
+
+    after { FileUtils.remove_entry(tmp, true) }
+
+    it "raises when neither XDG_DATA_HOME nor HOME is available" do
+      ENV.delete("XDG_DATA_HOME")
+      ENV.delete("HOME")
+
+      expect do
+        described_class.check_trust_non_interactive(
+          output_mode,
+          "/project",
+          columns_layout(col("vim")),
+          :project
+        )
+      end
+        .to raise_error(Orn::Error, /Could not determine data directory/)
+    end
+
+    it "raises for unapproved project commands even when stdin is a tty" do
+      ENV["XDG_DATA_HOME"] = tmp
+      layout = columns_layout(col("vim"))
+
+      with_interactive_stdin("y\n") do
+        expect do
+          described_class.check_trust_non_interactive(
+            output_mode,
+            "/project",
+            layout,
+            :project
+          )
+        end
+          .to raise_error(Orn::Error, /untrusted pane commands/)
+      end
+    end
   end
 
   describe ".check_trust_inner (non-interactive)" do
@@ -388,6 +568,10 @@ RSpec.describe Orn::Trust do
       expect(described_class.sbx_commands?(make_sbx(build_args: ["MY_SECRET"]))).to be(true)
     end
 
+    it "is true with env vars" do
+      expect(described_class.sbx_commands?(make_sbx(env: { "KEY" => "value" }))).to be(true)
+    end
+
     it "is false when build has no build args" do
       sbx = make_sbx(
         build: Orn::Config::SbxBuild.new(
@@ -438,6 +622,12 @@ RSpec.describe Orn::Trust do
       end
     end
 
+    it "labels each env var" do
+      items = described_class.format_sbx_items(make_sbx(env: { "API_KEY" => "secret" }))
+
+      expect(items).to contain_exactly(a_string_including("[env]", "API_KEY = secret"))
+    end
+
     it "is empty when nothing needs approval" do
       expect(described_class.format_sbx_items(make_sbx)).to be_empty
     end
@@ -486,6 +676,17 @@ RSpec.describe Orn::Trust do
         .not_to eq(described_class.sbx_fingerprint(make_sbx(setup: ["ab"])))
     end
 
+    it "is sensitive to env keys and values, and stable for the same env" do
+      first = described_class.sbx_fingerprint(make_sbx(env: { "KEY" => "value" }))
+      second = described_class.sbx_fingerprint(make_sbx(env: { "KEY" => "value" }))
+
+      aggregate_failures do
+        expect(first).not_to eq(described_class.sbx_fingerprint(make_sbx(env: { "OTHER" => "value" })))
+        expect(first).not_to eq(described_class.sbx_fingerprint(make_sbx(env: { "KEY" => "other" })))
+        expect(first).to eq(second)
+      end
+    end
+
     it "is 64 hex characters" do
       fingerprint = described_class.sbx_fingerprint(
         make_sbx(
@@ -496,6 +697,76 @@ RSpec.describe Orn::Trust do
       )
 
       expect(fingerprint).to match(/\A\h{64}\z/)
+    end
+  end
+
+  describe ".check_sbx_trust" do
+    let(:tmp) { Dir.mktmpdir }
+    let(:sbx) { make_sbx(setup: ["setup.sh"]) }
+    let(:sbx_approval_file) do
+      approved_dir = File.join(
+        tmp,
+        "orn",
+        "approved"
+      )
+      File.join(approved_dir, "sbx-#{described_class.project_id("/project")}")
+    end
+
+    before { ENV["XDG_DATA_HOME"] = tmp }
+
+    after { FileUtils.remove_entry(tmp, true) }
+
+    it "raises when neither XDG_DATA_HOME nor HOME is available" do
+      ENV.delete("XDG_DATA_HOME")
+      ENV.delete("HOME")
+
+      expect { described_class.check_sbx_trust("/project", sbx) }
+        .to raise_error(Orn::Error, /Could not determine data directory/)
+    end
+
+    it "passes without prompting when the sbx config has nothing to approve" do
+      result = with_stdin(StringIO.new("")) do
+        described_class.check_sbx_trust("/project", make_sbx)
+      end
+
+      expect(result).to be_nil
+    end
+
+    it "prompts and saves the approval under an sbx- prefixed file" do
+      _result, prompt_output = with_interactive_stdin("y\n") do
+        described_class.check_sbx_trust("/project", sbx)
+      end
+
+      aggregate_failures do
+        expect(prompt_output).to include("The sbx config will run these commands:")
+        expect(prompt_output).to include("setup.sh")
+        expect(prompt_output).to include("Approve? [y/N]")
+        expect(described_class.approved?(sbx_approval_file, described_class.sbx_fingerprint(sbx))).to be(true)
+      end
+    end
+
+    it "raises when the user declines" do
+      with_interactive_stdin("n\n") do
+        expect { described_class.check_sbx_trust("/project", sbx) }
+          .to raise_error(Orn::Error, "Sandbox commands not approved")
+      end
+    end
+
+    it "raises non-interactively and lists the commands in the message" do
+      with_stdin(StringIO.new("")) do
+        expect { described_class.check_sbx_trust("/project", sbx) }
+          .to raise_error(Orn::Error, /untrusted sandbox commands.*setup\.sh/m)
+      end
+    end
+
+    it "does not prompt when the commands are already approved" do
+      described_class.save_approval(sbx_approval_file, described_class.sbx_fingerprint(sbx))
+
+      result = with_stdin(StringIO.new("")) do
+        described_class.check_sbx_trust("/project", sbx)
+      end
+
+      expect(result).to be_nil
     end
   end
 end

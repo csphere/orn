@@ -214,6 +214,14 @@ RSpec.describe Orn::Sandbox::SbxCli do
         expect(described_class.list(mode)).to be_empty
       end
     end
+
+    it "raises a labelled error when the sbx binary is missing" do
+      with_fake_cmd do |fake|
+        fake.script_missing(%w[sbx ls --json])
+
+        expect { described_class.list(mode) }.to raise_error(Orn::Error, "Failed to run sbx ls")
+      end
+    end
   end
 
   describe ".parse_list_output" do
@@ -270,6 +278,10 @@ RSpec.describe Orn::Sandbox::SbxCli do
     it "raises on invalid JSON" do
       expect { described_class.parse_list_output("not json") }.to raise_error(Orn::Error, /parse sbx ls/)
     end
+
+    it "returns nothing for JSON that is neither an array nor an object" do
+      expect(described_class.parse_list_output('"running"')).to be_empty
+    end
   end
 
   describe ".exists?" do
@@ -288,6 +300,14 @@ RSpec.describe Orn::Sandbox::SbxCli do
           stderr: "no such sandbox",
           status: 1
         )
+
+        expect(described_class.exists?(mode, "my-sbx")).to be(false)
+      end
+    end
+
+    it "reports the sandbox absent when the sbx binary is missing" do
+      with_fake_cmd do |fake|
+        fake.script_missing(%w[sbx inspect my-sbx])
 
         expect(described_class.exists?(mode, "my-sbx")).to be(false)
       end
@@ -317,6 +337,26 @@ RSpec.describe Orn::Sandbox::SbxCli do
         )
 
         expect(described_class.try_remove(mode, "my-sbx")).to be(false)
+      end
+    end
+
+    it "returns false when the sbx binary is missing" do
+      with_fake_cmd do |fake|
+        fake.script_missing(%w[sbx rm --force my-sbx])
+
+        expect(described_class.try_remove(mode, "my-sbx")).to be(false)
+      end
+    end
+  end
+
+  describe ".remove" do
+    it "force-removes the sandbox" do
+      with_fake_cmd do |fake|
+        fake.script(%w[sbx rm --force my-sbx])
+
+        described_class.remove(mode, "my-sbx")
+
+        expect(fake.invocations).to eq([%w[sbx rm --force my-sbx]])
       end
     end
   end
@@ -371,6 +411,15 @@ RSpec.describe Orn::Sandbox::SbxCli do
         )
 
         expect(described_class.template_exists?(mode, "orn-system-rails:latest")).to be(false)
+      end
+    end
+
+    it "raises a labelled error when the sbx binary is missing" do
+      with_fake_cmd do |fake|
+        fake.script_missing(%w[sbx template ls])
+
+        expect { described_class.template_exists?(mode, "orn-system-rails") }
+          .to raise_error(Orn::Error, "Failed to run sbx template ls")
       end
     end
   end

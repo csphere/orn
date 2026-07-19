@@ -66,6 +66,61 @@ RSpec.describe Orn::Commands::Config::Migrate do
 
       expect { Dir.chdir(project) { command.run } }.to output(/"files"/).to_stdout
     end
+
+    it "reports an up-to-date config with its version and path" do
+      project = project_with_config(%(orn_version: "#{Orn::VERSION}"\n))
+      config_path = File.join(
+        File.realpath(project),
+        ".orn",
+        "config.yaml"
+      )
+
+      expect { Dir.chdir(project) { command(output_mode: Orn::OutputMode.default).run } }
+        .to output("project config is up to date (#{Orn::VERSION}): #{config_path}\n").to_stderr
+    end
+
+    it "prints each migration change as a bullet under the migrating header" do
+      project = project_with_config("base: main\nsession: work\n")
+
+      expect { Dir.chdir(project) { command(output_mode: Orn::OutputMode.default).run } }
+        .to output(
+          include(
+            "Migrating project config ((no version) -> #{Orn::VERSION}):",
+            "  - move `base` to [git]",
+            "  - move `session` to [tmux]",
+            %(  - set orn_version = "#{Orn::VERSION}")
+          )
+        ).to_stderr
+    end
+
+    it "notes that a dry run writes nothing" do
+      project = project_with_config("git:\n  base: main\n")
+
+      migrate = command(
+        dry_run: true,
+        output_mode: Orn::OutputMode.default
+      )
+
+      expect { Dir.chdir(project) { migrate.run } }
+        .to output(include("(dry run: no changes written)")).to_stderr
+    end
+
+    it "prints the backup and updated paths after writing" do
+      project = project_with_config("git:\n  base: main\n")
+      config_path = File.join(
+        File.realpath(project),
+        ".orn",
+        "config.yaml"
+      )
+
+      expect { Dir.chdir(project) { command(output_mode: Orn::OutputMode.default).run } }
+        .to output(
+          include(
+            "  backup:  #{config_path}.bak.1",
+            "  updated: #{config_path}"
+          )
+        ).to_stderr
+    end
   end
 
   describe "#targets" do
@@ -89,6 +144,13 @@ RSpec.describe Orn::Commands::Config::Migrate do
 
       expect(command(project_only: false).targets("/proj"))
         .to eq([["project", "/proj/.orn/config.yaml"], ["global", "/xdg/orn/default.yaml"]])
+    end
+
+    it "skips the global config when no global config dir exists" do
+      ENV.delete("XDG_CONFIG_HOME")
+      ENV.delete("HOME")
+
+      expect(command(project_only: false).targets("/proj")).to eq([["project", "/proj/.orn/config.yaml"]])
     end
   end
 end

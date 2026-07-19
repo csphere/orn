@@ -47,6 +47,116 @@ RSpec.describe Orn::Commands::Remove do
     )
   end
 
+  def sandbox_project
+    make_project(make_bare_project, "tmux:\n  session: proj\n")
+  end
+
+  def list_windows_argv
+    ["tmux", "list-windows", "-t", "proj:", "-F", "\#{window_name}"]
+  end
+
+  describe "Result#print_summary" do
+    it "prints the sandbox and window lines above the worktree summary" do
+      summary = result(
+        branch: "feature/x",
+        sandbox_removed: true,
+        window_closed: true
+      )
+
+      expect { summary.print_summary }.to output(<<~OUTPUT).to_stdout
+        Removed sandbox for feature/x
+        Closed tmux window: feature/x
+        Removed worktree: feature/x
+      OUTPUT
+    end
+  end
+
+  describe "#run_inner" do
+    it "removes the sandbox with its ports file and closes the window" do
+      project = sandbox_project
+      Orn::Sandbox::Ports.persist_ports(
+        File.join(project.root, ".orn"),
+        "proj-feat",
+        [
+          Orn::Sandbox::PortMapping.new(
+            host: 3042,
+            container: 3000
+          )
+        ]
+      )
+      ports_path = File.join(
+        project.root,
+        ".orn",
+        "sandbox",
+        "proj-feat.ports"
+      )
+      command = described_class.new(output_mode: Orn::OutputMode.quiet)
+
+      with_fake_cmd do |fake|
+        fake.script(%w[sbx rm --force proj-feat])
+        fake.script(list_windows_argv, stdout: "feat\n")
+        fake.script(%w[tmux kill-window -t proj:feat])
+
+        removal = command.run_inner(
+          project,
+          "feat",
+          false
+        )
+
+        aggregate_failures do
+          expect(removal.sandbox_removed).to be(true)
+          expect(removal.window_closed).to be(true)
+          expect(File).not_to exist(ports_path)
+        end
+      end
+    end
+  end
+
+  describe "#run" do
+    # Scripts every command a pruning removal issues for `branch` as a
+    # failure, so no sandbox, window, or git branch is found.
+    def script_nothing_to_remove(fake, project, branch)
+      sandbox = "proj-#{branch.tr("/", "-")}"
+      fake.script(
+        ["sbx", "rm", "--force", sandbox],
+        status: 1
+      )
+      fake.script(
+        ["git", "-C", project.root, "branch", "-D", branch],
+        status: 1
+      )
+      fake.script(
+        ["git", "-C", project.root, "push", "origin", "--delete", branch],
+        status: 1
+      )
+    end
+
+    it "prompts for each branch before pruning interactively" do
+      project = sandbox_project
+      isolate_global_config
+      command = described_class.new(output_mode: Orn::OutputMode.default)
+      allow(Orn::Confirm).to receive(:prune_interactive)
+
+      with_fake_cmd do |fake|
+        %w[feature/a feature/b].each { |branch| script_nothing_to_remove(fake, project, branch) }
+        fake.script(list_windows_argv)
+
+        expect do
+          Dir.chdir(project.root) do
+            command.run(
+              %w[feature/a feature/b],
+              prune: true,
+              force: false
+            )
+          end
+        end.to output("No worktree found for feature/a\nNo worktree found for feature/b\n").to_stdout
+      end
+
+      expect(Orn::Confirm).to have_received(:prune_interactive).with(project.root, "feature/a")
+      expect(Orn::Confirm).to have_received(:prune_interactive).with(project.root, "feature/b")
+    end
+  end
+
   describe "result JSON shape" do
     it "flattens the worktree fields alongside the sandbox and window flags" do
       json = result(

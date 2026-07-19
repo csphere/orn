@@ -33,6 +33,16 @@ RSpec.describe Orn::Git::Worktree do
         expect(worktree.local_branch_exists?("feature/local-check")).to be(true)
       end
     end
+
+    context "when git itself fails to run" do
+      it "returns false instead of raising" do
+        with_fake_cmd do |fake|
+          fake.script_missing(["git", "-C", "/project", "rev-parse", "--verify", "refs/heads/feature/x"])
+
+          expect(worktree_for("/project").local_branch_exists?("feature/x")).to be(false)
+        end
+      end
+    end
   end
 
   describe "#remote_branch_exists?" do
@@ -59,6 +69,16 @@ RSpec.describe Orn::Git::Worktree do
     context "when there is no remote" do
       it "returns false" do
         expect(worktree_for(make_bare_project).remote_branch_exists?("origin", "feature/anything")).to be(false)
+      end
+    end
+
+    context "when git itself fails to run" do
+      it "returns false instead of raising" do
+        with_fake_cmd do |fake|
+          fake.script_missing(["git", "-C", "/project", "ls-remote", "--heads", "origin", "feature/x"])
+
+          expect(worktree_for("/project").remote_branch_exists?("origin", "feature/x")).to be(false)
+        end
       end
     end
   end
@@ -98,6 +118,37 @@ RSpec.describe Orn::Git::Worktree do
           )
         end
           .to raise_error(Orn::Error, /Attempt 1:.+Attempt 2:.+Attempt 3:/m)
+      end
+    end
+
+    context "when every attempt fails with empty stderr" do
+      let(:root) { "/project" }
+
+      let(:branch) { "feature/x" }
+
+      let(:path) { "/project/feature/x" }
+
+      def attempt_argvs
+        [
+          ["git", "-C", root, "worktree", "add", "-b", branch, path, "origin/main"],
+          ["git", "-C", root, "worktree", "add", "-b", branch, path, "main"],
+          ["git", "-C", root, "worktree", "add", path, branch]
+        ]
+      end
+
+      it "raises the base failure message without attempt lines" do
+        with_fake_cmd do |fake|
+          attempt_argvs.each { |argv| fake.script(argv, status: 1) }
+
+          expect do
+            worktree_for(root).add(
+              path,
+              branch,
+              "origin/main"
+            )
+          end
+            .to raise_error(Orn::Error, "Failed to create worktree for 'feature/x'")
+        end
       end
     end
   end

@@ -3,6 +3,19 @@
 require "tmpdir"
 
 RSpec.describe Orn::Tmux do
+  let(:output_mode) { Orn::OutputMode.quiet }
+
+  # warn_if_old_tmux remembers that it already ran (@version_checked), and other
+  # examples in the process may have tripped it. Each example sets the state it
+  # needs and puts back whatever was there before.
+  def with_version_check_state(checked)
+    previous_state = described_class.instance_variable_get(:@version_checked)
+    described_class.instance_variable_set(:@version_checked, checked)
+    yield
+  ensure
+    described_class.instance_variable_set(:@version_checked, previous_state)
+  end
+
   describe ".window_target" do
     it "joins session and window with a colon" do
       expect(described_class.window_target("work", "feature")).to eq("work:feature")
@@ -125,10 +138,212 @@ RSpec.describe Orn::Tmux do
     end
   end
 
+  describe ".pane_command" do
+    def pane_command_argv(session, window)
+      ["tmux", "list-panes", "-t", "#{session}:#{window}", "-F", "\#{pane_current_command}"]
+    end
+
+    it "returns the command of the window's first pane" do
+      with_fake_cmd do |fake|
+        fake.script(pane_command_argv("work", "feat"), stdout: "vim\nzsh\n")
+
+        expect(described_class.pane_command(output_mode, "work", "feat")).to eq("vim")
+      end
+    end
+
+    it "returns nil when the window does not exist" do
+      with_fake_cmd do |fake|
+        fake.script(pane_command_argv("work", "gone"), status: 1)
+
+        expect(described_class.pane_command(output_mode, "work", "gone")).to be_nil
+      end
+    end
+
+    it "returns nil when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(pane_command_argv("work", "feat"))
+
+        expect(described_class.pane_command(output_mode, "work", "feat")).to be_nil
+      end
+    end
+
+    it "returns nil when tmux reports no panes" do
+      with_fake_cmd do |fake|
+        fake.script(pane_command_argv("work", "feat"), stdout: "")
+
+        expect(described_class.pane_command(output_mode, "work", "feat")).to be_nil
+      end
+    end
+  end
+
+  describe ".list_windows" do
+    def list_windows_argv(session)
+      ["tmux", "list-windows", "-t", "#{session}:", "-F", "\#{window_name}"]
+    end
+
+    it "returns no windows when the session does not exist" do
+      with_fake_cmd do |fake|
+        fake.script(list_windows_argv("absent"), status: 1)
+
+        expect(described_class.list_windows(output_mode, "absent")).to eq([])
+      end
+    end
+
+    it "returns no windows when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(list_windows_argv("work"))
+
+        expect(described_class.list_windows(output_mode, "work")).to eq([])
+      end
+    end
+  end
+
+  describe ".warn_if_old_tmux" do
+    def version_check_argv
+      ["tmux", "-V"]
+    end
+
+    it "warns when tmux is older than 2.9" do
+      with_fake_cmd do |fake|
+        fake.script(version_check_argv, stdout: "tmux 2.8\n")
+
+        with_version_check_state(nil) do
+          expect { described_class.warn_if_old_tmux }.to output(/tmux 2\.9\+ required \(found 2\.8\)/).to_stderr
+        end
+      end
+    end
+
+    ["tmux 2.9", "tmux 3.4"].each do |version_line|
+      it "does not warn for #{version_line}" do
+        with_fake_cmd do |fake|
+          fake.script(version_check_argv, stdout: "#{version_line}\n")
+
+          with_version_check_state(nil) do
+            expect { described_class.warn_if_old_tmux }.not_to output.to_stderr
+          end
+        end
+      end
+    end
+
+    it "stays quiet when the version is not a number" do
+      with_fake_cmd do |fake|
+        fake.script(version_check_argv, stdout: "tmux next-3.5\n")
+
+        with_version_check_state(nil) do
+          expect { described_class.warn_if_old_tmux }.not_to output.to_stderr
+        end
+      end
+    end
+
+    it "stays quiet when the output is not a tmux version line" do
+      with_fake_cmd do |fake|
+        fake.script(version_check_argv, stdout: "openbsd 7.4\n")
+
+        with_version_check_state(nil) do
+          expect { described_class.warn_if_old_tmux }.not_to output.to_stderr
+        end
+      end
+    end
+
+    it "stays quiet when the version query fails" do
+      with_fake_cmd do |fake|
+        fake.script(version_check_argv, status: 1)
+
+        with_version_check_state(nil) do
+          expect { described_class.warn_if_old_tmux }.not_to output.to_stderr
+        end
+      end
+    end
+
+    it "stays quiet when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(version_check_argv)
+
+        with_version_check_state(nil) do
+          expect { described_class.warn_if_old_tmux }.not_to output.to_stderr
+        end
+      end
+    end
+
+    it "checks the version only once per process" do
+      with_fake_cmd do |fake|
+        fake.script(version_check_argv, stdout: "tmux 3.4\n")
+
+        with_version_check_state(nil) do
+          described_class.warn_if_old_tmux
+          described_class.warn_if_old_tmux
+        end
+
+        expect(fake.invocations).to eq([version_check_argv])
+      end
+    end
+  end
+
+  describe ".create_window" do
+    def has_session_argv(session)
+      ["tmux", "has-session", "-t", session]
+    end
+
+    def new_window_argv(session, window, path)
+      ["tmux", "new-window", "-a", "-P", "-F", "\#{pane_id}", "-t", "#{session}:", "-n", window, "-c", path]
+    end
+
+    # One row holding a single pane whose command carries a template variable.
+    let(:templated_layout) do
+      Orn::Config::Layout.of_rows(
+        [
+          Orn::Config::Row.new(
+            panes: ["echo {{branch}}"],
+            columns: []
+          )
+        ]
+      )
+    end
+
+    it "substitutes template variables into pane commands after waiting for the shell" do
+      ready_command = described_class.shell_ready_command("orn-ready-7")
+
+      with_fake_cmd do |fake|
+        fake.script(has_session_argv("work"))
+        fake.script(new_window_argv("work", "feat", "/tmp/repo"), stdout: "%7\n")
+        fake.script(["tmux", "run-shell", "-b", "-d", "10", "tmux wait-for -S orn-ready-7"])
+        fake.script(["tmux", "send-keys", "-t", "%7", ready_command, "Enter"])
+        fake.script(%w[tmux wait-for orn-ready-7])
+        fake.script(["tmux", "send-keys", "-t", "%7", "echo feat", "Enter"])
+        fake.script(["tmux", "select-pane", "-t", "%7"])
+        fake.script(["tmux", "select-window", "-t", "work:feat"])
+
+        with_version_check_state(true) do
+          described_class.create_window(
+            output_mode,
+            "work",
+            "feat",
+            "/tmp/repo",
+            templated_layout,
+            template_vars: { "branch" => "feat" }
+          )
+        end
+
+        expect(fake.invocations).to eq(
+          [
+            has_session_argv("work"),
+            has_session_argv("work"),
+            new_window_argv("work", "feat", "/tmp/repo"),
+            ["tmux", "run-shell", "-b", "-d", "10", "tmux wait-for -S orn-ready-7"],
+            ["tmux", "send-keys", "-t", "%7", ready_command, "Enter"],
+            %w[tmux wait-for orn-ready-7],
+            ["tmux", "send-keys", "-t", "%7", "echo feat", "Enter"],
+            ["tmux", "select-pane", "-t", "%7"],
+            ["tmux", "select-window", "-t", "work:feat"]
+          ]
+        )
+      end
+    end
+  end
+
   context "with a real tmux server", if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
-    let(:output_mode) { Orn::OutputMode.quiet }
     let(:session) { "orn-tmux-spec" }
     # A column of two empty-command panes (a real split, no live-shell wait) and
     # an empty single-pane layout.

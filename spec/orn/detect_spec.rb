@@ -413,13 +413,185 @@ RSpec.describe Orn::Detect do
     end
 
     describe ".foreground_job" do
+      # Fake the /proc filesystem: `stats` maps pid to stat-line content,
+      # `cmdlines` maps pid to raw cmdline bytes (or an exception to raise).
+      def stub_proc(stats:, cmdlines: {})
+        allow(Dir).to receive(:children).and_call_original
+        allow(Dir).to receive(:children).with("/proc").and_return(stats.keys.map(&:to_s) + ["self"])
+        allow(File).to receive(:read).and_call_original
+        stats.each do |pid, stat_line|
+          allow(File).to receive(:read).with("/proc/#{pid}/stat").and_return(stat_line)
+        end
+        cmdlines.each do |pid, raw_cmdline|
+          stub = allow(File).to receive(:binread).with("/proc/#{pid}/cmdline")
+          raw_cmdline.is_a?(Class) ? stub.and_raise(raw_cmdline) : stub.and_return(raw_cmdline)
+        end
+      end
+
       it "runs against the current process without raising" do
         expect { described_class.foreground_job(Process.pid) }.not_to raise_error
+      end
+
+      it "builds the job from /proc, with nil argv for empty or unreadable cmdlines" do
+        stub_proc(
+          stats: {
+            1234 => "1234 (bash) S 1233 5678 1234 34816 5678 4194304",
+            4321 => "4321 (vim) S 1233 5678 4321 34816 5678 4194304",
+            5678 => "5678 (claude) S 1233 5678 5678 34816 5678 4194304",
+            999 => "999 (other) S 1 999 999 34816 5678 4194304"
+          },
+          cmdlines: {
+            1234 => "",
+            4321 => "vim\0notes.txt\0",
+            5678 => Errno::EACCES
+          }
+        )
+
+        expect(described_class.foreground_job(1234)).to eq(
+          job(
+            5678,
+            [
+              process(1234, "bash"),
+              process(
+                4321,
+                "vim",
+                ["vim", "notes.txt"]
+              ),
+              process(5678, "claude")
+            ]
+          )
+        )
+      end
+
+      it "returns nil when /proc cannot be listed" do
+        allow(File).to receive(:read).and_call_original
+        allow(File).to receive(:read)
+          .with("/proc/1234/stat")
+          .and_return("1234 (bash) S 1233 5678 1234 34816 5678 4194304")
+        allow(Dir).to receive(:children).and_call_original
+        allow(Dir).to receive(:children).with("/proc").and_raise(Errno::EACCES)
+
+        expect(described_class.foreground_job(1234)).to be_nil
       end
     end
   end
 
   describe Orn::Detect::Platform::Macos do
+    def script_tpgid_query(fake, stdout: "", status: 0)
+      fake.script(
+        %w[ps -o tpgid= -p 1234],
+        stdout: stdout,
+        status: status
+      )
+    end
+
+    describe ".foreground_process_group_id" do
+      it "returns nil for pid 0 without running ps" do
+        with_fake_cmd do |fake|
+          expect(described_class.foreground_process_group_id(0)).to be_nil
+          expect(fake.invocations).to be_empty
+        end
+      end
+
+      it "reads the tpgid from ps output" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, stdout: "  5678\n")
+
+          expect(described_class.foreground_process_group_id(1234)).to eq(5678)
+        end
+      end
+
+      it "returns nil when ps exits nonzero" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, status: 1)
+
+          expect(described_class.foreground_process_group_id(1234)).to be_nil
+        end
+      end
+
+      it "returns nil when ps is not installed" do
+        with_fake_cmd do |fake|
+          fake.script_missing(%w[ps -o tpgid= -p 1234])
+
+          expect(described_class.foreground_process_group_id(1234)).to be_nil
+        end
+      end
+
+      it "returns nil when ps output is not an integer" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, stdout: "not a number\n")
+
+          expect(described_class.foreground_process_group_id(1234)).to be_nil
+        end
+      end
+
+      it "returns nil for a nonpositive tpgid (no controlling terminal)" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, stdout: "0\n")
+
+          expect(described_class.foreground_process_group_id(1234)).to be_nil
+        end
+      end
+    end
+
+    describe ".foreground_job" do
+      it "builds the job from the process group listing" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, stdout: "222\n")
+          fake.script(
+            %w[ps -o pid=,comm=,args= -g 222],
+            stdout: "  222 claude /usr/bin/claude --model opus\n  223 bash\n"
+          )
+
+          expect(described_class.foreground_job(1234)).to eq(
+            job(
+              222,
+              [
+                process(
+                  222,
+                  "claude",
+                  ["/usr/bin/claude", "--model", "opus"]
+                ),
+                process(223, "bash")
+              ]
+            )
+          )
+        end
+      end
+
+      it "returns nil when the tpgid lookup fails" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, status: 1)
+
+          expect(described_class.foreground_job(1234)).to be_nil
+        end
+      end
+
+      it "returns nil when the group listing fails" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, stdout: "222\n")
+          fake.script(
+            %w[ps -o pid=,comm=,args= -g 222],
+            status: 1
+          )
+
+          expect(described_class.foreground_job(1234)).to be_nil
+        end
+      end
+
+      it "returns nil when the group listing has no parseable processes" do
+        with_fake_cmd do |fake|
+          script_tpgid_query(fake, stdout: "222\n")
+          fake.script(
+            %w[ps -o pid=,comm=,args= -g 222],
+            stdout: "   \n"
+          )
+
+          expect(described_class.foreground_job(1234)).to be_nil
+        end
+      end
+    end
+
     describe ".parse_ps_line" do
       it "splits pid, command, and space-joined argv" do
         process = described_class.parse_ps_line("  1234 claude /usr/bin/claude --model opus")
@@ -442,13 +614,54 @@ RSpec.describe Orn::Detect do
       it "returns nil for an unparseable line" do
         expect(described_class.parse_ps_line("   ")).to be_nil
       end
+
+      it "returns nil when the pid field is not a number" do
+        expect(described_class.parse_ps_line("  PID COMMAND")).to be_nil
+      end
     end
   end
 
   describe Orn::Detect::Platform do
+    def stub_host_os(value)
+      allow(RbConfig::CONFIG).to receive(:[]).and_call_original
+      allow(RbConfig::CONFIG).to receive(:[]).with("host_os").and_return(value)
+    end
+
+    describe ".host_os" do
+      it "returns :other for an unsupported platform" do
+        stub_host_os("freebsd")
+
+        expect(described_class.host_os).to eq(:other)
+      end
+    end
+
     describe ".foreground_job" do
       it "dispatches to a platform without raising on this host" do
         expect { described_class.foreground_job(Process.pid) }.not_to raise_error
+      end
+
+      it "dispatches to the macOS implementation on darwin" do
+        stub_host_os("darwin23")
+        with_fake_cmd do |fake|
+          fake.script(
+            %w[ps -o tpgid= -p 1234],
+            stdout: "222\n"
+          )
+          fake.script(
+            %w[ps -o pid=,comm=,args= -g 222],
+            stdout: "  222 claude\n"
+          )
+
+          expect(described_class.foreground_job(1234)).to eq(
+            job(222, [process(222, "claude")])
+          )
+        end
+      end
+
+      it "returns nil on an unsupported platform" do
+        stub_host_os("freebsd")
+
+        expect(described_class.foreground_job(1234)).to be_nil
       end
     end
   end

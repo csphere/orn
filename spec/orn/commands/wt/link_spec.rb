@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 RSpec.describe Orn::Commands::Wt::Link do
   subject(:command) { described_class.new(output_mode: Orn::OutputMode.default) }
 
@@ -39,6 +41,20 @@ RSpec.describe Orn::Commands::Wt::Link do
       FileUtils.mkdir_p(target)
 
       expect { Dir.chdir(target) { command.run } }.to output(/created: \.env/).to_stdout
+    end
+
+    it "prints the result as JSON in JSON mode" do
+      project = project_with_base_env
+      target = File.join(project.root, "feature-z")
+      FileUtils.mkdir_p(target)
+      json_command = described_class.new(output_mode: Orn::OutputMode.quiet)
+      expected_json = JSON.pretty_generate(
+        worktree_path: target,
+        created: [".env"],
+        skipped: []
+      )
+
+      expect { Dir.chdir(target) { json_command.run } }.to output("#{expected_json}\n").to_stdout
     end
   end
 end

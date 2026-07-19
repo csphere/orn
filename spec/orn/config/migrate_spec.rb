@@ -107,6 +107,15 @@ RSpec.describe Orn::Config::Migrate do
         expect(File).to exist(path)
       end
     end
+
+    it "wraps a copy failure in an Orn::Error" do
+      # Read-only dir: the backup copy cannot be created there.
+      FileUtils.chmod(0o555, dir)
+
+      expect { described_class.backup(path) }.to raise_error(Orn::Error, /failed to back up/)
+    ensure
+      FileUtils.chmod(0o755, dir)
+    end
   end
 
   describe ".binary_version" do
@@ -206,6 +215,17 @@ RSpec.describe Orn::Config::Migrate do
       aggregate_failures do
         expect(table).not_to have_key("base")
         expect(table.dig("git", "base")).to eq("main")
+      end
+    end
+
+    it "never overwrites an existing key with a renamed one" do
+      table = YAML.safe_load("symlinks:\n  worktree:\n    - .env\n  base:\n    - .cache\n")
+
+      described_class.apply(table, nil)
+
+      aggregate_failures do
+        expect(table["symlinks"]).not_to have_key("worktree")
+        expect(table.dig("symlinks", "base")).to eq([".cache"])
       end
     end
 
@@ -328,6 +348,32 @@ RSpec.describe Orn::Config::Migrate do
 
       expect(File.read(path)).to include("# Base branch for new worktrees.")
     end
+
+    it "raises when the file is missing" do
+      expect { described_class.migrate_file(File.join(dir, "missing.yaml"), dry_run: false) }
+        .to raise_error(Orn::Error, /failed to read/)
+    end
+
+    it "raises when the file is not valid YAML" do
+      File.write(path, "git: [unclosed\n")
+
+      expect { described_class.migrate_file(path, dry_run: false) }
+        .to raise_error(Orn::Error, /failed to parse/)
+    end
+  end
+
+  describe ".enforce_project_versions" do
+    it "skips the global config check when no global config dir resolves" do
+      # Empty project dir: the missing project config passes on its own, so
+      # only the global-dir branch is in play.
+      project = Dir.mktmpdir
+      ENV.delete("XDG_CONFIG_HOME")
+      ENV.delete("HOME")
+
+      expect { described_class.enforce_project_versions(project) }.not_to raise_error
+    ensure
+      FileUtils.remove_entry(project, true) if project
+    end
   end
 
   describe ".enforce_file_version" do
@@ -348,6 +394,12 @@ RSpec.describe Orn::Config::Migrate do
 
     it "passes for a clean unversioned config" do
       File.write(path, "git:\n  base: main\n")
+
+      expect { described_class.enforce_file_version(path, binary) }.not_to raise_error
+    end
+
+    it "passes for a file that is not a YAML mapping" do
+      File.write(path, "just a plain string\n")
 
       expect { described_class.enforce_file_version(path, binary) }.not_to raise_error
     end

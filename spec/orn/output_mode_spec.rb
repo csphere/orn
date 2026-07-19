@@ -19,6 +19,34 @@ RSpec.describe Orn::OutputMode do
     end
   end
 
+  describe ".from_options" do
+    it "enables verbose when the options hash asks for it" do
+      mode = described_class.from_options({ verbose: true })
+
+      expect(mode.verbose).to be(true)
+      expect(mode.json).to be(false)
+    end
+
+    it "enables json when the options hash asks for it" do
+      mode = described_class.from_options({ json: true })
+
+      expect(mode.json).to be(true)
+      expect(mode.verbose).to be(false)
+    end
+
+    it "enables both flags together" do
+      mode = described_class.from_options(
+        {
+          verbose: true,
+          json: true
+        }
+      )
+
+      expect(mode.verbose).to be(true)
+      expect(mode.json).to be(true)
+    end
+  end
+
   describe "#status" do
     context "when json is enabled" do
       it "writes nothing to stderr" do
