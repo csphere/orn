@@ -154,7 +154,7 @@ module Orn
     desc "wt SUBCOMMAND", "Manage git worktrees"
     subcommand "wt", Orn::Commands::Wt::CLI
 
-    desc "sbx SUBCOMMAND", "Manage sandboxes (dev containers) for worktrees"
+    desc "sbx SUBCOMMAND", "Manage sandboxes (sbx microVMs) for worktrees"
     subcommand "sbx", Orn::Commands::Sbx::CLI
 
     desc "completions SHELL", "Print a shell completion script (bash, zsh, or fish)"

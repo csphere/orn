@@ -5,7 +5,7 @@ module Orn
     module Sbx
       # `orn sbx new`: create a sandbox for a branch that already has a worktree.
       # Validates `sbx` config, trust, and preflight; requires the worktree to
-      # exist and the sandbox not to; then creates the container, runs setup, and
+      # exist and the sandbox not to; then creates the sandbox, runs setup, and
       # publishes configured ports. Unlike `switch --sbx` it neither opens a tmux
       # window nor runs the start command.
       class New

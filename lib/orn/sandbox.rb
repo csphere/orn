@@ -4,7 +4,7 @@ require "fileutils"
 require "tmpdir"
 
 module Orn
-  # Shared home for sandbox (dev container) work: the value types, the
+  # Shared home for sandbox (Docker Sandboxes microVM) work: the value types, the
   # required-tool checks, and the multi-step flows (setup commands, template
   # build). Single sbx/docker/colima invocations live in the SbxCli adapter,
   # port handling in Ports, and environment checks in Doctor; commands call

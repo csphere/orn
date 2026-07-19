@@ -28,7 +28,7 @@
 #     - source: "_shared/data"
 #       dest: "data"            # optional; defaults to the basename of source
 
-# Sandbox (Docker container) for isolated dev environments.
+# Sandbox (Docker Sandboxes microVM) for isolated dev environments.
 # Requires Docker and sbx.
 #
 # sbx:

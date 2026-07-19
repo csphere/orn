@@ -15,7 +15,7 @@ module Orn
 
       # --- Lifecycle ---
 
-      # Creates a sandbox container via `sbx create`.
+      # Creates a sandbox via `sbx create`.
       def self.create(output_mode, params)
         sbx_exec(output_mode, *build_create_command(params))
       end

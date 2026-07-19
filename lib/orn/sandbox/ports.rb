@@ -7,10 +7,10 @@ require "fileutils"
 module Orn
   module Sandbox
     # Host-side port handling for sandboxes: reserving a free host port,
-    # publishing it into the container via SbxCli, verifying it accepts TCP
+    # publishing it into the sandbox via SbxCli, verifying it accepts TCP
     # connections, and persisting the mappings to
     # `<orn_dir>/sandbox/<name>.ports` so they can be republished after a
-    # container restart.
+    # sandbox restart.
     module Ports
       # Total time verify_port waits for a published port to accept
       # connections.
@@ -57,7 +57,7 @@ module Orn
       end
 
       # Re-publishes previously persisted port mappings, e.g. after a
-      # container restart. A missing or unreadable ports file is a no-op.
+      # sandbox restart. A missing or unreadable ports file is a no-op.
       def self.republish_ports(output_mode, name, orn_dir)
         mappings = read_persisted_ports(orn_dir, name)
         return [] if mappings.nil?
@@ -111,7 +111,7 @@ module Orn
       end
 
       # Writes the mappings as JSON to `<orn_dir>/sandbox/<name>.ports` so
-      # they can be republished after a container restart.
+      # they can be republished after a sandbox restart.
       def self.persist_ports(orn_dir, name, mappings)
         sandbox_dir = File.join(orn_dir, "sandbox")
         FileUtils.mkdir_p(sandbox_dir)

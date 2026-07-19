@@ -193,7 +193,7 @@ module Orn
         )
       end
 
-      # Best-effort teardown: window, then container, then worktree. Each step
+      # Best-effort teardown: window, then sandbox, then worktree. Each step
       # ignores its own failure.
       def rollback(context, state)
         context.output_mode.status("Rolling back...")

@@ -161,8 +161,11 @@ orn remove feature/ABC-1234
 
 ### `orn sbx`: sandboxes
 
-A sandbox is a Docker dev container attached to a worktree, configured
-under `sbx:` in project config (agent type, image, kits, ports, services).
+A sandbox runs a worktree's agent inside a Docker Sandboxes (sbx) microVM.
+The point is real isolation: an agent can escape a plain container and
+change the host, but a microVM has its own kernel, so the worktree is all
+it can touch. Configured under `sbx:` in project config (agent type,
+image, kits, ports, services).
 
 - `orn sbx new BRANCH`: create a sandbox for a branch that already has a
   worktree.
