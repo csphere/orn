@@ -392,9 +392,9 @@ RSpec.describe Orn::Detect::Manifest do
 
     it "reads a bash permission prompt as blocked" do
       screen = "do you want to proceed?\n" \
-               "bash command: rm -rf /tmp/test\n" \
-               "❯ 1. Yes\n   2. No\n\n" \
-               "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
+        "bash command: rm -rf /tmp/test\n" \
+        "❯ 1. Yes\n   2. No\n\n" \
+        "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
 
       expect(det(:claude, screen: screen)).to have_attributes(
         state: :blocked,
@@ -404,7 +404,7 @@ RSpec.describe Orn::Detect::Manifest do
 
     it "reads a live blocked form as blocked" do
       screen = "──────────\n  1. Yes\n  2. No\n\n" \
-               "Enter to select \u{00B7} \u{2191}/\u{2193} to navigate \u{00B7} Esc to cancel\n"
+        "Enter to select \u{00B7} \u{2191}/\u{2193} to navigate \u{00B7} Esc to cancel\n"
 
       expect(det(:claude, screen: screen)).to have_attributes(
         state: :blocked,
@@ -438,9 +438,9 @@ RSpec.describe Orn::Detect::Manifest do
 
     it "lets a blocker outrank an idle osc title" do
       screen = "do you want to proceed?\n" \
-               "bash command: rm -rf /tmp/test\n" \
-               "❯ 1. Yes\n   2. No\n\n" \
-               "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
+        "bash command: rm -rf /tmp/test\n" \
+        "❯ 1. Yes\n   2. No\n\n" \
+        "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
 
       detection = det(
         :claude,

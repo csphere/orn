@@ -113,7 +113,7 @@ module Orn
 
           raise Orn::Error,
             "Cannot remove worktree for '#{branch}' while inside it\n  " \
-            "cd out of the worktree directory or run from a different window"
+              "cd out of the worktree directory or run from a different window"
         end
 
         def remove_worktree(worktree, wt_path)

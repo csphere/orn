@@ -61,7 +61,7 @@ module Orn
 
         raise Orn::Error,
           "Current branch '#{head_branch}' does not match the remote default branch " \
-          "'#{remote_default}'.\nUse --base #{remote_default} to specify the base branch explicitly."
+            "'#{remote_default}'.\nUse --base #{remote_default} to specify the base branch explicitly."
       end
 
       private

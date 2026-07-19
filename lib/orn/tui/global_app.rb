@@ -749,13 +749,13 @@ module Orn
           borrowed
         )
         states = if repo_panes.empty?
-                   {}
+                    {}
                  else
-                   Orn::Detect.detect_all_panes(
-                     output,
-                     repo_panes,
-                     repo.sbx_agent_type
-                   )
+                    Orn::Detect.detect_all_panes(
+                      output,
+                      repo_panes,
+                      repo.sbx_agent_type
+                   ) 
                  end
         repo.aggregate_agent_state = aggregate_state(states)
         repo.worktrees.each do |wt|

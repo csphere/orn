@@ -59,6 +59,9 @@ Layout/FirstHashElementIndentation:
 Layout/MultilineMethodCallIndentation:
   EnforcedStyle: indented
 
+Layout/LineEndStringConcatenationIndentation:
+  EnforcedStyle: indented
+
 # Enforce that module inclusions (include/extend/prepend) and constants are
 # declared at the top of a class/module body, before its methods, so constants
 # are never buried mid-class. Class methods (`def self.x`) and the initializer

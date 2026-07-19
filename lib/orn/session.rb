@@ -114,7 +114,7 @@ module Orn
       unless $stdin.tty?
         raise Orn::Error,
           "Session '#{session}' is already in use by #{existing_path}\n  " \
-          "Set session: <name> in .orn/config.yaml to resolve"
+            "Set session: <name> in .orn/config.yaml to resolve"
       end
 
       suggested = suggest_name(project.root)

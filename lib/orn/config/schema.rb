@@ -107,7 +107,7 @@ module Orn
 
         raise Orn::Error,
           "No agent_type configured in sbx\n  " \
-          "Set agent_type to the agent to run (e.g. agent_type: claude)"
+            "Set agent_type to the agent to run (e.g. agent_type: claude)"
       end
 
       def require_build!

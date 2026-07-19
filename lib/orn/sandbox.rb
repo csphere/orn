@@ -424,7 +424,7 @@ module Orn
       if failed
         raise Orn::Error,
           "Preflight check failed: #{failed.message}\n  " \
-          "Run `orn sbx doctor` for a full environment check."
+            "Run `orn sbx doctor` for a full environment check."
       end
 
       checks.each do |check|
@@ -543,8 +543,8 @@ module Orn
         Check.fail(
           "git-identity",
           "Git identity not configured in repo config.\n    " \
-          "Run: git config --local user.name \"Your Name\"\n         " \
-          "git config --local user.email \"you@example.com\""
+            "Run: git config --local user.name \"Your Name\"\n         " \
+            "git config --local user.email \"you@example.com\""
         )
       end
     end
@@ -561,7 +561,7 @@ module Orn
           "ssh-auth",
           false,
           "SSH_AUTH_SOCK not set; agent will not be able to git push.\n    " \
-          "Commits will be available in the host worktree."
+            "Commits will be available in the host worktree."
         )
       end
     end

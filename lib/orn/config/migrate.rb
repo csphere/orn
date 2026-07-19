@@ -145,7 +145,7 @@ module Orn
         when :behind
           raise Orn::Error,
             "#{path}: config version (#{check.config}) is behind orn (#{binary})\n  " \
-            "Run `orn config migrate` to update"
+              "Run `orn config migrate` to update"
         when :ahead
           warn "warning: #{path}: config version (#{check.config}) is ahead of orn (#{binary})"
         when :missing

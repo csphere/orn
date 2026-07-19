@@ -82,7 +82,7 @@ module Orn
         if Orn::Sandbox.exists?(output_mode, sbx_name)
           raise Orn::Error,
             "'#{branch}' uses sandbox '#{sbx_name}' and its window is closed; " \
-            "run 'orn switch #{branch}' to reopen it"
+              "run 'orn switch #{branch}' to reopen it"
         end
         Orn::Tmux.open_window_non_interactive(
           output_mode,

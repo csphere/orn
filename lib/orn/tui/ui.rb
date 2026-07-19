@@ -93,7 +93,7 @@ module Orn
         window_indicator = entry.has_window ? "\u{25cf}" : "\u{25cb}"
 
         text = " #{entry.branch.ljust(24)} #{dirty_indicator}  " \
-               "#{window_indicator} #{entry.ahead}\u{2191} #{entry.behind}\u{2193}"
+          "#{window_indicator} #{entry.ahead}\u{2191} #{entry.behind}\u{2193}"
         spans = [Span.styled(text, style)]
         append_agent_span(
           spans,

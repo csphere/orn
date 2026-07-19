@@ -31,7 +31,7 @@ module Orn
 
         raise Orn::Error,
           "Not an orn project (no .bare directory found)\n" \
-          "Use 'orn clone <url> --base <branch>' to set up a new project"
+            "Use 'orn clone <url> --base <branch>' to set up a new project"
       end
 
       # Resolves the project root from `start` by following its nearest `.git`
@@ -46,7 +46,7 @@ module Orn
 
         raise Orn::Error,
           "Could not determine orn project root from .git pointer\n" \
-          "Use 'orn clone <url> --base <branch>' to set up a new project"
+            "Use 'orn clone <url> --base <branch>' to set up a new project"
       end
 
       # The on-disk path for `branch`'s worktree: a direct child of the
@@ -118,7 +118,7 @@ module Orn
           if File.directory?(git_path)
             raise Orn::Error,
               "Found a .git directory (not a bare worktree project)\n" \
-              "Use 'orn clone <url> --base <branch>' to set up a new project"
+                "Use 'orn clone <url> --base <branch>' to set up a new project"
           end
 
           parent = File.dirname(dir)

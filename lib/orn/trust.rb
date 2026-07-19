@@ -73,7 +73,7 @@ module Orn
         header: "Project config contains pane commands that will be executed:",
         prompt: "Trust these commands? [y/N] ",
         non_interactive_msg: "Project config contains untrusted pane commands\n  " \
-                             "Run 'orn open <branch>' interactively to review and approve them",
+          "Run 'orn open <branch>' interactively to review and approve them",
         interactive: interactive
       )
       return layout if approved
@@ -167,7 +167,7 @@ module Orn
 
       items = format_sbx_items(sbx)
       non_interactive_msg = "Project config contains untrusted sandbox commands:\n  " \
-                            "#{items.join("\n  ")}\n  Run interactively to review and approve them"
+        "#{items.join("\n  ")}\n  Run interactively to review and approve them"
       approved = check_trust_flow(
         sbx_fingerprint(sbx),
         sbx_approval_path(data_dir, project_root),
