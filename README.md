@@ -24,9 +24,18 @@ app/                        tmux session "app"
 ├── .bare/                  bare git repo (object store, refs)
 ├── .git                    pointer file (gitdir: ./.bare)
 ├── .orn/config.yaml        project config
+├── CLAUDE.md               orients coding agents in this layout
 ├── main/                   window "main"
 └── feature/ABC-123/        window "feature/ABC-123"
 ```
+
+`clone`, `init`, and `convert` all write the root `CLAUDE.md`. Agents
+started at the project root would otherwise misread the layout: the `.git`
+pointer file makes the root look like a normal repo, but it has no working
+tree, so git commands only work from inside a worktree directory. The file
+explains that, maps the directories above, and lists the orn commands for
+switching and cleanup, so an agent lands in the right worktree instead of
+fighting the layout.
 
 Switching branches means switching tmux windows. Nothing is stashed or
 rebuilt: each branch keeps its own files, running processes, and agent.
