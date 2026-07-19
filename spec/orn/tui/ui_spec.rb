@@ -76,6 +76,7 @@ module Orn
           expect(screen).to include("enter:open")
           expect(screen).to include("n:new")
           expect(screen).to include("q:quit")
+          expect(screen).not_to include("r:refresh")
         end
       end
 

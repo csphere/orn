@@ -75,7 +75,7 @@ state.
 
 
  enter:open  space:expand  x:hide tab
- M-o:sidebar  M-i:agent  M-n/p:cycle  r:refresh  q:quit
+ M-o:sidebar  M-i:agent  M-n/p:cycle  q:quit
 ```
 
 | Key | Action |
@@ -86,7 +86,6 @@ state.
 | `Enter` on a worktree | Open its agent pane as a tab in the hub |
 | `x` | Close the current tab (pane returns home) |
 | `n` / `p` | Cycle to the next / previous tab |
-| `r` | Refresh |
 | `q` | Quit |
 
 Agent tabs are real panes, not copies: the worktree's agent pane is joined
@@ -114,7 +113,7 @@ counts against the base branch, and the agent indicator.
 
 
 
- enter:open  c:close  n:new  d:remove  r:refresh  q:quit
+ enter:open  c:close  n:new  d:remove  q:quit
 ```
 
 | Key | Action |
@@ -124,7 +123,6 @@ counts against the base branch, and the agent indicator.
 | `n` | New branch: prompts for a name, creates the worktree and window |
 | `d` | Remove the selected worktree (asks for `y` to confirm) |
 | `c` | Close the tmux window (the worktree stays on disk) |
-| `r` | Refresh |
 | `q` | Quit |
 
 `n` creates the worktree from `origin/<branch>` when the branch exists on

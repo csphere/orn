@@ -144,7 +144,7 @@ module Orn
           elsif mode.confirm_remove?
             " y:confirm  any:cancel"
           else
-            " enter:open  c:close  n:new  d:remove  r:refresh  q:quit"
+            " enter:open  c:close  n:new  d:remove  q:quit"
           end
         Line.styled(text, Style.default.fg(Color::DARK_GRAY))
       end

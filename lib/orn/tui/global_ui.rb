@@ -9,7 +9,7 @@ module Orn
 
       HELP_LINES = [
         " enter:open  space:expand  x:hide tab",
-        " M-o:sidebar  M-i:agent  M-n/p:cycle  r:refresh  q:quit"
+        " M-o:sidebar  M-i:agent  M-n/p:cycle  q:quit"
       ].freeze
 
       # Render the global TUI: title, repo/worktree tree, optional error line,

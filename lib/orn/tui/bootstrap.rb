@@ -269,7 +269,6 @@ module Orn
       # Normal-mode key tokens mapped to the zero-argument App action they
       # invoke ("q" is handled separately as the quit signal).
       NORMAL_ACTIONS = {
-        "r" => :refresh,
         :enter => :open_selected,
         "c" => :close_selected,
         "n" => :start_new_branch,
@@ -284,7 +283,6 @@ module Orn
       # invoke ("q" quits and the cycle keys are handled separately, since they
       # take a direction).
       GLOBAL_ACTIONS = {
-        "r" => :full_refresh,
         :enter => :enter_selected,
         " " => :toggle_expanded,
         "x" => :close_tab,

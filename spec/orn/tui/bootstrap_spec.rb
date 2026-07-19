@@ -636,7 +636,7 @@ module Orn
           expect(app).to have_received(:cycle_tab).with(false)
         end
 
-        it "does not quit on other keys", :real_cmd do
+        it "does not quit on other keys" do
           expect(described_class.dispatch_global(global_app, char("r"))).to be_nil
         end
       end

@@ -81,6 +81,7 @@ module Orn
         aggregate_failures do
           expect(screen).to include("enter:open")
           expect(screen).to include("q:quit")
+          expect(screen).not_to include("r:refresh")
         end
       end
 
