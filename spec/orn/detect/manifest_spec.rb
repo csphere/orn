@@ -440,17 +440,16 @@ RSpec.describe Orn::Detect::Manifest do
                "❯ 1. Yes\n   2. No\n\n" \
                "Esc to cancel \u{00B7} Tab to amend \u{00B7} ctrl+e to explain\n"
 
-      expect(
-        det(
-          :claude,
-          screen: screen,
-          title: "\u{2733} Claude Code"
-        )
+      detection = det(
+        :claude,
+        screen: screen,
+        title: "\u{2733} Claude Code"
       )
-        .to have_attributes(
-          state: :blocked,
-          visible_blocker: true
-        )
+
+      expect(detection).to have_attributes(
+        state: :blocked,
+        visible_blocker: true
+      )
     end
   end
 

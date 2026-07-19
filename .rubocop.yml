@@ -6,6 +6,7 @@ require:
   - ./.rubocop/cop/orn/multi_pair_hash_line_breaks.rb
   - ./.rubocop/cop/orn/empty_lines_between_collection_items.rb
   - ./.rubocop/cop/orn/multi_argument_line_breaks.rb
+  - ./.rubocop/cop/orn/chain_below_multiline_call.rb
 
 AllCops:
   TargetRubyVersion: 3.3
@@ -100,6 +101,13 @@ Orn/MultiArgumentLineBreaks:
     - sbx_exec
     - git_run
     - output
+
+# A chained call must not start a new line below a multiline call or
+# literal; assign the receiver to a named variable first. Chaining on the
+# closing delimiter line (`).entries`) and fluent chains stay legal.
+# No autocorrect: the variable name needs a human.
+Orn/ChainBelowMultilineCall:
+  Enabled: true
 
 Layout/FirstHashElementLineBreak:
   Enabled: true

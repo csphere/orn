@@ -219,11 +219,11 @@ module Orn
       end
 
       def safe_remove_worktree(context)
-        Orn::Git::Worktree.new(
+        worktree = Orn::Git::Worktree.new(
           root: context.project.root,
           output_mode: context.output_mode
         )
-          .remove(context.project.worktree_path(context.branch))
+        worktree.remove(context.project.worktree_path(context.branch))
       rescue Orn::Error
         nil
       end

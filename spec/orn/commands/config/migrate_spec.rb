@@ -76,13 +76,12 @@ RSpec.describe Orn::Commands::Config::Migrate do
     it "returns only the global config with global_only" do
       ENV["XDG_CONFIG_HOME"] = "/xdg"
 
-      expect(
-        command(
-          global_only: true,
-          project_only: false
-        ).targets("/proj")
-      )
-        .to eq([["global", "/xdg/orn/default.yaml"]])
+      targets = command(
+        global_only: true,
+        project_only: false
+      ).targets("/proj")
+
+      expect(targets).to eq([["global", "/xdg/orn/default.yaml"]])
     end
 
     it "returns both project and global by default" do
