@@ -2,12 +2,15 @@
 
 module Orn
   module TUI
-    # Agent tab mechanics for the global TUI hub window.
+    # The tmux effects behind the global TUI's agent tabs (the tab list itself
+    # lives in Tabs).
     #
     # An agent "tab" borrows the real tmux pane running a worktree's agent into
     # the hub window beside the sidebar (33/67 split), and returns it to its
     # home window on hide. Borrowed panes are tagged with pane user options in
-    # the tmux server so a crashed TUI can reconcile on next start.
+    # the tmux server so a crashed TUI can reconcile on next start. The
+    # reconcile helpers are also used by `orn switch`, `orn remove`, and the
+    # project TUI.
     module Hub
       SIDEBAR_WIDTH_PCT = 33
       AGENT_WIDTH_PCT = 67
@@ -249,33 +252,6 @@ module Orn
         rescue Orn::Error
           nil
         end
-      end
-
-      # True when the tab's pane still exists somewhere in the tmux server.
-      def self.tab_pane_alive(tab, all_panes)
-        all_panes.any? { |pane| pane.pane_id == tab.pane_id }
-      end
-
-      # The tab index reached by cycling forward or backward from `current`
-      # (nil when no tab is visible); nil when there are no tabs.
-      def self.cycle_index(length, current, forward)
-        return nil if length.zero?
-
-        if current.nil?
-          forward ? 0 : length - 1
-        elsif forward
-          (current + 1) % length
-        else
-          (current + length - 1) % length
-        end
-      end
-
-      # The visible-tab index after removing the tab at `removed`.
-      def self.adjust_visible_after_remove(visible, removed)
-        return visible if visible.nil?
-        return nil if visible == removed
-
-        visible > removed ? visible - 1 : visible
       end
     end
   end

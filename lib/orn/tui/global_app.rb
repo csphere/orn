@@ -57,101 +57,11 @@ module Orn
     # Name and last-activity time of a live tmux session.
     SessionInfo = Data.define(:name, :activity)
 
-    # Agent-tab state for the hub window: which tabs are open, which one (if
-    # any) is visible, and where the hub itself lives in tmux. Kept separate
-    # from GlobalApp's repo/sidebar state since it has its own lifecycle, tied
-    # to tmux rather than to the discovery/mru refresh cycle.
-    class HubState
-      attr_reader :tabs,
-        :hub_pane,
-        :hub_location
-      attr_accessor :agent_focused
-
-      def initialize(hub_pane, hub_location)
-        @tabs = []
-        @visible_tab = nil
-        @agent_focused = false
-        @hub_pane = hub_pane
-        @hub_location = hub_location
-      end
-
-      def visible
-        @visible_tab && @tabs[@visible_tab]
-      end
-
-      def visible_index
-        @visible_tab
-      end
-
-      def visible_index=(index)
-        @visible_tab = index
-      end
-
-      def take_visible
-        taken = @visible_tab
-        @visible_tab = nil
-        taken
-      end
-
-      def tab_index_for(root, branch)
-        @tabs.index { |tab| tab.root.to_s == root.to_s && tab.branch == branch }
-      end
-
-      def push_tab(tab)
-        @tabs.push(tab)
-        @tabs.length - 1
-      end
-
-      def remove_tab(index)
-        @tabs.delete_at(index)
-        @visible_tab = Hub.adjust_visible_after_remove(@visible_tab, index)
-      end
-
-      def clear_tabs
-        @tabs.clear
-        @visible_tab = nil
-      end
-
-      # Drop tabs whose panes no longer exist (closed underneath us). Returns
-      # true when the visible tab was among them, so the caller can tear down
-      # key bindings.
-      def prune_dead_tabs(all_panes)
-        had_visible = !@visible_tab.nil?
-        index = 0
-        while index < @tabs.length
-          if Hub.tab_pane_alive(@tabs[index], all_panes)
-            index += 1
-          else
-            remove_tab(index)
-          end
-        end
-        had_visible && @visible_tab.nil?
-      end
-
-      # A visible tab's pane can be moved out of the hub behind our back (e.g.
-      # `orn switch` returned it home). Demote such a tab to hidden, returning
-      # true when it did so, so the caller can tear down key bindings.
-      def demote_visible_if_moved(all_panes)
-        location = @hub_location
-        tab = visible
-        return false unless location && tab
-
-        hub_session, hub_window = location
-        in_hub = all_panes.any? do |pane|
-          pane.pane_id == tab.pane_id &&
-            pane.session_name == hub_session &&
-            pane.window_name == hub_window
-        end
-        return false if in_hub
-
-        @visible_tab = nil
-        true
-      end
-    end
-
-    # State and actions for the global TUI: repo discovery across scan roots,
-    # per-repo tmux and agent status, and the hub's agent-tab lifecycle. A
-    # mutable PORO the event loop drives and the renderer reads.
+    # State and actions for the global TUI: the selection over the repo tree,
+    # the refresh cadence, and per-repo tmux and agent status. Repo scanning
+    # lives in RepoDiscovery and the agent-tab lifecycle in Tabs; this class
+    # composes them. A mutable PORO the event loop drives and the renderer
+    # reads.
     class GlobalApp
       # Cadence of the tmux-derived refresh (sessions, windows, agent states).
       TMUX_REFRESH = 3
@@ -168,7 +78,7 @@ module Orn
         :spinner_tick
       attr_reader :config,
         :list_state,
-        :hub
+        :tabs
 
       # Build the app, capturing the hosting tmux pane and window for hub tabs,
       # and run an initial discovery.
@@ -195,7 +105,12 @@ module Orn
         @list_state.select(0) unless entries.empty?
         @error = nil
         @spinner_tick = 0
-        @hub = HubState.new(hub_pane, hub_location)
+        @tabs = Tabs.new(
+          output_mode: output_mode,
+          hub_pane: hub_pane,
+          hub_location: hub_location,
+          on_error: ->(message) { @error = message }
+        )
         @mru_state = mru_state || State.new
         @last_tmux_refresh = monotonic
         @last_discovery = monotonic
@@ -301,22 +216,22 @@ module Orn
 
       # The tab currently borrowed into the hub window, if any.
       def visible
-        @hub.visible
+        @tabs.visible
       end
 
       # True while the visible tab's agent pane has tmux focus, for the
       # sidebar's emphasized indicator.
       def agent_focused?
-        @hub.agent_focused
+        @tabs.agent_focused
       end
 
       # The visible tab's index into the open-tab list, if any.
       def visible_tab
-        @hub.visible_index
+        @tabs.visible_index
       end
 
       def tab_index_for(root, branch)
-        @hub.tab_index_for(root, branch)
+        @tabs.tab_index_for(root, branch)
       end
 
       # Act on the selected row: switch the tmux client into a repo's session,
@@ -335,8 +250,8 @@ module Orn
       # Re-apply the sidebar width; called on terminal resize while a tab is
       # visible.
       def enforce_layout
-        hub_pane = @hub.hub_pane
-        return unless @hub.visible_index && hub_pane
+        hub_pane = @tabs.hub_pane
+        return unless @tabs.visible_index && hub_pane
 
         Orn::Tmux.resize_pane_width(
           @output,
@@ -351,10 +266,10 @@ module Orn
       # sidebar indicator. Rate-limited so fast spinner ticks do not spawn a
       # tmux process per frame.
       def poll_focus
-        location = @hub.hub_location
-        tab = @hub.visible
+        location = @tabs.hub_location
+        tab = @tabs.visible
         unless location && tab
-          @hub.agent_focused = false
+          @tabs.agent_focused = false
           return
         end
         return if monotonic - @last_focus_poll < FOCUS_POLL_INTERVAL
@@ -365,39 +280,30 @@ module Orn
           hub_session,
           hub_window
         )
-        @hub.agent_focused = active == tab.pane_id
+        @tabs.agent_focused = active == tab.pane_id
         @last_focus_poll = monotonic
       end
 
       # Cycle the visible tab forward or backward through the open tabs.
       def cycle_tab(forward)
-        next_index = Hub.cycle_index(
-          @hub.tabs.length,
-          @hub.visible_index,
-          forward
-        )
-        return if next_index.nil? || @hub.visible_index == next_index
+        return unless @tabs.cycle(forward)
 
-        show_tab(next_index)
+        refresh_tmux
         select_visible_tab_row
       end
 
       # Close the selected worktree row's tab, or the visible tab when the
       # selection has none. The agent keeps running in its home window.
       def close_tab
-        idx = selected_tab_index || @hub.visible_index
+        idx = selected_tab_index || @tabs.visible_index
         return unless idx
 
-        hide_visible if @hub.visible_index == idx
-        @hub.remove_tab(idx)
-        Hub.remove_bindings(@output) if @hub.visible_index.nil?
+        @tabs.close(idx)
       end
 
       # Hide and forget every tab; called when the TUI exits.
       def close_all_tabs
-        hide_visible
-        @hub.clear_tabs
-        Hub.remove_bindings(@output)
+        @tabs.close_all
       end
 
       # Move the sidebar selection onto the visible tab's worktree row,
@@ -698,8 +604,7 @@ module Orn
         entry = @entries[repo_idx]
         return unless entry.healthy
 
-        hub_pane = @hub.hub_pane
-        unless hub_pane
+        unless @tabs.hub_pane
           @error = "agent tabs require the TUI to run inside tmux"
           return
         end
@@ -708,93 +613,34 @@ module Orn
         existing = tab_index_for(entry.root, branch)
         return focus_existing_tab(existing) if existing
 
-        open_new_tab(
-          entry,
-          branch,
-          hub_pane
-        )
+        open_new_tab(entry, branch)
       end
 
       def focus_existing_tab(idx)
-        if @hub.visible_index == idx
-          tab = visible
-          begin
-            Orn::Tmux.select_pane(@output, tab.pane_id) if tab
-          rescue Orn::Error
-            nil
-          end
-        else
-          show_tab(idx)
+        return show_tab(idx) unless @tabs.visible_index == idx
+
+        tab = visible
+        begin
+          Orn::Tmux.select_pane(@output, tab.pane_id) if tab
+        rescue Orn::Error
+          nil
         end
       end
 
-      def open_new_tab(entry, branch, hub_pane)
-        hide_visible
+      def open_new_tab(entry, branch)
         @mru_state.touch(entry.root)
         @mru_state.save
-        tab = Hub.open_tab(
-          @output,
+        opened = @tabs.open(
           root: entry.root,
           session: entry.session_name,
           base_branch: entry.base_branch,
-          branch: branch,
-          hub_pane: hub_pane
+          branch: branch
         )
-        idx = @hub.push_tab(tab)
-        @hub.visible_index = idx
-        install_bindings_for_visible
-        refresh_tmux
-      rescue Orn::Error => e
-        @error = e.message
+        refresh_tmux if opened
       end
 
-      # Bring a hidden tab to front: hide the visible one, borrow this tab's
-      # pane. Drops the tab if its pane is gone.
       def show_tab(idx)
-        hub_pane = @hub.hub_pane
-        return unless hub_pane
-
-        hide_visible
-        tab = @hub.tabs[idx]
-        Hub.show_tab(
-          @output,
-          tab,
-          hub_pane
-        )
-        @hub.visible_index = idx
-        install_bindings_for_visible
-        refresh_tmux
-      rescue Orn::Error => e
-        @error = e.message
-        @hub.remove_tab(idx)
-      end
-
-      # Hide the visible tab's pane (returns home); the tab stays open.
-      def hide_visible
-        idx = @hub.take_visible
-        return unless idx
-
-        Hub.hide_tab(@output, @hub.tabs[idx])
-      rescue Orn::Error => e
-        @error = e.message
-      end
-
-      def install_bindings_for_visible
-        location = @hub.hub_location
-        hub_pane = @hub.hub_pane
-        tab = visible
-        return unless location && hub_pane && tab
-
-        hub_session, hub_window = location
-        Hub.install_bindings(
-          @output,
-          hub_session,
-          hub_window,
-          hub_pane,
-          tab.pane_id
-        )
-      rescue Orn::Error => e
-        @error = e.message
+        refresh_tmux if @tabs.show(idx)
       end
 
       def selected_tab_index
@@ -834,8 +680,8 @@ module Orn
           @last_tmux_refresh = monotonic
           return
         end
-        prune_dead_tabs(all_panes)
-        sync_visible_with_reality(all_panes)
+        @tabs.prune_dead_tabs(all_panes)
+        @tabs.demote_visible_if_moved(all_panes)
         self.class.refresh_tmux_state(
           @output,
           @entries,
@@ -844,14 +690,6 @@ module Orn
         )
         RepoDiscovery.sort_entries(@entries)
         @last_tmux_refresh = monotonic
-      end
-
-      def prune_dead_tabs(all_panes)
-        Hub.remove_bindings(@output) if @hub.prune_dead_tabs(all_panes)
-      end
-
-      def sync_visible_with_reality(all_panes)
-        Hub.remove_bindings(@output) if @hub.demote_visible_if_moved(all_panes)
       end
 
       def monotonic

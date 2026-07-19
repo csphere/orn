@@ -231,7 +231,7 @@ module Orn
               )
             ]
           )
-          app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "main"))
+          app.tabs.visible_index = app.tabs.push_tab(tab_for(app.entries[1], "main"))
 
           app.select_visible_tab_row
 
@@ -253,7 +253,7 @@ module Orn
               )
             ]
           )
-          app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "feat"))
+          app.tabs.visible_index = app.tabs.push_tab(tab_for(app.entries[1], "feat"))
 
           app.select_visible_tab_row
 
