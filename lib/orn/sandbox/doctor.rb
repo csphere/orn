@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "tmpdir"
-require "open3"
 require "rbconfig"
 
 module Orn
@@ -17,6 +16,13 @@ module Orn
         :config,
         :project_root
       )
+
+      # Masks system and global git config so identity probes consult only
+      # the file they are given.
+      GIT_CONFIG_ISOLATION_ENV = {
+        "GIT_CONFIG_NOSYSTEM" => "1",
+        "GIT_CONFIG_GLOBAL" => "/dev/null"
+      }.freeze
 
       # Every check in report order.
       CHECK_STEPS = %i[
@@ -80,7 +86,12 @@ module Orn
       end
 
       def self.git_identity_checks(context)
-        [git_identity_check(context.project_root)]
+        [
+          git_identity_check(
+            context.output_mode,
+            context.project_root
+          )
+        ]
       end
 
       def self.template_checks(context)
@@ -129,14 +140,22 @@ module Orn
 
       # Checks that `user.name` and `user.email` are set in the repo's own
       # `.bare/config`; host global and system git config are ignored.
-      def self.git_identity_check(project_root)
+      def self.git_identity_check(output_mode, project_root)
         config_path = File.join(
           project_root,
           ".bare",
           "config"
         )
-        has_name = git_config_set?(config_path, "user.name")
-        has_email = git_config_set?(config_path, "user.email")
+        has_name = git_config_set?(
+          output_mode,
+          config_path,
+          "user.name"
+        )
+        has_email = git_config_set?(
+          output_mode,
+          config_path,
+          "user.email"
+        )
 
         if has_name && has_email
           Check.pass("git-identity", "Git user.name and user.email configured")
@@ -226,24 +245,22 @@ module Orn
         false
       end
 
-      # True when `key` is set in the given git config file; system and global
-      # config are masked out so only that file is consulted.
-      def self.git_config_set?(config_path, key)
-        env = {
-          "GIT_CONFIG_NOSYSTEM" => "1",
-          "GIT_CONFIG_GLOBAL" => "/dev/null"
-        }
-        _stdout, _stderr, status = Open3.capture3(
-          env,
+      # True when `key` is set in the given git config file. Runs from the
+      # temp dir so a git repo around the current directory cannot interfere.
+      def self.git_config_set?(output_mode, config_path, key)
+        cmd = Orn::Cmd.new(
+          output_mode: output_mode,
+          env: GIT_CONFIG_ISOLATION_ENV,
+          chdir: Dir.tmpdir
+        )
+        cmd.output(
           "git",
           "config",
           "--file",
           config_path.to_s,
-          key,
-          chdir: Dir.tmpdir
-        )
-        status.success?
-      rescue SystemCallError
+          key
+        ).success?
+      rescue Orn::Error, SystemCallError
         false
       end
 

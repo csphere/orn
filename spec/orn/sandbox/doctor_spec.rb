@@ -48,6 +48,8 @@ RSpec.describe Orn::Sandbox::Doctor do
       )
     end
 
+    let(:mode) { Orn::OutputMode.default }
+
     it "passes when both name and email are set" do
       root = make_bare_project
       set_git_config(
@@ -61,7 +63,7 @@ RSpec.describe Orn::Sandbox::Doctor do
         "test@example.com"
       )
 
-      check = described_class.git_identity_check(root)
+      check = described_class.git_identity_check(mode, root)
 
       expect(check).to have_attributes(
         passed: true,
@@ -78,7 +80,7 @@ RSpec.describe Orn::Sandbox::Doctor do
         "test@example.com"
       )
 
-      check = described_class.git_identity_check(root)
+      check = described_class.git_identity_check(mode, root)
 
       aggregate_failures do
         expect(check.passed).to be(false)
@@ -94,7 +96,7 @@ RSpec.describe Orn::Sandbox::Doctor do
         "Test User"
       )
 
-      check = described_class.git_identity_check(root)
+      check = described_class.git_identity_check(mode, root)
 
       aggregate_failures do
         expect(check.passed).to be(false)
@@ -103,12 +105,30 @@ RSpec.describe Orn::Sandbox::Doctor do
     end
 
     it "fails when both are missing" do
-      check = described_class.git_identity_check(make_bare_project)
+      check = described_class.git_identity_check(mode, make_bare_project)
 
       expect(check).to have_attributes(
         passed: false,
         kind: :error
       )
+    end
+
+    it "fails when the git binary is missing" do
+      root = make_bare_project
+      config_path = File.join(
+        root,
+        ".bare",
+        "config"
+      )
+
+      with_fake_cmd do |fake|
+        fake.script_missing(["git", "config", "--file", config_path, "user.name"])
+        fake.script_missing(["git", "config", "--file", config_path, "user.email"])
+
+        check = described_class.git_identity_check(mode, root)
+
+        expect(check.passed).to be(false)
+      end
     end
   end
 
