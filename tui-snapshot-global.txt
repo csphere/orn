@@ -1,0 +1,18 @@
+Global hub TUI (`orn -g`). Captured via tmux capture-pane in the
+orn-test-base container, 100x14 pane. `app` is expanded (Space) and has a
+live session with two windows; `api` has no session.
+
+ orn
+
+ ▾ app                          ●  2 active  3 wt
+     main                       ✔  ● 0↑ 0↓
+     feature/ABC-101            ✎  ● 1↑ 0↓
+     feature/ABC-207            ✔  ○ 0↑ 0↓
+ ▸ api                          ○  0 active  1 wt
+
+
+
+
+
+ enter:open  space:expand  x:hide tab
+ M-o:sidebar  M-i:agent  M-n/p:cycle  r:refresh  q:quit
