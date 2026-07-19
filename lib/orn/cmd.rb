@@ -33,12 +33,12 @@ module Orn
       end
     end
 
-    class << self
-      attr_writer :backend
+    def self.backend
+      @backend ||= Open3Backend.new
+    end
 
-      def backend
-        @backend ||= Open3Backend.new
-      end
+    def self.backend=(backend)
+      @backend = backend
     end
 
     def initialize(output_mode:)
