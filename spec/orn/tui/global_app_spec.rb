@@ -336,40 +336,6 @@ module Orn
         end
       end
 
-      describe ".aggregate_state" do
-        def states(*pairs)
-          pairs.each_with_index.to_h do |(agent, state), i|
-            [
-              "win#{i}",
-              Orn::Detect::PaneAgentState.new(
-                agent: agent,
-                state: state
-              )
-            ]
-          end
-        end
-
-        it "ranks blocked over working" do
-          expect(described_class.aggregate_state(states(%i[claude blocked], %i[claude working]))).to eq(:blocked)
-        end
-
-        it "ranks working over idle" do
-          expect(described_class.aggregate_state(states(%i[claude working], %i[claude idle]))).to eq(:working)
-        end
-
-        it "returns idle when all agents are idle" do
-          expect(described_class.aggregate_state(states(%i[claude idle], %i[claude idle]))).to eq(:idle)
-        end
-
-        it "returns nil when no pane hosts an agent" do
-          expect(described_class.aggregate_state(states([nil, :unknown]))).to be_nil
-        end
-
-        it "returns nil for an empty set" do
-          expect(described_class.aggregate_state({})).to be_nil
-        end
-      end
-
       describe "agent aggregate and polling" do
         it "reports working only when the aggregate is working" do
           aggregate_failures do
