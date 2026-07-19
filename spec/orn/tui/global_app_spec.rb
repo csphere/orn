@@ -20,7 +20,7 @@ module Orn
         )
       end
 
-      def app_with(entries)
+      def app_with(entries, tabs: nil)
         described_class.new(
           output_mode: Orn::OutputMode.quiet,
           config: Orn::Config::GlobalTuiConfig.new(
@@ -28,17 +28,26 @@ module Orn
             scan_roots: [],
             scan_depth: 3
           ),
-          entries: entries
+          entries: entries,
+          tabs: tabs
         )
       end
 
-      def tab_for(repo, branch)
-        Hub::Tab.new(
+      def fake_tabs
+        Tabs.new(
+          output_mode: Orn::OutputMode.quiet,
+          hub_pane: "%0",
+          hub_location: %w[orn orn],
+          hub: FakeHub.new
+        )
+      end
+
+      def open_tab_for(tabs, repo, branch)
+        tabs.open(
           root: repo.root,
           session: repo.session_name,
           base_branch: repo.base_branch,
-          branch: branch,
-          pane_id: "%9"
+          branch: branch
         )
       end
 
@@ -215,6 +224,7 @@ module Orn
 
       describe "#select_visible_tab_row" do
         it "moves the selection onto the visible tab's worktree row" do
+          tabs = fake_tabs
           app = app_with(
             [
               entry_with_worktrees(
@@ -227,9 +237,14 @@ module Orn
                 %w[main],
                 true
               )
-            ]
+            ],
+            tabs: tabs
           )
-          app.tabs.visible_index = app.tabs.push_tab(tab_for(app.entries[1], "main"))
+          open_tab_for(
+            tabs,
+            app.entries[1],
+            "main"
+          )
 
           app.select_visible_tab_row
 
@@ -237,6 +252,7 @@ module Orn
         end
 
         it "expands a collapsed owning repo" do
+          tabs = fake_tabs
           app = app_with(
             [
               entry_with_worktrees(
@@ -249,9 +265,14 @@ module Orn
                 %w[main feat],
                 false
               )
-            ]
+            ],
+            tabs: tabs
           )
-          app.tabs.visible_index = app.tabs.push_tab(tab_for(app.entries[1], "feat"))
+          open_tab_for(
+            tabs,
+            app.entries[1],
+            "feat"
+          )
 
           app.select_visible_tab_row
 

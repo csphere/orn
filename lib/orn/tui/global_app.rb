@@ -93,7 +93,10 @@ module Orn
         app
       end
 
-      def initialize(output_mode:, config:, entries: [], mru_state: nil, hub_pane: nil, hub_location: nil)
+      # `tabs` can be injected (specs pair it with a fake tmux-effects layer);
+      # by default the app builds its own, reporting tab errors onto the
+      # error line.
+      def initialize(output_mode:, config:, entries: [], mru_state: nil, hub_pane: nil, hub_location: nil, tabs: nil)
         @output = output_mode
         @config = config
         @entries = entries
@@ -102,7 +105,7 @@ module Orn
         @list_state.select(0) unless entries.empty?
         @error = nil
         @spinner_tick = 0
-        @tabs = Tabs.new(
+        @tabs = tabs || Tabs.new(
           output_mode: output_mode,
           hub_pane: hub_pane,
           hub_location: hub_location,
@@ -211,26 +214,6 @@ module Orn
         @error = nil
       end
 
-      # The tab currently borrowed into the hub window, if any.
-      def visible
-        @tabs.visible
-      end
-
-      # True while the visible tab's agent pane has tmux focus, for the
-      # sidebar's emphasized indicator.
-      def agent_focused?
-        @tabs.agent_focused
-      end
-
-      # The visible tab's index into the open-tab list, if any.
-      def visible_tab
-        @tabs.visible_index
-      end
-
-      def tab_index_for(root, branch)
-        @tabs.tab_index_for(root, branch)
-      end
-
       # Act on the selected row: switch the tmux client into a repo's session,
       # or open/focus a worktree's agent tab.
       def enter_selected
@@ -307,7 +290,7 @@ module Orn
       # expanding the owning repo when collapsed, so the highlighted row follows
       # the focused agent while cycling.
       def select_visible_tab_row
-        tab = visible
+        tab = @tabs.visible
         return unless tab
 
         repo_idx = @entries.index { |entry| entry.root.to_s == tab.root.to_s }
@@ -436,7 +419,7 @@ module Orn
         end
 
         branch = entry.worktrees[wt_idx].branch
-        existing = tab_index_for(entry.root, branch)
+        existing = @tabs.tab_index_for(entry.root, branch)
         return focus_existing_tab(existing) if existing
 
         open_new_tab(entry, branch)
@@ -445,7 +428,7 @@ module Orn
       def focus_existing_tab(idx)
         return show_tab(idx) unless @tabs.visible_index == idx
 
-        tab = visible
+        tab = @tabs.visible
         begin
           Orn::Tmux.select_pane(@output, tab.pane_id) if tab
         rescue Orn::Error
@@ -474,7 +457,7 @@ module Orn
         return nil unless row&.worktree?
 
         entry = @entries[row.repo_index]
-        tab_index_for(entry.root, entry.worktrees[row.wt_index].branch)
+        @tabs.tab_index_for(entry.root, entry.worktrees[row.wt_index].branch)
       end
 
       def expand_repo_for_tab(repo_idx, root)
@@ -510,7 +493,7 @@ module Orn
         @entries = RepoStatus.refresh(
           @output,
           @entries,
-          visible,
+          @tabs.visible,
           all_panes
         )
         RepoDiscovery.sort_entries(@entries)

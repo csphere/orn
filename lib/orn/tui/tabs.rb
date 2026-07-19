@@ -16,9 +16,9 @@ module Orn
     # the live pane listing clean those up.
     class Tabs
       attr_reader :hub_pane,
-        :hub_location
-      attr_accessor :agent_focused,
+        :hub_location,
         :visible_index
+      attr_accessor :agent_focused
 
       def initialize(output_mode:, hub_pane:, hub_location:, hub: Hub, on_error: nil)
         @output = output_mode
@@ -39,11 +39,6 @@ module Orn
         @tabs.index { |tab| tab.root.to_s == root.to_s && tab.branch == branch }
       end
 
-      def push_tab(tab)
-        @tabs.push(tab)
-        @tabs.length - 1
-      end
-
       # Open a new tab for a worktree's agent pane and make it visible,
       # hiding the previously visible tab. Returns false (reporting the
       # error) when borrowing the pane fails; no tab is added then.
@@ -59,7 +54,8 @@ module Orn
           branch: branch,
           hub_pane: @hub_pane
         )
-        @visible_index = push_tab(tab)
+        @tabs.push(tab)
+        @visible_index = @tabs.length - 1
         install_bindings_for_visible
         true
       rescue Orn::Error => e
