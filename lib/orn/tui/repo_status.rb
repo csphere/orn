@@ -7,23 +7,24 @@ module Orn
 
     # Live status for discovered repos: which tmux sessions are alive, their
     # window counts, per-worktree agent state and sandbox flags, and git stats
-    # for expanded repos. Updates RepoEntry/WorktreeRow fields in place, on
-    # the app's tmux refresh cadence.
+    # for expanded repos. Entries are immutable; every pass returns updated
+    # copies, on the app's tmux refresh cadence.
     module RepoStatus
-      # Update every repo's session, window, and agent status from one shared
-      # pane listing. `tab` is the visible hub tab, if any: its borrowed pane
-      # is attributed back to its home repo and branch.
+      # Refresh every repo's session, window, and agent status from one
+      # shared pane listing, returning the updated entries. `tab` is the
+      # visible hub tab, if any: its borrowed pane is attributed back to its
+      # home repo and branch.
       def self.refresh(output, repos, tab, all_panes)
         sessions = list_sessions(output)
-        repos.each do |repo|
+        repos.map do |repo|
           info = sessions.find { |session| session.name == repo.session_name }
           borrowed = borrowed_pane_for_repo(
             tab,
             repo,
             all_panes
           )
-          if info
-            refresh_alive_repo(
+          refreshed = if info
+            alive_repo(
               output,
               repo,
               info,
@@ -31,13 +32,13 @@ module Orn
               borrowed
             )
           else
-            refresh_dead_repo(
+            dead_repo(
               output,
               repo,
               borrowed
             )
           end
-          refresh_worktree_git_stats(output, repo) if repo.expanded
+          refreshed.expanded ? with_worktree_git_stats(output, refreshed) : refreshed
         end
       end
 
@@ -71,14 +72,11 @@ module Orn
         )
       end
 
-      # Refresh window and agent state for a repo whose session is alive. The
-      # borrowed pane, when this repo owns it, stands in for its home window.
-      def self.refresh_alive_repo(output, repo, info, all_panes, borrowed)
-        repo.session_alive = true
-        repo.session_activity = info.activity
+      # A repo whose session is alive, with window and agent state refreshed.
+      # The borrowed pane, when this repo owns it, stands in for its home
+      # window.
+      def self.alive_repo(output, repo, info, all_panes, borrowed)
         windows = Orn::Tmux.list_windows(output, info.name)
-        repo.window_count = windows.length
-
         repo_panes = session_panes(
           repo,
           all_panes,
@@ -93,15 +91,21 @@ module Orn
             repo.sbx_agent_type
           )
         end
-        repo.aggregate_agent_state = aggregate_state(states)
-        repo.worktrees.each do |wt|
-          assign_worktree_agent(
+        worktrees = repo.worktrees.map do |wt|
+          worktree_with_agent(
             wt,
             windows,
             states,
             repo_panes
           )
         end
+        repo.with(
+          session_alive: true,
+          session_activity: info.activity,
+          window_count: windows.length,
+          aggregate_agent_state: aggregate_state(states),
+          worktrees: worktrees
+        )
       end
 
       # The repo's own panes plus its borrowed hub pane (which replaces the
@@ -114,32 +118,39 @@ module Orn
         borrowed ? own + [borrowed] : own
       end
 
-      def self.assign_worktree_agent(worktree, windows, states, repo_panes)
-        worktree.has_window = windows.include?(worktree.branch)
-        worktree.agent = states[worktree.branch]
-        worktree.sandboxed = repo_panes.any? do |pane|
+      def self.worktree_with_agent(worktree, windows, states, repo_panes)
+        sandboxed = repo_panes.any? do |pane|
           pane.window_name == worktree.branch && Orn::Detect.container_command?(pane.pane_current_command)
         end
+        worktree.with(
+          has_window: windows.include?(worktree.branch),
+          agent: states[worktree.branch],
+          sandboxed: sandboxed
+        )
       end
 
-      # Borrowing a repo's only pane can kill its session; the agent still
-      # runs in the hub, so its status stays visible through the borrowed
-      # pane.
-      def self.refresh_dead_repo(output, repo, borrowed)
-        repo.session_alive = false
-        repo.session_activity = nil
-        repo.window_count = 0
-        repo.aggregate_agent_state = nil
-        repo.worktrees.each do |wt|
-          wt.has_window = false
-          wt.agent = nil
-          wt.sandboxed = false
-        end
-        return unless borrowed
+      # A repo whose session is gone, with its live state cleared. Borrowing
+      # a repo's only pane can kill its session; the agent still runs in the
+      # hub, so its status stays visible through the borrowed pane.
+      def self.dead_repo(output, repo, borrowed)
+        cleared = repo.with(
+          session_alive: false,
+          session_activity: nil,
+          window_count: 0,
+          aggregate_agent_state: nil,
+          worktrees: repo.worktrees.map do |wt|
+            wt.with(
+              has_window: false,
+              agent: nil,
+              sandboxed: false
+            )
+          end
+        )
+        return cleared unless borrowed
 
         attribute_borrowed_agent(
           output,
-          repo,
+          cleared,
           borrowed
         )
       end
@@ -151,12 +162,18 @@ module Orn
           [borrowed],
           repo.sbx_agent_type
         )
-        repo.aggregate_agent_state = aggregate_state(states)
-        worktree = repo.worktrees.find { |wt| wt.branch == branch }
-        return unless worktree
+        worktrees = repo.worktrees.map do |wt|
+          next wt unless wt.branch == branch
 
-        worktree.agent = states[branch]
-        worktree.sandboxed = Orn::Detect.container_command?(borrowed.pane_current_command)
+          wt.with(
+            agent: states[branch],
+            sandboxed: Orn::Detect.container_command?(borrowed.pane_current_command)
+          )
+        end
+        repo.with(
+          aggregate_agent_state: aggregate_state(states),
+          worktrees: worktrees
+        )
       end
 
       # Highest-priority state among panes hosting an agent (blocked > working
@@ -168,19 +185,23 @@ module Orn
         agents.map(&:state).max_by { |state| Orn::Detect.state_priority(state) }
       end
 
-      # Dirty and ahead/behind stats are gathered only for expanded repos, on
-      # the tmux refresh cadence, to keep the collapsed global view cheap.
-      def self.refresh_worktree_git_stats(output, repo)
-        repo.worktrees.each do |wt|
+      # The repo with dirty and ahead/behind stats filled in. Gathered only
+      # for expanded repos, on the tmux refresh cadence, to keep the collapsed
+      # global view cheap.
+      def self.with_worktree_git_stats(output, repo)
+        worktrees = repo.worktrees.map do |wt|
           wt_path = File.join(repo.root.to_s, wt.branch)
-          wt.dirty = App.dirty?(output, wt_path)
-          wt.ahead_behind = App.ahead_behind(
-            output,
-            wt_path,
-            wt.branch,
-            repo.base_branch
+          wt.with(
+            dirty: App.dirty?(output, wt_path),
+            ahead_behind: App.ahead_behind(
+              output,
+              wt_path,
+              wt.branch,
+              repo.base_branch
+            )
           )
         end
+        repo.with(worktrees: worktrees)
       end
     end
   end

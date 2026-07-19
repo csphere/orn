@@ -204,11 +204,11 @@ module Orn
             )
           ]
 
-          described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
+          renamed = described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
 
           aggregate_failures do
-            expect(repos[0].display_name).to eq("dev/orn")
-            expect(repos[1].display_name).to eq("work/orn")
+            expect(renamed[0].display_name).to eq("dev/orn")
+            expect(renamed[1].display_name).to eq("work/orn")
           end
         end
 
@@ -230,24 +230,22 @@ module Orn
             )
           ]
 
-          described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
+          renamed = described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
 
-          expect(repos.map(&:display_name)).to eq(%w[alpha beta])
+          expect(renamed.map(&:display_name)).to eq(%w[alpha beta])
         end
       end
 
       describe ".sort_entries" do
         def live(name, activity)
-          row = entry(name)
-          row.session_alive = true
-          row.session_activity = activity
-          row
+          entry(name).with(
+            session_alive: true,
+            session_activity: activity
+          )
         end
 
         def mru(name, timestamp)
-          row = entry(name)
-          row.mru_timestamp = timestamp
-          row
+          entry(name).with(mru_timestamp: timestamp)
         end
 
         it "orders live sessions before mru before unseen, with the right sub-order" do

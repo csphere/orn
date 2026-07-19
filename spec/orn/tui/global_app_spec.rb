@@ -14,10 +14,10 @@ module Orn
       end
 
       def entry_with_worktrees(name, branches, expanded)
-        row = entry(name)
-        row.expanded = expanded
-        row.worktrees = branches.map { |branch| WorktreeRow.new(branch: branch) }
-        row
+        entry(name).with(
+          expanded: expanded,
+          worktrees: branches.map { |branch| WorktreeRow.new(branch: branch) }
+        )
       end
 
       def app_with(entries)
@@ -43,9 +43,7 @@ module Orn
       end
 
       def agent_repo(name, state)
-        row = entry(name)
-        row.aggregate_agent_state = state
-        row
+        entry(name).with(aggregate_agent_state: state)
       end
 
       describe "#visible_rows" do
@@ -207,7 +205,7 @@ module Orn
             ]
           )
           app.selected = 2
-          app.entries[0].expanded = false
+          app.entries[0] = app.entries[0].with(expanded: false)
 
           app.move_down
 
@@ -362,8 +360,7 @@ module Orn
         end
 
         it "skips an unhealthy repo" do
-          unhealthy = entry("broken")
-          unhealthy.healthy = false
+          unhealthy = entry("broken").with(healthy: false)
           app = app_with([unhealthy])
 
           app.enter_selected

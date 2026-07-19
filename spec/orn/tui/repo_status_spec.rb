@@ -54,9 +54,11 @@ module Orn
 
       describe ".refresh" do
         it "marks a live session and its windowed worktrees" do
-          repo = entry("api")
-          repo.worktrees = [WorktreeRow.new(branch: "main"), WorktreeRow.new(branch: "feat")]
+          repo = entry("api").with(
+            worktrees: [WorktreeRow.new(branch: "main"), WorktreeRow.new(branch: "feat")]
+          )
 
+          refreshed = nil
           with_fake_cmd do |fake|
             fake.script(list_sessions_argv, stdout: "api\t123\n")
             fake.script(
@@ -70,53 +72,52 @@ module Orn
               ],
               stdout: "orn\nmain\n"
             )
-            refresh([repo])
+            refreshed = refresh([repo]).first
           end
 
           aggregate_failures do
-            expect(repo.session_alive).to be(true)
-            expect(repo.session_activity).to eq(123)
-            expect(repo.window_count).to eq(2)
-            expect(repo.worktrees[0].has_window).to be(true)
-            expect(repo.worktrees[1].has_window).to be(false)
-            expect(repo.aggregate_agent_state).to be_nil
+            expect(refreshed.session_alive).to be(true)
+            expect(refreshed.session_activity).to eq(123)
+            expect(refreshed.window_count).to eq(2)
+            expect(refreshed.worktrees[0].has_window).to be(true)
+            expect(refreshed.worktrees[1].has_window).to be(false)
+            expect(refreshed.aggregate_agent_state).to be_nil
           end
         end
 
         def live_repo
-          repo = entry("api")
-          repo.session_alive = true
-          repo.session_activity = 99
-          repo.window_count = 3
-          repo.aggregate_agent_state = :working
-          repo.worktrees = [
-            WorktreeRow.new(
-              branch: "main",
-              has_window: true,
-              agent: Orn::Detect::PaneAgentState.new(
-                agent: :claude,
-                state: :working
-              ),
-              sandboxed: true
-            )
-          ]
-          repo
+          entry("api").with(
+            session_alive: true,
+            session_activity: 99,
+            window_count: 3,
+            aggregate_agent_state: :working,
+            worktrees: [
+              WorktreeRow.new(
+                branch: "main",
+                has_window: true,
+                agent: Orn::Detect::PaneAgentState.new(
+                  agent: :claude,
+                  state: :working
+                ),
+                sandboxed: true
+              )
+            ]
+          )
         end
 
         it "clears live state when the session is gone" do
-          repo = live_repo
-          worktree = repo.worktrees[0]
-
+          refreshed = nil
           with_fake_cmd do |fake|
             fake.script(list_sessions_argv, stdout: "")
-            refresh([repo])
+            refreshed = refresh([live_repo]).first
           end
 
+          worktree = refreshed.worktrees[0]
           aggregate_failures do
-            expect(repo.session_alive).to be(false)
-            expect(repo.session_activity).to be_nil
-            expect(repo.window_count).to eq(0)
-            expect(repo.aggregate_agent_state).to be_nil
+            expect(refreshed.session_alive).to be(false)
+            expect(refreshed.session_activity).to be_nil
+            expect(refreshed.window_count).to eq(0)
+            expect(refreshed.aggregate_agent_state).to be_nil
             expect(worktree.has_window).to be(false)
             expect(worktree.agent).to be_nil
             expect(worktree.sandboxed).to be(false)
@@ -124,15 +125,15 @@ module Orn
         end
 
         it "treats a failed session listing as no sessions" do
-          repo = entry("api")
-          repo.session_alive = true
+          repo = entry("api").with(session_alive: true)
 
+          refreshed = nil
           with_fake_cmd do |fake|
             fake.script(list_sessions_argv, status: 1)
-            refresh([repo])
+            refreshed = refresh([repo]).first
           end
 
-          expect(repo.session_alive).to be(false)
+          expect(refreshed.session_alive).to be(false)
         end
       end
 

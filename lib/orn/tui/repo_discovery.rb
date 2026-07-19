@@ -21,9 +21,9 @@ module Orn
             repos
           )
         end
-        disambiguate_names(config.scan_roots, repos)
-        apply_mru(state, repos)
-        apply_expanded(state, repos)
+        repos = disambiguate_names(config.scan_roots, repos)
+        repos = apply_mru(state, repos)
+        repos = apply_expanded(state, repos)
         prune_mru(state, repos)
         repos
       end
@@ -104,11 +104,11 @@ module Orn
       end
 
       def self.apply_mru(state, repos)
-        repos.each { |repo| repo.mru_timestamp = state.timestamp(repo.root) }
+        repos.map { |repo| repo.with(mru_timestamp: state.timestamp(repo.root)) }
       end
 
       def self.apply_expanded(state, repos)
-        repos.each { |repo| repo.expanded = state.expanded?(repo.root) }
+        repos.map { |repo| repo.with(expanded: state.expanded?(repo.root)) }
       end
 
       # Drop persisted state for repos no longer discovered, and save.
@@ -150,15 +150,18 @@ module Orn
       end
 
       # Prefix colliding display names with their scan root's basename.
+      # Returns the (possibly renamed) entries.
       def self.disambiguate_names(scan_roots, repos)
-        return if scan_roots.length <= 1
+        return repos if scan_roots.length <= 1
 
         needs_prefix = collisions(repos)
-        repos.each_with_index do |repo, i|
-          next unless needs_prefix[i]
+        repos.each_with_index.map do |repo, i|
+          next repo unless needs_prefix[i]
 
           root = scan_roots.find { |candidate| repo.root.to_s.start_with?(candidate.to_s) }
-          repo.display_name = "#{File.basename(root.to_s)}/#{repo.display_name}" if root
+          next repo unless root
+
+          repo.with(display_name: "#{File.basename(root.to_s)}/#{repo.display_name}")
         end
       end
 

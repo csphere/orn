@@ -185,13 +185,13 @@ module Orn
         return unless row
 
         repo_idx = row.repo_index
-        entry = @entries[repo_idx]
-        entry.expanded = !entry.expanded
+        entry = @entries[repo_idx].with(expanded: !@entries[repo_idx].expanded)
+        @entries[repo_idx] = entry
         @mru_state.set_expanded(entry.root, entry.expanded)
         @mru_state.save
 
         if entry.expanded
-          RepoStatus.refresh_worktree_git_stats(@output, entry)
+          @entries[repo_idx] = RepoStatus.with_worktree_git_stats(@output, entry)
         elsif row.worktree?
           @selected = visible_rows.index { |candidate| candidate == TreeRow.repo(repo_idx) } || 0
         end
@@ -481,10 +481,9 @@ module Orn
         entry = @entries[repo_idx]
         return if entry.expanded
 
-        entry.expanded = true
         @mru_state.set_expanded(root, true)
         @mru_state.save
-        RepoStatus.refresh_worktree_git_stats(@output, entry)
+        @entries[repo_idx] = RepoStatus.with_worktree_git_stats(@output, entry.with(expanded: true))
       end
 
       # Refresh tmux-derived state and resort, keeping the selection anchored to
@@ -508,7 +507,7 @@ module Orn
         end
         @tabs.prune_dead_tabs(all_panes)
         @tabs.demote_visible_if_moved(all_panes)
-        RepoStatus.refresh(
+        @entries = RepoStatus.refresh(
           @output,
           @entries,
           visible,
