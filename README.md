@@ -102,7 +102,9 @@ orn config migrate      # upgrade config files to the current schema version
 
 ```bash
 just check          # rubocop + rspec (the pre-commit gate)
-just test
+just test           # suite in an unprivileged container: no network, host untouched
+just test-host      # suite directly on the host (faster, less isolated)
 just lint
-just system-test    # full suite in a Docker-in-Docker container (git/tmux/docker)
+just system-test    # full suite in a Docker-in-Docker container (git/tmux/docker/sbx)
+just test-clean     # remove the test images and cache volumes
 ```

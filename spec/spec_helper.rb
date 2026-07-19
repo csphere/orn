@@ -4,6 +4,9 @@
 # rspec`. SimpleCov must start before the code under test is required.
 if ENV["COVERAGE"]
   require "simplecov"
+  # The test container mounts the source read-only and provides a writable
+  # /coverage mount for the report instead.
+  SimpleCov.coverage_dir(ENV["ORN_COVERAGE_DIR"]) if ENV["ORN_COVERAGE_DIR"]
   SimpleCov.start do
     enable_coverage :branch
     add_filter "/spec/"
@@ -20,8 +23,9 @@ Dir[File.join(
 )].each { |file| require file }
 
 RSpec.configure do |config|
-  # Enable flags like --only-failures and --next-failure
-  config.example_status_persistence_file_path = ".rspec_status"
+  # Enable flags like --only-failures and --next-failure. The test container
+  # mounts the source read-only and points this at a path under /tmp.
+  config.example_status_persistence_file_path = ENV.fetch("ORN_RSPEC_STATUS_FILE", ".rspec_status")
 
   # Disable RSpec exposing methods globally on `Module` and `main`
   config.disable_monkey_patching!
