@@ -7,6 +7,7 @@ require:
   - ./.rubocop/cop/orn/empty_lines_between_collection_items.rb
   - ./.rubocop/cop/orn/multi_argument_line_breaks.rb
   - ./.rubocop/cop/orn/chain_below_multiline_call.rb
+  - ./.rubocop/cop/orn/parallel_swap_assignment.rb
 
 AllCops:
   TargetRubyVersion: 3.3
@@ -102,6 +103,13 @@ Orn/MultiArgumentLineBreaks:
     - git_run
     - output
 
+# Parallel assignment is avoided wherever a sequential form exists. Stock
+# Style/ParallelAssignment forbids the independent cases but permits swaps
+# (`a, b = b, a`); this cop closes that gap, asking for a temporary
+# variable instead. Destructuring a method return stays legal.
+Orn/ParallelSwapAssignment:
+  Enabled: true
+
 # A chained call must not start a new line below a multiline call or
 # literal; assign the receiver to a named variable first. Chaining on the
 # closing delimiter line (`).entries`) and fluent chains stay legal.
@@ -119,6 +127,14 @@ Layout/FirstMethodArgumentLineBreak:
   Enabled: true
 
 Layout/MultilineMethodArgumentLineBreaks:
+  Enabled: true
+
+# Once an array spans multiple lines, one item per line; single-line
+# arrays stay legal.
+Layout/FirstArrayElementLineBreak:
+  Enabled: true
+
+Layout/MultilineArrayLineBreaks:
   Enabled: true
 
 # Class-level documentation is not mandatory; we comment where the intent

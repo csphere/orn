@@ -168,10 +168,12 @@ RSpec.describe Orn::Sandbox do
     after { FileUtils.remove_entry(orn_dir, true) }
 
     it "round-trips a single mapping" do
-      mappings = [Orn::Sandbox::PortMapping.new(
-        host: 3042,
-        container: 3000
-      )]
+      mappings = [
+        Orn::Sandbox::PortMapping.new(
+          host: 3042,
+          container: 3000
+        )
+      ]
       described_class.persist_ports(
         orn_dir,
         "my-sbx",
@@ -205,10 +207,12 @@ RSpec.describe Orn::Sandbox do
       described_class.persist_ports(
         orn_dir,
         "test",
-        [Orn::Sandbox::PortMapping.new(
-          host: 8080,
-          container: 80
-        )]
+        [
+          Orn::Sandbox::PortMapping.new(
+            host: 8080,
+            container: 80
+          )
+        ]
       )
 
       expect(File).to exist(
@@ -228,10 +232,12 @@ RSpec.describe Orn::Sandbox do
       described_class.persist_ports(
         orn_dir,
         "my-sbx",
-        [Orn::Sandbox::PortMapping.new(
-          host: 3042,
-          container: 3000
-        )]
+        [
+          Orn::Sandbox::PortMapping.new(
+            host: 3042,
+            container: 3000
+          )
+        ]
       )
 
       described_class.remove_ports_file(orn_dir, "my-sbx")
@@ -366,9 +372,17 @@ RSpec.describe Orn::Sandbox do
       )
 
       expect(args).to eq(
-        ["exec", "my-sbx", "--", "env",
-         "DATABASE_URL=postgres://localhost/db", "REDIS_URL=redis://localhost:6379",
-         "sh", "-c", "bin/setup"]
+        [
+          "exec",
+          "my-sbx",
+          "--",
+          "env",
+          "DATABASE_URL=postgres://localhost/db",
+          "REDIS_URL=redis://localhost:6379",
+          "sh",
+          "-c",
+          "bin/setup"
+        ]
       )
     end
   end

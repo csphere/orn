@@ -87,11 +87,14 @@ RSpec.describe Orn::Detect do
     it "prefers the process group leader" do
       j = job(
         100,
-        [process(100, "claude"), process(
-          101,
-          "node",
-          ["node", "/path/to/codex"]
-        )]
+        [
+          process(100, "claude"),
+          process(
+            101,
+            "node",
+            ["node", "/path/to/codex"]
+          )
+        ]
       )
 
       expect(described_class.identify_agent_in_job(j).first).to eq(:claude)
@@ -100,11 +103,13 @@ RSpec.describe Orn::Detect do
     it "falls back to a wrapped agent when the leader is a runtime" do
       j = job(
         100,
-        [process(
-          100,
-          "node",
-          ["node", "/path/to/bin/codex", "--model", "gpt-5"]
-        )]
+        [
+          process(
+            100,
+            "node",
+            ["node", "/path/to/bin/codex", "--model", "gpt-5"]
+          )
+        ]
       )
 
       expect(described_class.identify_agent_in_job(j)).to eq([:codex, "codex"])
@@ -113,15 +118,18 @@ RSpec.describe Orn::Detect do
     it "detects a wrapped agent in a child process" do
       j = job(
         100,
-        [process(
-          100,
-          "bash",
-          ["bash"]
-        ), process(
-          101,
-          "node",
-          ["node", "/path/to/bin/codex"]
-        )]
+        [
+          process(
+            100,
+            "bash",
+            ["bash"]
+          ),
+          process(
+            101,
+            "node",
+            ["node", "/path/to/bin/codex"]
+          )
+        ]
       )
 
       expect(described_class.identify_agent_in_job(j).first).to eq(:codex)
@@ -130,11 +138,13 @@ RSpec.describe Orn::Detect do
     it "ignores eval flags (subsequent args are inline code)" do
       j = job(
         100,
-        [process(
-          100,
-          "python3",
-          ["python3", "-c", "print('hi')", "/tmp/codex"]
-        )]
+        [
+          process(
+            100,
+            "python3",
+            ["python3", "-c", "print('hi')", "/tmp/codex"]
+          )
+        ]
       )
 
       expect(described_class.identify_agent_in_job(j)).to be_nil
@@ -143,15 +153,18 @@ RSpec.describe Orn::Detect do
     it "returns nil for shells only" do
       j = job(
         100,
-        [process(
-          100,
-          "bash",
-          ["bash"]
-        ), process(
-          101,
-          "zsh",
-          ["zsh"]
-        )]
+        [
+          process(
+            100,
+            "bash",
+            ["bash"]
+          ),
+          process(
+            101,
+            "zsh",
+            ["zsh"]
+          )
+        ]
       )
 
       expect(described_class.identify_agent_in_job(j)).to be_nil
@@ -174,41 +187,47 @@ RSpec.describe Orn::Detect do
 
   describe ".choose_agent_pane" do
     it "prefers the pane running an agent over a shell" do
-      panes = [pane(
-        window: "issues/1",
-        command: "zsh",
-        pane_id: "%1"
-      ),
-               pane(
-                 window: "issues/1",
-                 command: "claude",
-                 pane_id: "%2"
-               )]
+      panes = [
+        pane(
+          window: "issues/1",
+          command: "zsh",
+          pane_id: "%1"
+        ),
+        pane(
+          window: "issues/1",
+          command: "claude",
+          pane_id: "%2"
+        )
+      ]
 
       expect(described_class.choose_agent_pane(panes, "issues/1").pane_id).to eq("%2")
     end
 
     it "falls back to the first pane when no agent is present" do
-      panes = [pane(
-        window: "issues/1",
-        command: "zsh",
-        pane_id: "%1"
-      ),
-               pane(
-                 window: "issues/1",
-                 command: "vim",
-                 pane_id: "%2"
-               )]
+      panes = [
+        pane(
+          window: "issues/1",
+          command: "zsh",
+          pane_id: "%1"
+        ),
+        pane(
+          window: "issues/1",
+          command: "vim",
+          pane_id: "%2"
+        )
+      ]
 
       expect(described_class.choose_agent_pane(panes, "issues/1").pane_id).to eq("%1")
     end
 
     it "ignores panes in other windows" do
-      panes = [pane(
-        window: "main",
-        command: "claude",
-        pane_id: "%1"
-      )]
+      panes = [
+        pane(
+          window: "main",
+          command: "claude",
+          pane_id: "%1"
+        )
+      ]
 
       expect(described_class.choose_agent_pane(panes, "issues/1")).to be_nil
     end

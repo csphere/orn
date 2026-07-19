@@ -54,11 +54,14 @@ module Orn
       describe "#visible_rows" do
         it "hides worktrees of collapsed repos" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main feat],
-              false
-            ), entry("b")]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main feat],
+                false
+              ),
+              entry("b")
+            ]
           )
 
           expect(app.visible_rows).to eq([TreeRow.repo(0), TreeRow.repo(1)])
@@ -66,11 +69,14 @@ module Orn
 
         it "shows worktrees of expanded repos" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main feat],
-              true
-            ), entry("b")]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main feat],
+                true
+              ),
+              entry("b")
+            ]
           )
 
           expect(app.visible_rows).to eq(
@@ -84,11 +90,14 @@ module Orn
       describe "selection movement" do
         it "traverses expanded worktrees then wraps" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main],
-              true
-            ), entry("b")]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main],
+                true
+              ),
+              entry("b")
+            ]
           )
 
           aggregate_failures do
@@ -146,11 +155,13 @@ module Orn
       describe "#toggle_expanded" do
         it "expands the selected repo" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main],
-              false
-            )]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main],
+                false
+              )
+            ]
           )
           app.toggle_expanded
 
@@ -162,11 +173,14 @@ module Orn
 
         it "collapses to the repo row from a worktree row" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main feat],
-              true
-            ), entry("b")]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main feat],
+                true
+              ),
+              entry("b")
+            ]
           )
           app.selected = 2
 
@@ -187,11 +201,13 @@ module Orn
 
         it "keeps the selection in range after collapse" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main feat],
-              true
-            )]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main feat],
+                true
+              )
+            ]
           )
           app.selected = 2
           app.entries[0].expanded = false
@@ -205,15 +221,18 @@ module Orn
       describe "#select_visible_tab_row" do
         it "moves the selection onto the visible tab's worktree row" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main feat],
-              true
-            ), entry_with_worktrees(
-              "b",
-              %w[main],
-              true
-            )]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main feat],
+                true
+              ),
+              entry_with_worktrees(
+                "b",
+                %w[main],
+                true
+              )
+            ]
           )
           app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "main"))
 
@@ -224,15 +243,18 @@ module Orn
 
         it "expands a collapsed owning repo" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main],
-              true
-            ), entry_with_worktrees(
-              "b",
-              %w[main feat],
-              false
-            )]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main],
+                true
+              ),
+              entry_with_worktrees(
+                "b",
+                %w[main feat],
+                false
+              )
+            ]
           )
           app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "feat"))
 
@@ -246,11 +268,13 @@ module Orn
 
         it "is a no-op without a visible tab" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main],
-              true
-            )]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main],
+                true
+              )
+            ]
           )
           app.selected = 1
           app.sync_list_state
@@ -275,11 +299,14 @@ module Orn
 
         it "follows a worktree across a resort" do
           app = app_with(
-            [entry_with_worktrees(
-              "a",
-              %w[main feat],
-              true
-            ), entry("b")]
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main feat],
+                true
+              ),
+              entry("b")
+            ]
           )
           app.selected = 2
           anchor = app.selected_identity
@@ -550,10 +577,13 @@ module Orn
       describe ".aggregate_state" do
         def states(*pairs)
           pairs.each_with_index.to_h do |(agent, state), i|
-            ["win#{i}", Orn::Detect::PaneAgentState.new(
-              agent: agent,
-              state: state
-            )]
+            [
+              "win#{i}",
+              Orn::Detect::PaneAgentState.new(
+                agent: agent,
+                state: state
+              )
+            ]
           end
         end
 

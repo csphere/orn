@@ -110,11 +110,13 @@ RSpec.describe Orn::Tmux do
       borrowed = described_class.parse_borrowed_lines(output)
 
       expect(borrowed).to eq(
-        [described_class::BorrowedPane.new(
-          pane_id: "%3",
-          home_session: "dev",
-          home_window: "issues/270"
-        )]
+        [
+          described_class::BorrowedPane.new(
+            pane_id: "%3",
+            home_session: "dev",
+            home_window: "issues/270"
+          )
+        ]
       )
     end
 

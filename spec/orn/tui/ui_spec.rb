@@ -53,11 +53,13 @@ module Orn
       it "shows ahead and behind counts" do
         screen = render(
           app_with(
-            [entry(
-              "dev",
-              ahead: 5,
-              behind: 2
-            )]
+            [
+              entry(
+                "dev",
+                ahead: 5,
+                behind: 2
+              )
+            ]
           )
         ).to_s
 

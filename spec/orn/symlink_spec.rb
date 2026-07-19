@@ -79,10 +79,12 @@ RSpec.describe Orn::Symlink do
         root = temp_dir("root")
         FileUtils.mkdir_p(File.join(root, "legit"))
         config = symlinks(
-          root: [root_symlink(
-            source: "legit",
-            dest: "../../.bashrc"
-          )]
+          root: [
+            root_symlink(
+              source: "legit",
+              dest: "../../.bashrc"
+            )
+          ]
         )
 
         expect do
@@ -272,10 +274,12 @@ RSpec.describe Orn::Symlink do
           wt,
           "develop",
           symlinks(
-            root: [root_symlink(
-              source: "_shared/docs",
-              dest: "shared_docs"
-            )]
+            root: [
+              root_symlink(
+                source: "_shared/docs",
+                dest: "shared_docs"
+              )
+            ]
           )
         )
 
@@ -337,10 +341,12 @@ RSpec.describe Orn::Symlink do
       root = temp_dir("root")
       FileUtils.mkdir_p(File.join(root, "_shared"))
       config = symlinks(
-        root: [root_symlink(
-          source: "_shared",
-          dest: "shared_docs"
-        )]
+        root: [
+          root_symlink(
+            source: "_shared",
+            dest: "shared_docs"
+          )
+        ]
       )
 
       expect(
@@ -421,10 +427,12 @@ RSpec.describe Orn::Symlink do
       init_git_repo(wt)
       FileUtils.mkdir_p(File.join(root, "_shared"))
       config = symlinks(
-        root: [root_symlink(
-          source: "_shared",
-          dest: "shared_docs"
-        )]
+        root: [
+          root_symlink(
+            source: "_shared",
+            dest: "shared_docs"
+          )
+        ]
       )
 
       described_class.apply(

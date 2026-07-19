@@ -82,10 +82,12 @@ RSpec.describe Orn::Commands::Switch do
         base: "main",
         worktree_path: "/path",
         sandbox_name: "proj-feature-x",
-        host_ports: [Orn::Sandbox::PortMapping.new(
-          host: 3042,
-          container: 3000
-        )]
+        host_ports: [
+          Orn::Sandbox::PortMapping.new(
+            host: 3042,
+            container: 3000
+          )
+        ]
       )
 
       json = result.to_json_hash
@@ -93,10 +95,12 @@ RSpec.describe Orn::Commands::Switch do
       aggregate_failures do
         expect(json["sandbox_name"]).to eq("proj-feature-x")
         expect(json["host_ports"]).to eq(
-          [{
-            "host" => 3042,
-            "container" => 3000
-          }]
+          [
+            {
+              "host" => 3042,
+              "container" => 3000
+            }
+          ]
         )
       end
     end

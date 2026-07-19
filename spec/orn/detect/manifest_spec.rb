@@ -28,10 +28,12 @@ RSpec.describe Orn::Detect::Manifest do
   def rule(fields)
     {
       "id" => "test",
-      "rules" => [{
-        "id" => "r",
-        "state" => "working"
-      }.merge(fields)]
+      "rules" => [
+        {
+          "id" => "r",
+          "state" => "working"
+        }.merge(fields)
+      ]
     }
   end
 

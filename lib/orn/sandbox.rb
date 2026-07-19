@@ -130,10 +130,14 @@ module Orn
 
     def self.build_create_command(params)
       [
-        "create", "--name", params.name,
+        "create",
+        "--name",
+        params.name,
         *optional_create_flags(params),
         *params.kits.flat_map { |kit| ["--kit", kit] },
-        params.agent_type, params.worktree_path.to_s, params.bare_path.to_s
+        params.agent_type,
+        params.worktree_path.to_s,
+        params.bare_path.to_s
       ]
     end
 

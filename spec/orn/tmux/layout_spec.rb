@@ -59,11 +59,13 @@ RSpec.describe Orn::Tmux::Layout do
 
     it "stacks three panes vertically in one column", :aggregate_failures do
       plan = described_class.plan_columns(
-        [col(
-          "a",
-          "b",
-          "c"
-        )]
+        [
+          col(
+            "a",
+            "b",
+            "c"
+          )
+        ]
       )
 
       expect(plan.splits).to eq(
@@ -113,19 +115,25 @@ RSpec.describe Orn::Tmux::Layout do
       )
       expect(plan.commands).to eq(
         [
-          pane_command(0, "a"), pane_command(2, "b"),
-          pane_command(1, "c"), pane_command(3, "d")
+          pane_command(0, "a"),
+          pane_command(2, "b"),
+          pane_command(1, "c"),
+          pane_command(3, "d")
         ]
       )
     end
 
     it "handles three columns with varying pane counts", :aggregate_failures do
       plan = described_class.plan_columns(
-        [col("a"), col("b", "c"), col(
-          "d",
-          "e",
-          "f"
-        )]
+        [
+          col("a"),
+          col("b", "c"),
+          col(
+            "d",
+            "e",
+            "f"
+          )
+        ]
       )
 
       expect(plan.splits).to eq(
@@ -169,12 +177,14 @@ RSpec.describe Orn::Tmux::Layout do
       plan = described_class.plan_columns([col(""), col("")])
 
       expect(plan.splits).to eq(
-        [split(
-          :horizontal,
-          0,
-          50,
-          1
-        )]
+        [
+          split(
+            :horizontal,
+            0,
+            50,
+            1
+          )
+        ]
       )
       expect(plan.commands).to be_empty
     end
@@ -198,12 +208,14 @@ RSpec.describe Orn::Tmux::Layout do
       plan = described_class.plan_rows([row_panes("top"), row_panes("bottom")])
 
       expect(plan.splits).to eq(
-        [split(
-          :vertical,
-          0,
-          50,
-          1
-        )]
+        [
+          split(
+            :vertical,
+            0,
+            50,
+            1
+          )
+        ]
       )
       expect(plan.commands).to eq([pane_command(0, "top"), pane_command(1, "bottom")])
     end
@@ -247,8 +259,10 @@ RSpec.describe Orn::Tmux::Layout do
       expect(plan.commands).to eq(
         [
           pane_command(0, "main-command"),
-          pane_command(1, "cmd1"), pane_command(3, "cmd2"),
-          pane_command(2, "cmd3"), pane_command(4, "cmd4")
+          pane_command(1, "cmd1"),
+          pane_command(3, "cmd2"),
+          pane_command(2, "cmd3"),
+          pane_command(4, "cmd4")
         ]
       )
     end
@@ -289,25 +303,30 @@ RSpec.describe Orn::Tmux::Layout do
 
     it "stacks multiple panes in a single row" do
       plan = described_class.plan_rows(
-        [row_panes(
-          "a",
-          "b",
-          "c"
-        )]
+        [
+          row_panes(
+            "a",
+            "b",
+            "c"
+          )
+        ]
       )
 
       expect(plan.splits).to eq(
-        [split(
-          :vertical,
-          0,
-          67,
-          1
-        ), split(
-          :vertical,
-          1,
-          50,
-          2
-        )]
+        [
+          split(
+            :vertical,
+            0,
+            67,
+            1
+          ),
+          split(
+            :vertical,
+            1,
+            50,
+            2
+          )
+        ]
       )
       expect(plan.commands.map(&:pane)).to eq([0, 1, 2])
     end

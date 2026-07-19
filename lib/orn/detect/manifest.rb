@@ -92,9 +92,20 @@ module Orn
 
       MANIFEST_KEYS = %w[id aliases rules].freeze
       RULE_KEYS = %w[
-        id state priority region
-        visible_idle visible_blocker visible_working skip_state_update
-        all any not contains regex line_regex
+        id
+        state
+        priority
+        region
+        visible_idle
+        visible_blocker
+        visible_working
+        skip_state_update
+        all
+        any
+        not
+        contains
+        regex
+        line_regex
       ].freeze
       GATE_KEYS = %w[all any not contains regex line_regex].freeze
       STATES = {
@@ -105,8 +116,14 @@ module Orn
       }.freeze
 
       REGION_NAMES = %w[
-        whole_recent prompt_box_body above_prompt_box after_last_horizontal_rule
-        after_last_prompt_marker before_last_prompt_marker osc_title osc_progress
+        whole_recent
+        prompt_box_body
+        above_prompt_box
+        after_last_horizontal_rule
+        after_last_prompt_marker
+        before_last_prompt_marker
+        osc_title
+        osc_progress
       ].freeze
 
       # Complexity caps protecting against pathological (user override) manifests.
@@ -766,11 +783,14 @@ module Orn
         top = prompt_box_top_border_index(lines)
         return content if top.nil?
 
-        content[0...[line_start_offset(
-          content,
-          lines,
-          top
-        ), content.length].min]
+        content[0...[
+          line_start_offset(
+            content,
+            lines,
+            top
+          ),
+          content.length
+        ].min]
       end
 
       # Content after the last horizontal rule line; the whole content when none.
@@ -837,11 +857,14 @@ module Orn
       end
 
       def self.slice_from_line_index(content, lines, index)
-        content[[line_start_offset(
-          content,
-          lines,
-          index
-        ), content.length].min..]
+        content[[
+          line_start_offset(
+            content,
+            lines,
+            index
+          ),
+          content.length
+        ].min..]
       end
 
       # Character offset where line `index` starts, assuming one-char `\n`

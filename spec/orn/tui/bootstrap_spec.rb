@@ -79,14 +79,16 @@ module Orn
 
         it "toggles expansion on space" do
           app = global_app
-          app.entries = [RepoEntry.new(
-            display_name: "a",
-            root: "/tmp/x",
-            healthy: true,
-            session_name: "a",
-            base_branch: "main",
-            worktrees: []
-          )]
+          app.entries = [
+            RepoEntry.new(
+              display_name: "a",
+              root: "/tmp/x",
+              healthy: true,
+              session_name: "a",
+              base_branch: "main",
+              worktrees: []
+            )
+          ]
           app.sync_list_state
           described_class.dispatch_global(app, char(" "))
 

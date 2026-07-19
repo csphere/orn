@@ -13,10 +13,12 @@ RSpec.describe Orn::Commands::Sbx::Remove do
       Orn::Sandbox.persist_ports(
         orn_dir,
         name,
-        [Orn::Sandbox::PortMapping.new(
-          host: 3042,
-          container: 3000
-        )]
+        [
+          Orn::Sandbox::PortMapping.new(
+            host: 3042,
+            container: 3000
+          )
+        ]
       )
       expect(File).to exist(
         File.join(

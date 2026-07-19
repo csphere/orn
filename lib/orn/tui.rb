@@ -25,8 +25,16 @@ module Orn
     TUI_WINDOW = "orn"
     # Braille frames for the working-agent spinner.
     SPINNER_FRAMES = [
-      "\u{280b}", "\u{2819}", "\u{2839}", "\u{2838}", "\u{283c}",
-      "\u{2834}", "\u{2826}", "\u{2827}", "\u{2807}", "\u{280f}"
+      "\u{280b}",
+      "\u{2819}",
+      "\u{2839}",
+      "\u{2838}",
+      "\u{283c}",
+      "\u{2834}",
+      "\u{2826}",
+      "\u{2827}",
+      "\u{2807}",
+      "\u{280f}"
     ].freeze
 
     # Symbol, colour, and label for an agent's status indicator, shared by the
@@ -75,14 +83,18 @@ module Orn
     # Swap windows into `desired` order one mismatch at a time, tracking the
     # live positions as each swap lands.
     def self.apply_window_order(cmd, session, windows, desired)
-      desired.each_index do |i|
-        next if windows[i] == desired[i]
+      desired.each_index do |desired_index|
+        next if windows[desired_index] == desired[desired_index]
 
-        j = windows.index(desired[i])
-        next unless j
+        current_index = windows.index(desired[desired_index])
+        next unless current_index
 
-        cmd.output("tmux", "swap-window", "-d", "-s", "#{session}:#{windows[i]}", "-t", "#{session}:#{windows[j]}")
-        windows[i], windows[j] = windows[j], windows[i]
+        src_address = "#{session}:#{windows[desired_index]}"
+        dst_address = "#{session}:#{windows[current_index]}"
+        cmd.output("tmux", "swap-window", "-d", "-s", src_address, "-t", dst_address)
+        displaced_window = windows[desired_index]
+        windows[desired_index] = windows[current_index]
+        windows[current_index] = displaced_window
       end
     end
 
