@@ -4,7 +4,9 @@ RSpec.describe Orn::Commands::Wt::Remove do
   subject(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
 
   def project_on(base = "main")
-    make_project(make_bare_project, "git:\n  base: #{base}\n")
+    # Realpath so scripted argvs match the root Project.discover resolves
+    # (macOS realpaths /var temp dirs to /private/var).
+    make_project(File.realpath(make_bare_project), "git:\n  base: #{base}\n")
   end
 
   def add_worktree(project, branch, remote)

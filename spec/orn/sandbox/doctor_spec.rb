@@ -325,6 +325,8 @@ RSpec.describe Orn::Sandbox::Doctor do
   end
 
   describe ".preflight" do
+    before { stub_host_os("linux") }
+
     let(:mode) { Orn::OutputMode.default }
     let(:project) { make_project(make_bare_project, "sbx: {}\n") }
 
@@ -412,17 +414,27 @@ RSpec.describe Orn::Sandbox::Doctor do
     end
 
     it "skips the colima check off macOS" do
+      stub_host_os("linux")
+
       names = described_class.run(
         mode,
         project.config.sbx,
         project.root
       ).map(&:name)
 
-      if described_class.send(:macos?)
-        expect(names).to include("colima")
-      else
-        expect(names).not_to include("colima")
-      end
+      expect(names).not_to include("colima")
+    end
+
+    it "includes the colima check on macOS" do
+      stub_host_os("darwin23")
+
+      names = described_class.run(
+        mode,
+        project.config.sbx,
+        project.root
+      ).map(&:name)
+
+      expect(names).to include("colima")
     end
 
     context "with a template and build args configured" do

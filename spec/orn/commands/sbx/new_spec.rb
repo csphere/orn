@@ -261,6 +261,8 @@ RSpec.describe Orn::Commands::Sbx::New do
   end
 
   describe "#run" do
+    before { stub_host_os("linux") }
+
     it "creates the sandbox, runs setup, publishes the configured port, and prints the result" do
       host_port = pick_free_port
       listeners = []
@@ -351,6 +353,7 @@ RSpec.describe Orn::Commands::Sbx::New do
     end
 
     it "fails when the sandbox already exists" do
+      stub_host_os("linux")
       project = sandbox_ready_project(minimal_config)
       with_fake_cmd do |fake|
         script_passing_preflight(fake, project)

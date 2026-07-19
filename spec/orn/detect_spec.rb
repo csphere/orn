@@ -622,11 +622,6 @@ RSpec.describe Orn::Detect do
   end
 
   describe Orn::Detect::Platform do
-    def stub_host_os(value)
-      allow(RbConfig::CONFIG).to receive(:[]).and_call_original
-      allow(RbConfig::CONFIG).to receive(:[]).with("host_os").and_return(value)
-    end
-
     describe ".host_os" do
       it "returns :other for an unsupported platform" do
         stub_host_os("freebsd")

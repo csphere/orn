@@ -150,6 +150,7 @@ module Orn
         end
 
         it "flags a worktree sandboxed when a pane in its window runs a container command" do
+          stub_host_os("linux")
           repo = entry("api").with(
             worktrees: [
               WorktreeRow.new(branch: "main"),

@@ -123,6 +123,8 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
   end
 
   describe "#run" do
+    before { stub_host_os("linux") }
+
     it "prints an [ok] line per check and no failure footer when everything passes" do
       root = doctor_project_root(template_config)
       ENV["SSH_AUTH_SOCK"] = "/tmp/agent.sock"
@@ -170,6 +172,7 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
     end
 
     it "returns the standard checks for a minimal config" do
+      stub_host_os("linux")
       project = project_with("sbx:\n  template: img:1\n")
 
       names = command.run_inner(project).checks.map(&:name)
@@ -180,11 +183,7 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
           "docker",
           "template"
         )
-        if Orn::Sandbox::Doctor.send(:macos?)
-          expect(names).to include("colima")
-        else
-          expect(names).not_to include("colima")
-        end
+        expect(names).not_to include("colima")
       end
     end
 

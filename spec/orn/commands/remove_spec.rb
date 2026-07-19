@@ -48,7 +48,9 @@ RSpec.describe Orn::Commands::Remove do
   end
 
   def sandbox_project
-    make_project(make_bare_project, "tmux:\n  session: proj\n")
+    # Realpath so scripted argvs match the root Project.discover resolves
+    # (macOS realpaths /var temp dirs to /private/var).
+    make_project(File.realpath(make_bare_project), "tmux:\n  session: proj\n")
   end
 
   def list_windows_argv

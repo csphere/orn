@@ -313,6 +313,7 @@ module Orn
         end
 
         it "attributes container panes to the configured sbx agent" do
+          stub_host_os("linux")
           isolate_global_config
           project = project_with_sbx_agent
           with_fake_cmd do |fake|
@@ -385,6 +386,7 @@ module Orn
 
       describe "#refresh_agents" do
         it "records a state per window from the session's panes" do
+          stub_host_os("linux")
           app = build_app([], root: scripted_root)
           with_fake_cmd do |fake|
             fake.script(

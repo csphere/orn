@@ -243,6 +243,8 @@ RSpec.describe Orn::Commands::SwitchSandbox do
   end
 
   describe ".create_with_sandbox" do
+    before { stub_host_os("linux") }
+
     def provision_config(host_port)
       <<~YAML
         tmux:
