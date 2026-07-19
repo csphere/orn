@@ -162,9 +162,10 @@ module Orn
       # A heavy bar marks the visible tab (yellow while its agent pane has
       # focus), a light bar an open-but-hidden tab, a space for no tab.
       def tab_gutter(app, entry, worktree, style)
-        tab_idx = app.tab_index_for(entry.root, worktree.branch)
-        if tab_idx && app.visible_tab == tab_idx
-          color = app.agent_focused? ? Color::YELLOW : Color::WHITE
+        tabs = app.tabs
+        tab_idx = tabs.tab_index_for(entry.root, worktree.branch)
+        if tab_idx && tabs.visible_index == tab_idx
+          color = tabs.agent_focused ? Color::YELLOW : Color::WHITE
           ["\u{2503}", Style.default.fg(color).bold]
         elsif tab_idx
           ["\u{2502}", Style.default.fg(Color::DARK_GRAY)]

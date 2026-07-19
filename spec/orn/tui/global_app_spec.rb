@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require "tmpdir"
-require "fileutils"
-
 module Orn
   module TUI
     RSpec.describe GlobalApp do
@@ -17,13 +14,13 @@ module Orn
       end
 
       def entry_with_worktrees(name, branches, expanded)
-        row = entry(name)
-        row.expanded = expanded
-        row.worktrees = branches.map { |branch| WorktreeRow.new(branch: branch) }
-        row
+        entry(name).with(
+          expanded: expanded,
+          worktrees: branches.map { |branch| WorktreeRow.new(branch: branch) }
+        )
       end
 
-      def app_with(entries)
+      def app_with(entries, tabs: nil)
         described_class.new(
           output_mode: Orn::OutputMode.quiet,
           config: Orn::Config::GlobalTuiConfig.new(
@@ -31,24 +28,31 @@ module Orn
             scan_roots: [],
             scan_depth: 3
           ),
-          entries: entries
+          entries: entries,
+          tabs: tabs
         )
       end
 
-      def tab_for(repo, branch)
-        Hub::Tab.new(
+      def fake_tabs
+        Tabs.new(
+          output_mode: Orn::OutputMode.quiet,
+          hub_pane: "%0",
+          hub_location: %w[orn orn],
+          hub: FakeHub.new
+        )
+      end
+
+      def open_tab_for(tabs, repo, branch)
+        tabs.open(
           root: repo.root,
           session: repo.session_name,
           base_branch: repo.base_branch,
-          branch: branch,
-          pane_id: "%9"
+          branch: branch
         )
       end
 
       def agent_repo(name, state)
-        row = entry(name)
-        row.aggregate_agent_state = state
-        row
+        entry(name).with(aggregate_agent_state: state)
       end
 
       describe "#visible_rows" do
@@ -210,7 +214,7 @@ module Orn
             ]
           )
           app.selected = 2
-          app.entries[0].expanded = false
+          app.entries[0] = app.entries[0].with(expanded: false)
 
           app.move_down
 
@@ -220,6 +224,7 @@ module Orn
 
       describe "#select_visible_tab_row" do
         it "moves the selection onto the visible tab's worktree row" do
+          tabs = fake_tabs
           app = app_with(
             [
               entry_with_worktrees(
@@ -232,9 +237,10 @@ module Orn
                 %w[main],
                 true
               )
-            ]
+            ],
+            tabs: tabs
           )
-          app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "main"))
+          open_tab_for(tabs, app.entries[1], "main")
 
           app.select_visible_tab_row
 
@@ -242,6 +248,7 @@ module Orn
         end
 
         it "expands a collapsed owning repo" do
+          tabs = fake_tabs
           app = app_with(
             [
               entry_with_worktrees(
@@ -254,9 +261,10 @@ module Orn
                 %w[main feat],
                 false
               )
-            ]
+            ],
+            tabs: tabs
           )
-          app.hub.visible_index = app.hub.push_tab(tab_for(app.entries[1], "feat"))
+          open_tab_for(tabs, app.entries[1], "feat")
 
           app.select_visible_tab_row
 
@@ -339,275 +347,6 @@ module Orn
         end
       end
 
-      describe ".healthy?" do
-        around { |example| Dir.mktmpdir { |dir| example.metadata[:dir] = dir and example.run } }
-
-        it "is true for a bare repo with a readable HEAD" do |example|
-          bare = File.join(example.metadata[:dir], ".bare")
-          FileUtils.mkdir_p(bare)
-          File.write(File.join(bare, "HEAD"), "ref: refs/heads/main\n")
-
-          expect(described_class.healthy?(example.metadata[:dir])).to be(true)
-        end
-
-        it "is false when HEAD is missing" do |example|
-          FileUtils.mkdir_p(File.join(example.metadata[:dir], ".bare"))
-
-          expect(described_class.healthy?(example.metadata[:dir])).to be(false)
-        end
-
-        it "is false when there is no bare dir" do |example|
-          expect(described_class.healthy?(example.metadata[:dir])).to be(false)
-        end
-      end
-
-      describe ".discover_repos" do
-        around { |example| Dir.mktmpdir { |dir| example.metadata[:dir] = dir and example.run } }
-
-        def make_bare(root, name, head: "ref: refs/heads/main\n")
-          bare = File.join(
-            root,
-            name,
-            ".bare"
-          )
-          FileUtils.mkdir_p(bare)
-          File.write(File.join(bare, "HEAD"), head) if head
-        end
-
-        def config_for(root)
-          Orn::Config::GlobalTuiConfig.new(
-            session: "orn",
-            scan_roots: [root],
-            scan_depth: 3
-          )
-        end
-
-        it "finds bare projects and names them relative to the scan root" do |example|
-          root = example.metadata[:dir]
-          make_bare(root, "org/project-a")
-          make_bare(root, "org/project-b")
-
-          names = described_class.discover_repos(config_for(root)).map(&:display_name)
-
-          aggregate_failures do
-            expect(names).to include("org/project-a")
-            expect(names).to include("org/project-b")
-          end
-        end
-
-        it "marks a repo without HEAD as unhealthy" do |example|
-          root = example.metadata[:dir]
-          make_bare(
-            root,
-            "broken",
-            head: nil
-          )
-
-          repos = described_class.discover_repos(config_for(root))
-
-          aggregate_failures do
-            expect(repos.length).to eq(1)
-            expect(repos[0].healthy).to be(false)
-          end
-        end
-
-        it "caches the session name from the root basename" do |example|
-          root = example.metadata[:dir]
-          make_bare(root, "my-project")
-
-          repos = described_class.discover_repos(config_for(root))
-
-          expect(repos[0].session_name).to eq("my-project")
-        end
-
-        it "caches the session name from config" do |example|
-          root = example.metadata[:dir]
-          make_bare(root, "my-project")
-          FileUtils.mkdir_p(
-            File.join(
-              root,
-              "my-project",
-              ".orn"
-            )
-          )
-          File.write(
-            File.join(
-              root,
-              "my-project",
-              ".orn",
-              "config.yaml"
-            ),
-            "tmux:\n  session: custom-name\n"
-          )
-
-          repos = described_class.discover_repos(config_for(root))
-
-          expect(repos[0].session_name).to eq("custom-name")
-        end
-
-        it "sorts unseen repos alphabetically" do |example|
-          root = example.metadata[:dir]
-          %w[zebra alpha middle].each { |name| make_bare(root, name) }
-
-          repos = described_class.discover_repos(config_for(root))
-          described_class.sort_entries(repos)
-
-          expect(repos.map(&:display_name)).to eq(%w[alpha middle zebra])
-        end
-      end
-
-      describe ".disambiguate_names" do
-        it "prefixes colliding names with the scan-root basename" do
-          repos = [
-            RepoEntry.new(
-              display_name: "orn",
-              root: "/home/user/dev/orn",
-              healthy: true,
-              session_name: "orn",
-              base_branch: "main"
-            ),
-            RepoEntry.new(
-              display_name: "orn",
-              root: "/home/user/work/orn",
-              healthy: true,
-              session_name: "orn",
-              base_branch: "main"
-            )
-          ]
-
-          described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
-
-          aggregate_failures do
-            expect(repos[0].display_name).to eq("dev/orn")
-            expect(repos[1].display_name).to eq("work/orn")
-          end
-        end
-
-        it "leaves unique names untouched" do
-          repos = [
-            RepoEntry.new(
-              display_name: "alpha",
-              root: "/home/user/dev/alpha",
-              healthy: true,
-              session_name: "alpha",
-              base_branch: "main"
-            ),
-            RepoEntry.new(
-              display_name: "beta",
-              root: "/home/user/work/beta",
-              healthy: true,
-              session_name: "beta",
-              base_branch: "main"
-            )
-          ]
-
-          described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
-
-          expect(repos.map(&:display_name)).to eq(%w[alpha beta])
-        end
-      end
-
-      describe ".sort_entries" do
-        def live(name, activity)
-          row = entry(name)
-          row.session_alive = true
-          row.session_activity = activity
-          row
-        end
-
-        def mru(name, timestamp)
-          row = entry(name)
-          row.mru_timestamp = timestamp
-          row
-        end
-
-        it "orders live sessions before mru before unseen, with the right sub-order" do
-          repos = [entry("unseen-z"), live("live", 100), entry("unseen-a"), mru("mru", "2026-06-27T14:30:00Z")]
-
-          described_class.sort_entries(repos)
-
-          expect(repos.map(&:display_name)).to eq(%w[live mru unseen-a unseen-z])
-        end
-
-        it "orders live sessions by activity descending" do
-          repos = [live("older", 100), live("newer", 200)]
-
-          described_class.sort_entries(repos)
-
-          expect(repos.map(&:display_name)).to eq(%w[newer older])
-        end
-
-        it "orders mru repos by timestamp descending" do
-          repos = [mru("older-mru", "2026-06-26T09:00:00Z"), mru("newer-mru", "2026-06-27T14:30:00Z")]
-
-          described_class.sort_entries(repos)
-
-          expect(repos.map(&:display_name)).to eq(%w[newer-mru older-mru])
-        end
-      end
-
-      describe ".list_worktree_rows" do
-        it "is empty for a nonexistent repo" do
-          rows = described_class.list_worktree_rows(
-            Orn::OutputMode.quiet,
-            "/tmp/nonexistent-orn",
-            "main"
-          )
-
-          expect(rows).to be_empty
-        end
-      end
-
-      describe ".sort_branches_base_first" do
-        it "puts the base branch first, then alphabetical" do
-          branches = %w[zeta main alpha]
-          described_class.sort_branches_base_first(branches, "main")
-
-          expect(branches).to eq(%w[main alpha zeta])
-        end
-
-        it "is alphabetical when the base is absent" do
-          branches = %w[zeta alpha]
-          described_class.sort_branches_base_first(branches, "main")
-
-          expect(branches).to eq(%w[alpha zeta])
-        end
-      end
-
-      describe ".aggregate_state" do
-        def states(*pairs)
-          pairs.each_with_index.to_h do |(agent, state), i|
-            [
-              "win#{i}",
-              Orn::Detect::PaneAgentState.new(
-                agent: agent,
-                state: state
-              )
-            ]
-          end
-        end
-
-        it "ranks blocked over working" do
-          expect(described_class.aggregate_state(states(%i[claude blocked], %i[claude working]))).to eq(:blocked)
-        end
-
-        it "ranks working over idle" do
-          expect(described_class.aggregate_state(states(%i[claude working], %i[claude idle]))).to eq(:working)
-        end
-
-        it "returns idle when all agents are idle" do
-          expect(described_class.aggregate_state(states(%i[claude idle], %i[claude idle]))).to eq(:idle)
-        end
-
-        it "returns nil when no pane hosts an agent" do
-          expect(described_class.aggregate_state(states([nil, :unknown]))).to be_nil
-        end
-
-        it "returns nil for an empty set" do
-          expect(described_class.aggregate_state({})).to be_nil
-        end
-      end
-
       describe "agent aggregate and polling" do
         it "reports working only when the aggregate is working" do
           aggregate_failures do
@@ -634,8 +373,7 @@ module Orn
         end
 
         it "skips an unhealthy repo" do
-          unhealthy = entry("broken")
-          unhealthy.healthy = false
+          unhealthy = entry("broken").with(healthy: false)
           app = app_with([unhealthy])
 
           app.enter_selected

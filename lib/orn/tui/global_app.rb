@@ -2,66 +2,6 @@
 
 module Orn
   module TUI
-    # One discovered bare-worktree repo, with cached tmux session and agent
-    # status for the sidebar. Mutable: the refresh passes update it in place.
-    class RepoEntry
-      attr_accessor :display_name,
-        :root,
-        :healthy,
-        :session_name,
-        :base_branch,
-        :session_alive,
-        :window_count,
-        :expanded,
-        :worktrees,
-        :session_activity,
-        :mru_timestamp,
-        :aggregate_agent_state,
-        :sbx_agent_type
-
-      def initialize(display_name:, root:, healthy:, session_name:, base_branch:,
-        session_alive: false, window_count: 0, expanded: false, worktrees: [],
-        session_activity: nil, mru_timestamp: nil, aggregate_agent_state: nil, sbx_agent_type: nil)
-        @display_name = display_name
-        @root = root
-        @healthy = healthy
-        @session_name = session_name
-        @base_branch = base_branch
-        @session_alive = session_alive
-        @window_count = window_count
-        @expanded = expanded
-        @worktrees = worktrees
-        @session_activity = session_activity
-        @mru_timestamp = mru_timestamp
-        @aggregate_agent_state = aggregate_agent_state
-        @sbx_agent_type = sbx_agent_type
-      end
-
-      def worktree_count
-        @worktrees.length
-      end
-    end
-
-    # One worktree row under a repo in the global tree. `dirty`/`ahead_behind`
-    # stay nil until the owning repo is expanded (computed on demand).
-    class WorktreeRow
-      attr_accessor :branch,
-        :has_window,
-        :agent,
-        :sandboxed,
-        :dirty,
-        :ahead_behind
-
-      def initialize(branch:, has_window: false, agent: nil, sandboxed: false, dirty: nil, ahead_behind: nil)
-        @branch = branch
-        @has_window = has_window
-        @agent = agent
-        @sandboxed = sandboxed
-        @dirty = dirty
-        @ahead_behind = ahead_behind
-      end
-    end
-
     # A visible row in the flattened repo/worktree tree: a repo header or a
     # worktree under it, identified by index into `entries`.
     TreeRow = Data.define(
@@ -114,104 +54,11 @@ module Orn
       end
     end
 
-    # Name and last-activity time of a live tmux session.
-    SessionInfo = Data.define(:name, :activity)
-
-    # Agent-tab state for the hub window: which tabs are open, which one (if
-    # any) is visible, and where the hub itself lives in tmux. Kept separate
-    # from GlobalApp's repo/sidebar state since it has its own lifecycle, tied
-    # to tmux rather than to the discovery/mru refresh cycle.
-    class HubState
-      attr_reader :tabs,
-        :hub_pane,
-        :hub_location
-      attr_accessor :agent_focused
-
-      def initialize(hub_pane, hub_location)
-        @tabs = []
-        @visible_tab = nil
-        @agent_focused = false
-        @hub_pane = hub_pane
-        @hub_location = hub_location
-      end
-
-      def visible
-        @visible_tab && @tabs[@visible_tab]
-      end
-
-      def visible_index
-        @visible_tab
-      end
-
-      def visible_index=(index)
-        @visible_tab = index
-      end
-
-      def take_visible
-        taken = @visible_tab
-        @visible_tab = nil
-        taken
-      end
-
-      def tab_index_for(root, branch)
-        @tabs.index { |tab| tab.root.to_s == root.to_s && tab.branch == branch }
-      end
-
-      def push_tab(tab)
-        @tabs.push(tab)
-        @tabs.length - 1
-      end
-
-      def remove_tab(index)
-        @tabs.delete_at(index)
-        @visible_tab = Hub.adjust_visible_after_remove(@visible_tab, index)
-      end
-
-      def clear_tabs
-        @tabs.clear
-        @visible_tab = nil
-      end
-
-      # Drop tabs whose panes no longer exist (closed underneath us). Returns
-      # true when the visible tab was among them, so the caller can tear down
-      # key bindings.
-      def prune_dead_tabs(all_panes)
-        had_visible = !@visible_tab.nil?
-        index = 0
-        while index < @tabs.length
-          if Hub.tab_pane_alive(@tabs[index], all_panes)
-            index += 1
-          else
-            remove_tab(index)
-          end
-        end
-        had_visible && @visible_tab.nil?
-      end
-
-      # A visible tab's pane can be moved out of the hub behind our back (e.g.
-      # `orn switch` returned it home). Demote such a tab to hidden, returning
-      # true when it did so, so the caller can tear down key bindings.
-      def demote_visible_if_moved(all_panes)
-        location = @hub_location
-        tab = visible
-        return false unless location && tab
-
-        hub_session, hub_window = location
-        in_hub = all_panes.any? do |pane|
-          pane.pane_id == tab.pane_id &&
-            pane.session_name == hub_session &&
-            pane.window_name == hub_window
-        end
-        return false if in_hub
-
-        @visible_tab = nil
-        true
-      end
-    end
-
-    # State and actions for the global TUI: repo discovery across scan roots,
-    # per-repo tmux and agent status, and the hub's agent-tab lifecycle. A
-    # mutable PORO the event loop drives and the renderer reads.
+    # State and actions for the global TUI: the selection over the repo tree
+    # and the refresh cadence. Repo scanning lives in RepoDiscovery, live
+    # tmux/agent status in RepoStatus, and the agent-tab lifecycle in Tabs;
+    # this class composes them. A mutable PORO the event loop drives and the
+    # renderer reads.
     class GlobalApp
       # Cadence of the tmux-derived refresh (sessions, windows, agent states).
       TMUX_REFRESH = 3
@@ -228,7 +75,7 @@ module Orn
         :spinner_tick
       attr_reader :config,
         :list_state,
-        :hub
+        :tabs
 
       # Build the app, capturing the hosting tmux pane and window for hub tabs,
       # and run an initial discovery.
@@ -246,7 +93,10 @@ module Orn
         app
       end
 
-      def initialize(output_mode:, config:, entries: [], mru_state: nil, hub_pane: nil, hub_location: nil)
+      # `tabs` can be injected (specs pair it with a fake tmux-effects layer);
+      # by default the app builds its own, reporting tab errors onto the
+      # error line.
+      def initialize(output_mode:, config:, entries: [], mru_state: nil, hub_pane: nil, hub_location: nil, tabs: nil)
         @output = output_mode
         @config = config
         @entries = entries
@@ -255,23 +105,25 @@ module Orn
         @list_state.select(0) unless entries.empty?
         @error = nil
         @spinner_tick = 0
-        @hub = HubState.new(hub_pane, hub_location)
+        @tabs = tabs || Tabs.new(
+          output_mode: output_mode,
+          hub_pane: hub_pane,
+          hub_location: hub_location,
+          on_error: ->(message) { @error = message }
+        )
         @mru_state = mru_state || State.new
         @last_tmux_refresh = monotonic
         @last_discovery = monotonic
         @last_focus_poll = monotonic
       end
 
-      # Re-discover repos, reapply MRU and expanded state, refresh tmux data,
-      # and resort, keeping the selection anchored to the same row.
+      # Re-discover repos (with MRU and expanded state reapplied), refresh
+      # tmux data, and resort, keeping the selection anchored to the same row.
       def full_refresh
         anchor = selected_identity
-        @entries = self.class.discover_repos(@config)
-        self.class.apply_mru(@mru_state, @entries)
-        self.class.apply_expanded(@mru_state, @entries)
+        @entries = RepoDiscovery.discover(@output, @config, @mru_state)
         refresh_tmux_data
-        self.class.prune_mru(@mru_state, @entries)
-        self.class.sort_entries(@entries)
+        RepoDiscovery.sort_entries(@entries)
         reanchor_selected(anchor)
         @last_discovery = monotonic
       end
@@ -332,13 +184,13 @@ module Orn
         return unless row
 
         repo_idx = row.repo_index
-        entry = @entries[repo_idx]
-        entry.expanded = !entry.expanded
+        entry = @entries[repo_idx].with(expanded: !@entries[repo_idx].expanded)
+        @entries[repo_idx] = entry
         @mru_state.set_expanded(entry.root, entry.expanded)
         @mru_state.save
 
         if entry.expanded
-          self.class.refresh_worktree_git_stats(@output, entry)
+          @entries[repo_idx] = RepoStatus.with_worktree_git_stats(@output, entry)
         elsif row.worktree?
           @selected = visible_rows.index { |candidate| candidate == TreeRow.repo(repo_idx) } || 0
         end
@@ -358,26 +210,6 @@ module Orn
         @error = nil
       end
 
-      # The tab currently borrowed into the hub window, if any.
-      def visible
-        @hub.visible
-      end
-
-      # True while the visible tab's agent pane has tmux focus, for the
-      # sidebar's emphasized indicator.
-      def agent_focused?
-        @hub.agent_focused
-      end
-
-      # The visible tab's index into the open-tab list, if any.
-      def visible_tab
-        @hub.visible_index
-      end
-
-      def tab_index_for(root, branch)
-        @hub.tab_index_for(root, branch)
-      end
-
       # Act on the selected row: switch the tmux client into a repo's session,
       # or open/focus a worktree's agent tab.
       def enter_selected
@@ -394,8 +226,8 @@ module Orn
       # Re-apply the sidebar width; called on terminal resize while a tab is
       # visible.
       def enforce_layout
-        hub_pane = @hub.hub_pane
-        return unless @hub.visible_index && hub_pane
+        hub_pane = @tabs.hub_pane
+        return unless @tabs.visible_index && hub_pane
 
         Orn::Tmux.resize_pane_width(
           @output,
@@ -410,10 +242,10 @@ module Orn
       # sidebar indicator. Rate-limited so fast spinner ticks do not spawn a
       # tmux process per frame.
       def poll_focus
-        location = @hub.hub_location
-        tab = @hub.visible
+        location = @tabs.hub_location
+        tab = @tabs.visible
         unless location && tab
-          @hub.agent_focused = false
+          @tabs.agent_focused = false
           return
         end
         return if monotonic - @last_focus_poll < FOCUS_POLL_INTERVAL
@@ -424,46 +256,37 @@ module Orn
           hub_session,
           hub_window
         )
-        @hub.agent_focused = active == tab.pane_id
+        @tabs.agent_focused = active == tab.pane_id
         @last_focus_poll = monotonic
       end
 
       # Cycle the visible tab forward or backward through the open tabs.
       def cycle_tab(forward)
-        next_index = Hub.cycle_index(
-          @hub.tabs.length,
-          @hub.visible_index,
-          forward
-        )
-        return if next_index.nil? || @hub.visible_index == next_index
+        return unless @tabs.cycle(forward)
 
-        show_tab(next_index)
+        refresh_tmux
         select_visible_tab_row
       end
 
       # Close the selected worktree row's tab, or the visible tab when the
       # selection has none. The agent keeps running in its home window.
       def close_tab
-        idx = selected_tab_index || @hub.visible_index
+        idx = selected_tab_index || @tabs.visible_index
         return unless idx
 
-        hide_visible if @hub.visible_index == idx
-        @hub.remove_tab(idx)
-        Hub.remove_bindings(@output) if @hub.visible_index.nil?
+        @tabs.close(idx)
       end
 
       # Hide and forget every tab; called when the TUI exits.
       def close_all_tabs
-        hide_visible
-        @hub.clear_tabs
-        Hub.remove_bindings(@output)
+        @tabs.close_all
       end
 
       # Move the sidebar selection onto the visible tab's worktree row,
       # expanding the owning repo when collapsed, so the highlighted row follows
       # the focused agent while cycling.
       def select_visible_tab_row
-        tab = visible
+        tab = @tabs.visible
         return unless tab
 
         repo_idx = @entries.index { |entry| entry.root.to_s == tab.root.to_s }
@@ -500,341 +323,6 @@ module Orn
         length = visible_rows.length
         @selected = length - 1 if @selected >= length && length.positive?
         sync_list_state
-      end
-
-      # Scan every configured root for bare-worktree projects, disambiguating
-      # colliding display names.
-      def self.discover_repos(config)
-        output = Orn::OutputMode.quiet
-        repos = []
-        config.scan_roots.each do |root|
-          scan_root(
-            root,
-            config.scan_depth,
-            output,
-            repos
-          )
-        end
-        disambiguate_names(config.scan_roots, repos)
-        repos
-      end
-
-      # Find `.bare` directories under `root` (via `find`, up to `depth`) and
-      # append a RepoEntry for each containing project.
-      def self.scan_root(root, depth, output, repos)
-        result = Orn::Cmd.new(output_mode: output)
-          .output("find", root.to_s, "-maxdepth", depth.to_s, "-name", ".bare", "-type", "d")
-        return unless result.success?
-
-        result.stdout.lines.each do |line|
-          bare_path = line.strip
-          next if bare_path.empty?
-
-          repos << repo_entry_for(
-            bare_path,
-            root,
-            output
-          )
-        end
-      rescue Orn::Error
-        nil
-      end
-
-      def self.repo_entry_for(bare_path, scan_root, output)
-        project_root = File.dirname(bare_path)
-        config = Orn::Config.load(project_root)
-        agent = config.sbx&.agent_type && Orn::Detect.identify_agent(config.sbx.agent_type)
-        project = Orn::Git::Project.new(
-          root: project_root,
-          config: config
-        )
-        RepoEntry.new(
-          display_name: relative_display_name(project_root, scan_root),
-          root: project_root,
-          healthy: healthy?(project_root),
-          session_name: Orn::Session.session_name(project),
-          base_branch: config.base,
-          worktrees: list_worktree_rows(
-            output,
-            project_root,
-            config.base
-          ),
-          sbx_agent_type: agent
-        )
-      end
-
-      # `project_root` relative to `scan_root` when nested under it, else the
-      # absolute path.
-      def self.relative_display_name(project_root, scan_root)
-        prefix = "#{scan_root.to_s.chomp("/")}/"
-        project_root.start_with?(prefix) ? project_root[prefix.length..] : project_root
-      end
-
-      # Worktree rows for a repo, base branch first, then alphabetical.
-      def self.list_worktree_rows(output, root, base)
-        branches = Orn::Git::Worktree.new(
-          root: root,
-          output_mode: output
-        ).entries
-        sort_branches_base_first(branches, base)
-        branches.map { |branch| WorktreeRow.new(branch: branch) }
-      end
-
-      def self.sort_branches_base_first(branches, base)
-        branches.sort_by! { |branch| [branch == base ? 0 : 1, branch] }
-      end
-
-      # A project is healthy when `.bare/HEAD` exists and is readable.
-      def self.healthy?(project_root)
-        head = File.join(
-          project_root,
-          ".bare",
-          "HEAD"
-        )
-        File.file?(head) && File.readable?(head)
-      end
-
-      def self.apply_mru(state, repos)
-        repos.each { |repo| repo.mru_timestamp = state.timestamp(repo.root) }
-      end
-
-      def self.apply_expanded(state, repos)
-        repos.each { |repo| repo.expanded = state.expanded?(repo.root) }
-      end
-
-      # Drop persisted state for repos no longer discovered, and save.
-      def self.prune_mru(state, repos)
-        state.prune(repos.map(&:root))
-        state.save
-      end
-
-      # Order repos by tier: live sessions by activity (newest first), then
-      # previously entered repos by MRU timestamp, then the rest alphabetically.
-      def self.sort_entries(repos)
-        repos.sort! do |a, b|
-          tier_a = sort_tier(a)
-          tier_b = sort_tier(b)
-          next tier_a <=> tier_b unless tier_a == tier_b
-
-          tier_order(
-            tier_a,
-            a,
-            b
-          )
-        end
-      end
-
-      def self.tier_order(tier, first, second)
-        case tier
-        when 0 then (second.session_activity || 0) <=> (first.session_activity || 0)
-        when 1 then (second.mru_timestamp || "") <=> (first.mru_timestamp || "")
-        else first.display_name <=> second.display_name
-        end
-      end
-
-      # 0 = live session, 1 = previously entered (MRU), 2 = unseen.
-      def self.sort_tier(entry)
-        return 0 if entry.session_alive
-        return 1 if entry.mru_timestamp
-
-        2
-      end
-
-      # Prefix colliding display names with their scan root's basename.
-      def self.disambiguate_names(scan_roots, repos)
-        return if scan_roots.length <= 1
-
-        needs_prefix = collisions(repos)
-        repos.each_with_index do |repo, i|
-          next unless needs_prefix[i]
-
-          root = scan_roots.find { |candidate| repo.root.to_s.start_with?(candidate.to_s) }
-          repo.display_name = "#{File.basename(root.to_s)}/#{repo.display_name}" if root
-        end
-      end
-
-      def self.collisions(repos)
-        needs = Array.new(repos.length, false)
-        repos.each_index do |i|
-          ((i + 1)...repos.length).each do |j|
-            next unless repos[i].display_name == repos[j].display_name
-
-            needs[i] = true
-            needs[j] = true
-          end
-        end
-        needs
-      end
-
-      # Highest-priority state among panes hosting an agent (blocked > working
-      # > idle), or nil when no agent is detected.
-      def self.aggregate_state(states)
-        agents = states.values.select(&:agent)
-        return nil if agents.empty?
-
-        agents.map(&:state).max_by { |state| Orn::Detect.state_priority(state) }
-      end
-
-      def self.list_sessions(output)
-        result = Orn::Cmd.new(output_mode: output)
-          .output("tmux", "list-sessions", "-F", "\#{session_name}\t\#{session_activity}")
-        return [] unless result.success?
-
-        result.stdout.lines.filter_map do |line|
-          name, activity = line.chomp.split("\t", 2)
-          activity && SessionInfo.new(
-            name: name,
-            activity: activity.to_i
-          )
-        end
-      rescue Orn::Error
-        []
-      end
-
-      # Update every repo's session, window, and agent status from one shared
-      # pane listing.
-      def self.refresh_tmux_state(output, repos, tab, all_panes)
-        sessions = list_sessions(output)
-        repos.each do |repo|
-          info = sessions.find { |session| session.name == repo.session_name }
-          borrowed = borrowed_pane_for_repo(
-            tab,
-            repo,
-            all_panes
-          )
-          if info
-            refresh_alive_repo(
-              output,
-              repo,
-              info,
-              all_panes,
-              borrowed
-            )
-          else
-            refresh_dead_repo(
-              output,
-              repo,
-              borrowed
-            )
-          end
-          refresh_worktree_git_stats(output, repo) if repo.expanded
-        end
-      end
-
-      # The visible tab's pane remapped to its home repo and branch, so agent
-      # detection attributes it correctly while it sits in the hub window.
-      def self.borrowed_pane_for_repo(tab, repo, all_panes)
-        return nil unless tab && tab.root.to_s == repo.root.to_s
-
-        pane = all_panes.find { |candidate| candidate.pane_id == tab.pane_id }
-        return nil unless pane
-
-        pane.with(
-          session_name: repo.session_name,
-          window_name: tab.branch
-        )
-      end
-
-      # Refresh window and agent state for a repo whose session is alive. The
-      # borrowed pane, when this repo owns it, stands in for its home window.
-      def self.refresh_alive_repo(output, repo, info, all_panes, borrowed)
-        repo.session_alive = true
-        repo.session_activity = info.activity
-        windows = Orn::Tmux.list_windows(output, info.name)
-        repo.window_count = windows.length
-
-        repo_panes = session_panes(
-          repo,
-          all_panes,
-          borrowed
-        )
-        states = if repo_panes.empty?
-          {}
-        else
-          Orn::Detect.detect_all_panes(
-            output,
-            repo_panes,
-            repo.sbx_agent_type
-          )
-        end
-        repo.aggregate_agent_state = aggregate_state(states)
-        repo.worktrees.each do |wt|
-          assign_worktree_agent(
-            wt,
-            windows,
-            states,
-            repo_panes
-          )
-        end
-      end
-
-      # The repo's own panes plus its borrowed hub pane (which replaces the
-      # original, matched out by id).
-      def self.session_panes(repo, all_panes, borrowed)
-        borrowed_id = borrowed&.pane_id
-        own = all_panes.select do |pane|
-          pane.session_name == repo.session_name && pane.pane_id != borrowed_id
-        end
-        borrowed ? own + [borrowed] : own
-      end
-
-      def self.assign_worktree_agent(worktree, windows, states, repo_panes)
-        worktree.has_window = windows.include?(worktree.branch)
-        worktree.agent = states[worktree.branch]
-        worktree.sandboxed = repo_panes.any? do |pane|
-          pane.window_name == worktree.branch && Orn::Detect.container_command?(pane.pane_current_command)
-        end
-      end
-
-      # Borrowing a repo's only pane can kill its session; the agent still runs
-      # in the hub, so its status stays visible through the borrowed pane.
-      def self.refresh_dead_repo(output, repo, borrowed)
-        repo.session_alive = false
-        repo.session_activity = nil
-        repo.window_count = 0
-        repo.aggregate_agent_state = nil
-        repo.worktrees.each do |wt|
-          wt.has_window = false
-          wt.agent = nil
-          wt.sandboxed = false
-        end
-        return unless borrowed
-
-        attribute_borrowed_agent(
-          output,
-          repo,
-          borrowed
-        )
-      end
-
-      def self.attribute_borrowed_agent(output, repo, borrowed)
-        branch = borrowed.window_name
-        states = Orn::Detect.detect_all_panes(
-          output,
-          [borrowed],
-          repo.sbx_agent_type
-        )
-        repo.aggregate_agent_state = aggregate_state(states)
-        worktree = repo.worktrees.find { |wt| wt.branch == branch }
-        return unless worktree
-
-        worktree.agent = states[branch]
-        worktree.sandboxed = Orn::Detect.container_command?(borrowed.pane_current_command)
-      end
-
-      # Dirty and ahead/behind stats are gathered only for expanded repos, on
-      # the tmux refresh cadence, to keep the collapsed global view cheap.
-      def self.refresh_worktree_git_stats(output, repo)
-        repo.worktrees.each do |wt|
-          wt_path = File.join(repo.root.to_s, wt.branch)
-          wt.dirty = App.dirty?(output, wt_path)
-          wt.ahead_behind = App.ahead_behind(
-            output,
-            wt_path,
-            wt.branch,
-            repo.base_branch
-          )
-        end
       end
 
       # Switch the tmux client to the repo's session, creating the session and
@@ -921,103 +409,43 @@ module Orn
         entry = @entries[repo_idx]
         return unless entry.healthy
 
-        hub_pane = @hub.hub_pane
-        unless hub_pane
+        unless @tabs.hub_pane
           @error = "agent tabs require the TUI to run inside tmux"
           return
         end
 
         branch = entry.worktrees[wt_idx].branch
-        existing = tab_index_for(entry.root, branch)
+        existing = @tabs.tab_index_for(entry.root, branch)
         return focus_existing_tab(existing) if existing
 
-        open_new_tab(
-          entry,
-          branch,
-          hub_pane
-        )
+        open_new_tab(entry, branch)
       end
 
       def focus_existing_tab(idx)
-        if @hub.visible_index == idx
-          tab = visible
-          begin
-            Orn::Tmux.select_pane(@output, tab.pane_id) if tab
-          rescue Orn::Error
-            nil
-          end
-        else
-          show_tab(idx)
+        return show_tab(idx) unless @tabs.visible_index == idx
+
+        tab = @tabs.visible
+        begin
+          Orn::Tmux.select_pane(@output, tab.pane_id) if tab
+        rescue Orn::Error
+          nil
         end
       end
 
-      def open_new_tab(entry, branch, hub_pane)
-        hide_visible
+      def open_new_tab(entry, branch)
         @mru_state.touch(entry.root)
         @mru_state.save
-        tab = Hub.open_tab(
-          @output,
+        opened = @tabs.open(
           root: entry.root,
           session: entry.session_name,
           base_branch: entry.base_branch,
-          branch: branch,
-          hub_pane: hub_pane
+          branch: branch
         )
-        idx = @hub.push_tab(tab)
-        @hub.visible_index = idx
-        install_bindings_for_visible
-        refresh_tmux
-      rescue Orn::Error => e
-        @error = e.message
+        refresh_tmux if opened
       end
 
-      # Bring a hidden tab to front: hide the visible one, borrow this tab's
-      # pane. Drops the tab if its pane is gone.
       def show_tab(idx)
-        hub_pane = @hub.hub_pane
-        return unless hub_pane
-
-        hide_visible
-        tab = @hub.tabs[idx]
-        Hub.show_tab(
-          @output,
-          tab,
-          hub_pane
-        )
-        @hub.visible_index = idx
-        install_bindings_for_visible
-        refresh_tmux
-      rescue Orn::Error => e
-        @error = e.message
-        @hub.remove_tab(idx)
-      end
-
-      # Hide the visible tab's pane (returns home); the tab stays open.
-      def hide_visible
-        idx = @hub.take_visible
-        return unless idx
-
-        Hub.hide_tab(@output, @hub.tabs[idx])
-      rescue Orn::Error => e
-        @error = e.message
-      end
-
-      def install_bindings_for_visible
-        location = @hub.hub_location
-        hub_pane = @hub.hub_pane
-        tab = visible
-        return unless location && hub_pane && tab
-
-        hub_session, hub_window = location
-        Hub.install_bindings(
-          @output,
-          hub_session,
-          hub_window,
-          hub_pane,
-          tab.pane_id
-        )
-      rescue Orn::Error => e
-        @error = e.message
+        refresh_tmux if @tabs.show(idx)
       end
 
       def selected_tab_index
@@ -1025,17 +453,16 @@ module Orn
         return nil unless row&.worktree?
 
         entry = @entries[row.repo_index]
-        tab_index_for(entry.root, entry.worktrees[row.wt_index].branch)
+        @tabs.tab_index_for(entry.root, entry.worktrees[row.wt_index].branch)
       end
 
       def expand_repo_for_tab(repo_idx, root)
         entry = @entries[repo_idx]
         return if entry.expanded
 
-        entry.expanded = true
         @mru_state.set_expanded(root, true)
         @mru_state.save
-        self.class.refresh_worktree_git_stats(@output, entry)
+        @entries[repo_idx] = RepoStatus.with_worktree_git_stats(@output, entry.with(expanded: true))
       end
 
       # Refresh tmux-derived state and resort, keeping the selection anchored to
@@ -1057,24 +484,16 @@ module Orn
           @last_tmux_refresh = monotonic
           return
         end
-        prune_dead_tabs(all_panes)
-        sync_visible_with_reality(all_panes)
-        self.class.refresh_tmux_state(
+        @tabs.prune_dead_tabs(all_panes)
+        @tabs.demote_visible_if_moved(all_panes)
+        @entries = RepoStatus.refresh(
           @output,
           @entries,
-          visible,
+          @tabs.visible,
           all_panes
         )
-        self.class.sort_entries(@entries)
+        RepoDiscovery.sort_entries(@entries)
         @last_tmux_refresh = monotonic
-      end
-
-      def prune_dead_tabs(all_panes)
-        Hub.remove_bindings(@output) if @hub.prune_dead_tabs(all_panes)
-      end
-
-      def sync_visible_with_reality(all_panes)
-        Hub.remove_bindings(@output) if @hub.demote_visible_if_moved(all_panes)
       end
 
       def monotonic

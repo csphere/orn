@@ -70,17 +70,17 @@ module Orn
       end
 
       it "grays out an unhealthy repo" do
-        broken = entry("broken")
-        broken.healthy = false
+        broken = entry("broken").with(healthy: false)
 
         expect(render(app_with([broken]))[[1, 2]].fg).to eq(Color::DARK_GRAY)
       end
 
       it "renders session and worktree count columns" do
-        repo = entry("seaseducation/api")
-        repo.session_alive = true
-        repo.window_count = 3
-        repo.worktrees = Array.new(5) { |i| WorktreeRow.new(branch: "wt-#{i}") }
+        repo = entry("seaseducation/api").with(
+          session_alive: true,
+          window_count: 3,
+          worktrees: Array.new(5) { |i| WorktreeRow.new(branch: "wt-#{i}") }
+        )
 
         screen = render(app_with([repo]), width: 80).to_s
 
@@ -117,9 +117,10 @@ module Orn
 
       describe "aggregate agent indicators" do
         def agent_app(state)
-          repo = entry("seaseducation/api")
-          repo.session_alive = true
-          repo.aggregate_agent_state = state
+          repo = entry("seaseducation/api").with(
+            session_alive: true,
+            aggregate_agent_state: state
+          )
           app_with([repo])
         end
 

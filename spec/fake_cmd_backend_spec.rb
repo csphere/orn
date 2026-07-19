@@ -39,6 +39,15 @@ RSpec.describe FakeCmdBackend do
     end
   end
 
+  it "feeds Cmd's command-not-found error path" do
+    with_fake_cmd do |fake|
+      fake.script_missing(%w[figd status])
+
+      expect { cmd.output("figd", "status") }
+        .to raise_error(Orn::Error, /Failed to run figd: command not found/)
+    end
+  end
+
   it "feeds Cmd#run's nonzero-exit error path" do
     with_fake_cmd do |fake|
       fake.script(
