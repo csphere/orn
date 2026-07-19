@@ -253,3 +253,8 @@ Metrics/ParameterLists:
 # so they are not named with a trailing '?'.
 Naming/PredicateMethod:
   Enabled: false
+
+# Class-level writers are defined as plain `def self.x=` methods like any
+# other class method, not as attr_writer inside a `class << self` block.
+Style/TrivialAccessors:
+  IgnoreClassMethods: true

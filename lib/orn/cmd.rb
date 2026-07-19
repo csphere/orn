@@ -19,6 +19,28 @@ module Orn
       end
     end
 
+    # Runs commands for real via Open3. The class-level `backend` accessor is
+    # the test seam: specs install a scripted fake there, so callers exercise
+    # Cmd's logging and error mapping without spawning subprocesses.
+    class Open3Backend
+      def capture(command)
+        stdout, stderr, process_status = Open3.capture3(*command)
+        Result.new(
+          stdout:,
+          stderr:,
+          status: process_status.exitstatus || 1
+        )
+      end
+    end
+
+    def self.backend
+      @backend ||= Open3Backend.new
+    end
+
+    def self.backend=(backend)
+      @backend = backend
+    end
+
     def initialize(output_mode:)
       @output_mode = output_mode
     end
@@ -49,12 +71,7 @@ module Orn
     private
 
     def capture(command)
-      stdout, stderr, process_status = Open3.capture3(*command)
-      Result.new(
-        stdout:,
-        stderr:,
-        status: process_status.exitstatus || 1
-      )
+      self.class.backend.capture(command)
     rescue Errno::ENOENT
       raise Orn::Error, "Failed to run #{command.first}: command not found"
     end

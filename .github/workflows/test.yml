@@ -27,6 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.8"
+      # The container runs bundler in frozen mode, which needs a lockfile;
+      # Gemfile.lock is gitignored, so the checkout has none. Resolve one
+      # here for the container to freeze against.
+      - run: bundle lock
       - uses: taiki-e/install-action@just
       # Without these secrets (e.g. fork PRs) the sandbox system tests are
       # skipped; the rest of the suite still runs in the container.
