@@ -228,12 +228,22 @@ module Orn
       )
     end
 
+    # Values come from the same resolution the TUI uses
+    # (GlobalTuiConfig.resolve); only the source labels are added here.
     def self.tui_info(global)
       tui = global&.tui || {}
+      resolved = GlobalTuiConfig.resolve(tui)
       TuiInfo.new(
-        session: sourced_global(tui["session"], "orn"),
-        scan_roots: sourced_global(tui["scan_roots"], []),
-        scan_depth: sourced_global(tui["scan_depth"], DEFAULT_SCAN_DEPTH)
+        session: sourced_tui(resolved.session, tui.key?("session")),
+        scan_roots: sourced_tui(resolved.scan_roots, tui.key?("scan_roots")),
+        scan_depth: sourced_tui(resolved.scan_depth, tui.key?("scan_depth"))
+      )
+    end
+
+    def self.sourced_tui(value, configured)
+      Sourced.new(
+        value: value,
+        source: configured ? :global : :default
       )
     end
 
@@ -288,6 +298,7 @@ module Orn
       :sourced_symlinks,
       :tui_info,
       :sourced_global,
+      :sourced_tui,
       :read_yaml_mapping,
       :read_mapping_for_rewrite,
       :rewrite_refused_message
