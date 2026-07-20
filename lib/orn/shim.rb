@@ -30,9 +30,10 @@ module Orn
     def run
       return Orn::TUI.launch(global: global_requested?) unless subcommand?
 
-      # A config newer than the running orn must be refused before the command
-      # touches it. Do this here, once the project is known, so every command
-      # is covered in one place rather than each command re-checking.
+      # A config older than the running orn (pending migration) must be
+      # refused before the command touches it. Do this here, once the project
+      # is known, so every command is covered in one place rather than each
+      # command re-checking.
       enforce_config_versions
 
       # `Thor.start` is Thor's entry point: it parses the argv it is given

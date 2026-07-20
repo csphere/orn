@@ -217,8 +217,8 @@ image, kits, ports, services).
   sources (project / global / default).
 - `orn config migrate [--dry-run] [--yes] [--global] [--project]`: upgrade
   config files to the current schema version. Commands refuse to run when a
-  project's config is newer than the installed orn, so upgrade orn or
-  migrate as prompted.
+  project's config is older than the installed orn; run `orn config migrate`
+  to update it. A config newer than the installed orn only prints a warning.
 
 ## Configuration
 
