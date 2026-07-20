@@ -23,6 +23,16 @@ module Orn
         )
       end
 
+      # Advisory: whether the remote is configured at all. False on any git
+      # failure. Projects made by `orn init` have no origin.
+      def remote_configured?(remote)
+        @repo.ok?(
+          "remote",
+          "get-url",
+          remote
+        )
+      end
+
       # Advisory, like local_branch_exists?, but consults the remote.
       def remote_branch_exists?(remote, branch)
         !@repo.read(

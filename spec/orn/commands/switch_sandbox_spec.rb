@@ -161,7 +161,12 @@ RSpec.describe Orn::Commands::SwitchSandbox do
   end
 
   # ls-remote reports the branch absent, so the worktree branches off base.
+  def remote_get_url_argv(root)
+    ["git", "-C", root, "remote", "get-url", "origin"]
+  end
+
   def script_worktree_creation(fake, root, base)
+    fake.script(remote_get_url_argv(root))
     fake.script(fetch_argv(root, base))
     fake.script(ls_remote_argv(root))
     fake.script(worktree_add_argv(root, base))
@@ -244,6 +249,7 @@ RSpec.describe Orn::Commands::SwitchSandbox do
     def expected_provision_argvs(project, host_port)
       [
         *preflight_argvs(project),
+        remote_get_url_argv(project.root),
         fetch_argv(project.root, "main"),
         ls_remote_argv(project.root),
         worktree_add_argv(project.root, "main"),
@@ -423,6 +429,7 @@ RSpec.describe Orn::Commands::SwitchSandbox do
           expect(fake.invocations).to eq(
             [
               *preflight_argvs(project),
+              remote_get_url_argv(project.root),
               fetch_argv(project.root, "main"),
               ls_remote_argv(project.root),
               worktree_add_argv(project.root, "main"),

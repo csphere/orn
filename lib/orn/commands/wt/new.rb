@@ -50,15 +50,22 @@ module Orn
         end
 
         # Fetches base, then creates the worktree from origin/<branch> when the
-        # remote branch exists, otherwise from origin/<base>. Returns from_remote.
+        # remote branch exists, otherwise from origin/<base>. Projects without
+        # an origin remote (orn init) and failed fetches (offline) fall back to
+        # the local base branch. Returns from_remote.
         def self.create_worktree(output_mode, project, worktree, branch, base)
           wt_path = project.worktree_path(branch)
-          output_mode.status("Fetching origin/#{base}...")
-          worktree.fetch("origin", base)
+          has_origin = worktree.remote_configured?("origin")
+          fetch_base(output_mode, worktree, base) if has_origin
 
-          from_remote = worktree.remote_branch_exists?("origin", branch)
+          from_remote = has_origin && worktree.remote_branch_exists?("origin", branch)
           worktree.fetch("origin", branch) if from_remote
-          start_point = from_remote ? "origin/#{branch}" : "origin/#{base}"
+          start_point = start_point_for(
+            branch,
+            base,
+            from_remote,
+            has_origin
+          )
           output_mode.status("Creating worktree at #{wt_path}...")
           worktree.add(
             wt_path,
@@ -66,6 +73,20 @@ module Orn
             start_point
           )
           from_remote
+        end
+
+        def self.fetch_base(output_mode, worktree, base)
+          output_mode.status("Fetching origin/#{base}...")
+          worktree.fetch("origin", base)
+        rescue Orn::Error => e
+          output_mode.status("  Fetch failed, using local '#{base}': #{e.message}")
+        end
+
+        def self.start_point_for(branch, base, from_remote, has_origin)
+          return "origin/#{branch}" if from_remote
+          return "origin/#{base}" if has_origin
+
+          base
         end
 
         def self.apply_symlinks(output_mode, project, worktree, wt_path, base)
@@ -169,6 +190,8 @@ module Orn
         end
 
         private_class_method :create_worktree,
+          :fetch_base,
+          :start_point_for,
           :apply_symlinks,
           :handle_unignored,
           :resolve_unignored_interactively,

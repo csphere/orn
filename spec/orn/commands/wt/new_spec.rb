@@ -27,6 +27,49 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
     )
   end
 
+  # A project with a local main branch and no origin remote, like one made
+  # by `orn init`.
+  def remoteless_project
+    workspace = register_temp_dir(Dir.mktmpdir("orn-noremote-src"))
+    git(
+      "init",
+      "-b",
+      "main",
+      chdir: workspace
+    )
+    init_git_repo(workspace)
+    File.write(File.join(workspace, "f.txt"), "x")
+    git(
+      "add",
+      ".",
+      chdir: workspace
+    )
+    git(
+      "commit",
+      "-m",
+      "init",
+      chdir: workspace
+    )
+
+    root = register_temp_dir(Dir.mktmpdir("orn-project"))
+    git(
+      "clone",
+      "--bare",
+      workspace,
+      File.join(root, ".bare")
+    )
+    git(
+      "remote",
+      "remove",
+      "origin",
+      chdir: File.join(root, ".bare")
+    )
+    File.write(File.join(root, ".git"), "gitdir: ./.bare\n")
+    FileUtils.mkdir_p(File.join(root, ".orn"))
+    File.write(File.join(root, ".orn", "config.yaml"), "git:\n  base: main\n")
+    root
+  end
+
   # A project whose config links the named project-root files into each new
   # worktree. The files exist at the root but nothing gitignores them, so
   # creating a worktree triggers the unignored-destination flow.
@@ -78,6 +121,45 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
         expect(result.from_remote).to be(false)
         expect(result.base).to eq("main")
         expect(File).to be_directory(File.join(root, "feature/brand-new"))
+      end
+    end
+
+    it "creates a worktree off the local base when no origin remote exists" do
+      root = remoteless_project
+
+      result = nil
+      expect do
+        result = described_class.create(
+          Orn::OutputMode.default,
+          load_project(root),
+          "feature/no-remote",
+          nil
+        )
+      end.not_to output(/Fetching/).to_stderr
+
+      aggregate_failures do
+        expect(result.from_remote).to be(false)
+        expect(File).to be_directory(File.join(root, "feature/no-remote"))
+      end
+    end
+
+    it "falls back to the local base when the fetch fails" do
+      root = remoteless_project
+      add_origin(root, "/nonexistent/orn-remote")
+
+      result = nil
+      expect do
+        result = described_class.create(
+          Orn::OutputMode.default,
+          load_project(root),
+          "feature/offline",
+          nil
+        )
+      end.to output(/Fetch failed, using local 'main'/).to_stderr
+
+      aggregate_failures do
+        expect(result.from_remote).to be(false)
+        expect(File).to be_directory(File.join(root, "feature/offline"))
       end
     end
 
@@ -206,6 +288,7 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
       ]
 
       with_fake_cmd do |fake|
+        fake.script(["git", "-C", root, "remote", "get-url", "origin"])
         fake.script(["git", "-C", root, "fetch", "origin", "main"])
         fake.script(["git", "-C", root, "ls-remote", "--heads", "origin", "feature/new"])
         fake.script(["git", "-C", root, "worktree", "add", "-b", "feature/new", wt_path, "origin/main"])

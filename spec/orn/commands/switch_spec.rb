@@ -257,6 +257,10 @@ RSpec.describe Orn::Commands::Switch do
       ["git", "-C", root, "fetch", "origin", ref]
     end
 
+    def remote_get_url_argv(root)
+      ["git", "-C", root, "remote", "get-url", "origin"]
+    end
+
     def worktree_add_argv(root, start_point)
       ["git", "-C", root, "worktree", "add", "-b", "feat", File.join(root, "feat"), start_point]
     end
@@ -331,6 +335,7 @@ RSpec.describe Orn::Commands::Switch do
       project = discoverable_project(plain_switch_config)
       with_fake_cmd do |fake|
         fake.script(ls_remote_argv(project.root), stdout: "abc123\trefs/heads/feat\n")
+        fake.script(remote_get_url_argv(project.root))
         fake.script(fetch_argv(project.root, "main"))
         fake.script(fetch_argv(project.root, "feat"))
         fake.script(worktree_add_argv(project.root, "origin/feat"))
@@ -343,6 +348,7 @@ RSpec.describe Orn::Commands::Switch do
           expect(fake.invocations).to eq(
             [
               ls_remote_argv(project.root),
+              remote_get_url_argv(project.root),
               fetch_argv(project.root, "main"),
               ls_remote_argv(project.root),
               fetch_argv(project.root, "feat"),
@@ -422,6 +428,7 @@ RSpec.describe Orn::Commands::Switch do
       project = discoverable_project(plain_switch_config)
       with_fake_cmd do |fake|
         fake.script(ls_remote_argv(project.root))
+        fake.script(remote_get_url_argv(project.root))
         fake.script(fetch_argv(project.root, "main"))
         fake.script(worktree_add_argv(project.root, "origin/main"))
 
