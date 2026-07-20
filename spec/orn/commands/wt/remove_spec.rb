@@ -24,17 +24,17 @@ RSpec.describe Orn::Commands::Wt::Remove, :real_cmd do
     worktree
   end
 
-  describe "#run" do
-    def run_from(project, run_command, branches, prune:, force:)
-      Dir.chdir(project.root) do
-        run_command.run(
-          branches,
-          prune: prune,
-          force: force
-        )
-      end
+  def run_from(project, run_command, branches, prune:, force:)
+    Dir.chdir(project.root) do
+      run_command.run(
+        branches,
+        prune: prune,
+        force: force
+      )
     end
+  end
 
+  describe "#run" do
     it "prompts for each branch before pruning interactively" do
       project = project_on
       interactive_command = described_class.new(output_mode: Orn::OutputMode.default)
@@ -214,7 +214,7 @@ RSpec.describe Orn::Commands::Wt::Remove, :real_cmd do
     end
   end
 
-  describe "#remove_multiple" do
+  describe "#run batches" do
     it "removes every worktree in the batch" do
       project = project_on
       remote = make_remote_with_branch("feature/multi-a")
@@ -232,16 +232,20 @@ RSpec.describe Orn::Commands::Wt::Remove, :real_cmd do
           "origin/#{branch}"
         )
       end
+      human_command = described_class.new(output_mode: Orn::OutputMode.default)
 
-      results, errors = command.remove_multiple(
-        project,
-        %w[feature/multi-a feature/multi-b],
-        false
-      )
+      expect do
+        run_from(
+          project,
+          human_command,
+          %w[feature/multi-a feature/multi-b],
+          prune: false,
+          force: false
+        )
+      end.to output("Removed worktree: feature/multi-a\nRemoved worktree: feature/multi-b\n").to_stdout
 
-      expect(results.length).to eq(2)
-      expect(errors).to be_empty
-      expect(results.map(&:worktree_removed)).to all(be(true))
+      expect(File.exist?(project.worktree_path("feature/multi-a"))).to be(false)
+      expect(File.exist?(project.worktree_path("feature/multi-b"))).to be(false)
     end
 
     it "reports one branch's failure but still removes the others" do
@@ -251,17 +255,21 @@ RSpec.describe Orn::Commands::Wt::Remove, :real_cmd do
         "feature/survive",
         make_remote_with_branch("feature/survive")
       )
+      human_command = described_class.new(output_mode: Orn::OutputMode.default)
 
-      results, errors = command.remove_multiple(
-        project,
-        %w[main feature/survive],
-        true
-      )
+      expect do
+        expect do
+          run_from(
+            project,
+            human_command,
+            %w[main feature/survive],
+            prune: true,
+            force: true
+          )
+        end.to raise_error(Orn::Error, /failed to remove 1 of 2/)
+      end.to output(/error: main: Cannot prune the base branch/).to_stderr
 
-      expect(results.length).to eq(1)
-      expect(results.first.worktree_removed).to be(true)
-      expect(errors.length).to eq(1)
-      expect(errors.first).to include("main")
+      expect(File.exist?(project.worktree_path("feature/survive"))).to be(false)
     end
   end
 

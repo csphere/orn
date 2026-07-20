@@ -65,22 +65,18 @@ module Orn
       end
 
       def run(branches, prune:, force:)
-        branches.each { |branch| Orn::Git::BranchName.new(branch).validate! }
-        project = Orn::Git::Project.discover
-        confirm_prunes(project, branches) if prune && !force && !@output_mode.json
-
-        results, errors = remove_multiple(
-          project,
-          branches,
-          prune
-        )
-        json = results.map(&:to_json_hash)
-        Commands::Output.finish_multi_branch(
+        BranchBatch.run(
           @output_mode,
-          json,
-          errors,
-          branches.length
-        )
+          branches,
+          prune: prune,
+          force: force
+        ) do |project, branch|
+          run_inner(
+            project,
+            branch,
+            prune
+          )
+        end
       end
 
       private
@@ -99,25 +95,6 @@ module Orn
 
         @client.kill_window(session, branch)
         true
-      end
-
-      def remove_multiple(project, branches, prune)
-        printer = lambda(&:print_summary)
-        Commands::Output.run_multi_branch(
-          @output_mode,
-          branches,
-          printer
-        ) do |branch|
-          run_inner(
-            project,
-            branch,
-            prune
-          )
-        end
-      end
-
-      def confirm_prunes(project, branches)
-        branches.each { |branch| Orn::Confirm.prune_interactive(project.root, branch) }
       end
     end
   end

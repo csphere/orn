@@ -36,31 +36,12 @@ module Orn
         end
 
         def run(branches, prune:, force:)
-          branches.each { |branch| Orn::Git::BranchName.new(branch).validate! }
-          project = Orn::Git::Project.discover
-          confirm_prunes(project, branches) if prune && !force && !@output_mode.json
-
-          results, errors = remove_multiple(
-            project,
-            branches,
-            prune
-          )
-          json = results.map(&:to_json_hash)
-          Commands::Output.finish_multi_branch(
-            @output_mode,
-            json,
-            errors,
-            branches.length
-          )
-        end
-
-        def remove_multiple(project, branches, prune)
-          printer = lambda(&:print_summary)
-          Commands::Output.run_multi_branch(
+          BranchBatch.run(
             @output_mode,
             branches,
-            printer
-          ) do |branch|
+            prune: prune,
+            force: force
+          ) do |project, branch|
             run_inner(
               project,
               branch,
@@ -69,10 +50,6 @@ module Orn
           end
         end
 
-        # Removes one branch's worktree, then with prune its local and remote
-        # branches. Refuses to prune the base branch or to run from inside
-        # the worktree being removed; a missing worktree is not an error, so
-        # prune-only invocations work.
         # All preconditions for removing this branch, raised before anything
         # is destroyed. The top-level `orn remove` runs this first so the
         # sandbox and tmux window survive when removal would be refused.
@@ -85,6 +62,10 @@ module Orn
           reject_inside_worktree!(project, branch)
         end
 
+        # Removes one branch's worktree, then with prune its local and remote
+        # branches. Refuses to prune the base branch or to run from inside
+        # the worktree being removed; a missing worktree is not an error, so
+        # prune-only invocations work.
         def run_inner(project, branch, prune)
           check_removable!(
             project,
@@ -157,10 +138,6 @@ module Orn
           Dir.pwd
         rescue SystemCallError
           nil
-        end
-
-        def confirm_prunes(project, branches)
-          branches.each { |branch| Orn::Confirm.prune_interactive(project.root, branch) }
         end
       end
     end
