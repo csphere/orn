@@ -80,24 +80,28 @@ module Orn
       # Build the app, capturing the hosting tmux pane and window for hub tabs,
       # and run an initial discovery.
       def self.build(output_mode, config)
+        client = Orn::Tmux::Client.new(output_mode: output_mode)
         hub_pane = ENV.fetch("TMUX_PANE", nil)
-        hub_location = hub_pane && Orn::Tmux.current_session_window(output_mode, hub_pane)
+        hub_location = hub_pane && client.current_session_window(hub_pane)
         app = new(
           output_mode: output_mode,
           config: config,
           mru_state: State.load,
           hub_pane: hub_pane,
-          hub_location: hub_location
+          hub_location: hub_location,
+          client: client
         )
         app.full_refresh
         app
       end
 
-      # `tabs` can be injected (specs pair it with a fake tmux-effects layer);
-      # by default the app builds its own, reporting tab errors onto the
-      # error line.
-      def initialize(output_mode:, config:, entries: [], mru_state: nil, hub_pane: nil, hub_location: nil, tabs: nil)
+      # `tabs` and `client` can be injected (specs pair them with fakes); by
+      # default the app builds its own, reporting tab errors onto the error
+      # line.
+      def initialize(output_mode:, config:, entries: [], mru_state: nil, hub_pane: nil, hub_location: nil,
+        client: nil, tabs: nil)
         @output = output_mode
+        @client = client || Orn::Tmux::Client.new(output_mode: output_mode)
         @config = config
         @entries = entries
         @selected = 0
@@ -106,7 +110,7 @@ module Orn
         @error = nil
         @spinner_tick = 0
         @tabs = tabs || Tabs.new(
-          output_mode: output_mode,
+          hub: Hub.new(client: @client),
           hub_pane: hub_pane,
           hub_location: hub_location,
           on_error: ->(message) { @error = message }
@@ -229,11 +233,7 @@ module Orn
         hub_pane = @tabs.hub_pane
         return unless @tabs.visible_index && hub_pane
 
-        Orn::Tmux.resize_pane_width(
-          @output,
-          hub_pane,
-          Hub::SIDEBAR_WIDTH_PCT
-        )
+        @client.resize_pane_width(hub_pane, Hub::SIDEBAR_WIDTH_PCT)
       rescue Orn::Error
         nil
       end
@@ -251,11 +251,7 @@ module Orn
         return if monotonic - @last_focus_poll < FOCUS_POLL_INTERVAL
 
         hub_session, hub_window = location
-        active = Orn::Tmux.active_pane(
-          @output,
-          hub_session,
-          hub_window
-        )
+        active = @client.active_pane(hub_session, hub_window)
         @tabs.agent_focused = active == tab.pane_id
         @last_focus_poll = monotonic
       end
@@ -327,7 +323,7 @@ module Orn
 
       # Switch the tmux client to the repo's session, creating the session and
       # its `orn` TUI window when missing.
-      def self.enter_repo(output, root)
+      def self.enter_repo(client, root)
         config = Orn::Config.load(root)
         project = Orn::Git::Project.new(
           root: root,
@@ -336,49 +332,21 @@ module Orn
         session_name = Orn::Session.session_name(project)
         base = config.base
 
-        Orn::Tmux.ensure_session(
-          output,
+        client.ensure_session(
           session_name,
           root,
           base
         )
-        unless Orn::Tmux.window_exists?(
-          output,
-          session_name,
-          REPO_TUI_WINDOW
-        )
-          create_repo_tui_window(
-            output,
+        unless client.window_exists?(session_name, REPO_TUI_WINDOW)
+          client.new_window_running(
             session_name,
-            root
+            REPO_TUI_WINDOW,
+            root,
+            Orn::TUI.relaunch_command
           )
         end
-        Orn::TUI.reorder_windows(
-          output,
-          session_name,
-          base
-        )
-        Orn::Cmd.new(output_mode: output).exec(
-          "tmux",
-          "switch-client",
-          "-t",
-          "#{session_name}:#{REPO_TUI_WINDOW}"
-        )
-      end
-
-      def self.create_repo_tui_window(output, session_name, root)
-        Orn::Cmd.new(output_mode: output).exec(
-          "tmux",
-          "new-window",
-          "-a",
-          "-t",
-          "#{session_name}:",
-          "-n",
-          REPO_TUI_WINDOW,
-          "-c",
-          root.to_s,
-          Orn::TUI.relaunch_command
-        )
+        client.reorder_windows(session_name, base)
+        client.switch_client(session_name, REPO_TUI_WINDOW)
       end
 
       private
@@ -398,7 +366,7 @@ module Orn
 
         @mru_state.touch(entry.root)
         @mru_state.save
-        self.class.enter_repo(@output, entry.root)
+        self.class.enter_repo(@client, entry.root)
       rescue Orn::Error => e
         @error = e.message
       end
@@ -426,7 +394,7 @@ module Orn
 
         tab = @tabs.visible
         begin
-          Orn::Tmux.select_pane(@output, tab.pane_id) if tab
+          @client.select_pane(tab.pane_id) if tab
         rescue Orn::Error
           nil
         end
@@ -479,7 +447,7 @@ module Orn
         # A failed listing means "no information", not "no panes": pruning tabs
         # against it would drop live tabs, strand their borrowed panes in the
         # hub, and tear down the key bindings.
-        all_panes = Orn::Tmux.list_all_panes_metadata(@output)
+        all_panes = @client.list_all_panes_metadata
         unless all_panes
           @last_tmux_refresh = monotonic
           return
@@ -487,7 +455,7 @@ module Orn
         @tabs.prune_dead_tabs(all_panes)
         @tabs.demote_visible_if_moved(all_panes)
         @entries = RepoStatus.refresh(
-          @output,
+          @client,
           @entries,
           @tabs.visible,
           all_panes

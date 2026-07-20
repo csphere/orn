@@ -30,10 +30,9 @@ module Orn
 
       def tabs_with_fake_hub
         Tabs.new(
-          output_mode: Orn::OutputMode.quiet,
+          hub: FakeHub.new,
           hub_pane: "%0",
-          hub_location: %w[orn orn],
-          hub: FakeHub.new
+          hub_location: %w[orn orn]
         )
       end
 

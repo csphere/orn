@@ -51,53 +51,6 @@ module Orn
       end
     end
 
-    # Enforce window order in `session`: [orn, base, sorted worktrees]. Uses
-    # swap-window so it works regardless of the base-index setting. `base_branch`
-    # is empty for the global TUI, which pins no base.
-    def self.reorder_windows(output_mode, session, base_branch)
-      cmd = Orn::Cmd.new(output_mode: output_mode)
-      result = cmd.output("tmux", "list-windows", "-t", "#{session}:", "-F", "\#{window_name}")
-      return unless result.success?
-
-      windows = result.stdout.lines.map(&:chomp)
-      return if windows.length <= 1
-
-      apply_window_order(
-        cmd,
-        session,
-        windows,
-        desired_order(windows, base_branch)
-      )
-    end
-
-    # The target window order: the TUI window first, then the base branch, then
-    # the remaining worktree windows alphabetically.
-    def self.desired_order(windows, base_branch)
-      desired = []
-      desired << TUI_WINDOW if windows.include?(TUI_WINDOW)
-      desired << base_branch if windows.include?(base_branch)
-      rest = windows.reject { |name| name == TUI_WINDOW || name == base_branch }.sort
-      desired.concat(rest)
-    end
-
-    # Swap windows into `desired` order one mismatch at a time, tracking the
-    # live positions as each swap lands.
-    def self.apply_window_order(cmd, session, windows, desired)
-      desired.each_index do |desired_index|
-        next if windows[desired_index] == desired[desired_index]
-
-        current_index = windows.index(desired[desired_index])
-        next unless current_index
-
-        src_address = "#{session}:#{windows[desired_index]}"
-        dst_address = "#{session}:#{windows[current_index]}"
-        cmd.output("tmux", "swap-window", "-d", "-s", src_address, "-t", dst_address)
-        displaced_window = windows[desired_index]
-        windows[desired_index] = windows[current_index]
-        windows[current_index] = displaced_window
-      end
-    end
-
     # The shell command a tmux window runs to re-exec orn as a TUI process,
     # guarded by the `ORN_TUI` env var so the re-exec runs the event loop
     # directly instead of bootstrapping another window. `suffix` appends flags

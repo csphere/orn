@@ -233,12 +233,14 @@ RSpec.describe Orn::Detect do
     end
   end
 
+  # :real_cmd for the platform foreground-job probe (`ps`/`/proc`), not tmux:
+  # pane capture goes through the fake client.
   describe ".detect_pane", :real_cmd do
-    let(:mode) { Orn::OutputMode.quiet }
+    let(:client) { FakeTmuxClient.new }
 
     it "identifies claude from the pane command" do
       result = described_class.detect_pane(
-        mode,
+        client,
         pane(
           window: "w",
           command: "claude",
@@ -252,7 +254,7 @@ RSpec.describe Orn::Detect do
 
     it "falls through to no agent for a shell" do
       result = described_class.detect_pane(
-        mode,
+        client,
         pane(
           window: "w",
           command: "bash",
@@ -269,7 +271,7 @@ RSpec.describe Orn::Detect do
 
     it "uses the sbx agent type when the command is a container runtime" do
       result = described_class.detect_pane(
-        mode,
+        client,
         pane(
           window: "w",
           command: "docker",
@@ -283,7 +285,7 @@ RSpec.describe Orn::Detect do
 
     it "reports no agent for a container runtime without an sbx agent type" do
       result = described_class.detect_pane(
-        mode,
+        client,
         pane(
           window: "w",
           command: "docker",
@@ -300,7 +302,7 @@ RSpec.describe Orn::Detect do
 
     it "skips the screen capture when the osc title is definitive" do
       result = described_class.detect_pane(
-        mode,
+        client,
         pane(
           window: "w",
           command: "claude",
@@ -310,15 +312,18 @@ RSpec.describe Orn::Detect do
         nil
       )
 
-      expect(result).to have_attributes(
-        agent: :claude,
-        state: :working
-      )
+      aggregate_failures do
+        expect(result).to have_attributes(
+          agent: :claude,
+          state: :working
+        )
+        expect(client.count(:capture_pane)).to eq(0)
+      end
     end
   end
 
   describe ".detect_all_panes", :real_cmd do
-    let(:mode) { Orn::OutputMode.quiet }
+    let(:client) { FakeTmuxClient.new }
 
     it "lets the first pane with an agent win its window" do
       panes = [
@@ -342,7 +347,7 @@ RSpec.describe Orn::Detect do
 
       expect(
         described_class.detect_all_panes(
-          mode,
+          client,
           panes,
           nil
         )["win"].agent
@@ -364,7 +369,7 @@ RSpec.describe Orn::Detect do
       ]
 
       results = described_class.detect_all_panes(
-        mode,
+        client,
         panes,
         nil
       )

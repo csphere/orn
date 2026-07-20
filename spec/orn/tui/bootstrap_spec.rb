@@ -6,12 +6,15 @@ require "tmpdir"
 module Orn
   module TUI
     RSpec.describe Bootstrap do
+      let(:client) { FakeTmuxClient.new }
+
       def project_app
         App.new(
           output_mode: Orn::OutputMode.quiet,
           root: "/tmp/nonexistent",
           session: "test",
-          base_branch: "main"
+          base_branch: "main",
+          client: FakeTmuxClient.new
         )
       end
 
@@ -22,7 +25,8 @@ module Orn
             session: "orn",
             scan_roots: [],
             scan_depth: 3
-          )
+          ),
+          client: FakeTmuxClient.new
         )
       end
 
@@ -30,32 +34,16 @@ module Orn
         KeyEvent.char(character)
       end
 
-      def output_mode
-        Orn::OutputMode.quiet
-      end
-
-      def list_windows_argv(session)
-        ["tmux", "list-windows", "-t", "#{session}:", "-F", "\#{window_name}"]
-      end
-
-      def tui_pane_command_argv(session)
-        ["tmux", "list-panes", "-t", "#{session}:orn", "-F", "\#{pane_current_command}"]
-      end
-
-      def select_tui_window_argv(session)
-        ["tmux", "select-window", "-t", "#{session}:orn"]
-      end
-
-      def kill_tui_window_argv(session)
-        ["tmux", "kill-window", "-t", "#{session}:orn"]
-      end
-
-      # The tmux answers for a session whose `orn` window is open and still
+      # Sets the fake up as a session whose `orn` window is open and still
       # running the TUI, so reuse selects it instead of launching a new one.
-      def script_live_tui_window(fake, session)
-        fake.script(list_windows_argv(session), stdout: "orn\n")
-        fake.script(tui_pane_command_argv(session), stdout: "orn\n")
-        fake.script(select_tui_window_argv(session))
+      def live_tui_window(session)
+        client.windows = { session => ["orn"] }
+        client.pane_commands = { "#{session}:orn" => "orn" }
+      end
+
+      # Entry points that construct their own client get the fake instead.
+      def inject_fake_client
+        allow(Orn::Tmux::Client).to receive(:new).and_return(client)
       end
 
       # An in-memory terminal backend that also accepts the start/stop
@@ -262,17 +250,14 @@ module Orn
       end
 
       describe ".run_global_direct" do
-        def borrowed_list_argv
-          ["tmux", "list-panes", "-a", "-F", "\#{pane_id}\t\#{@orn_home_session}\t\#{@orn_home_window}"]
-        end
-
-        def unbind_argvs
-          %w[M-o M-i M-n M-p].map { |key| ["tmux", "unbind-key", "-n", key] }
-        end
-
-        def script_hub_cleanup(fake)
-          fake.script(borrowed_list_argv)
-          unbind_argvs.each { |argv| fake.script(argv) }
+        def hub_cleanup_calls
+          [
+            [:list_borrowed_panes],
+            [:unbind_key, "M-o"],
+            [:unbind_key, "M-i"],
+            [:unbind_key, "M-n"],
+            [:unbind_key, "M-p"]
+          ]
         end
 
         # The app the stubbed GlobalApp.build returns, with close_all_tabs
@@ -287,48 +272,44 @@ module Orn
           allow(TermBackend).to receive(:new).and_return(scripted_terminal_backend(*key_events))
         end
 
-        # Stubs GlobalApp.build to return `app`, recording which tmux commands
+        # Stubs GlobalApp.build to return `app`, recording which client verbs
         # had already run by the time the build happened.
-        def stub_global_app_build(fake, app)
-          invocations_at_build = []
+        def stub_global_app_build(app)
+          calls_at_build = []
           allow(GlobalApp).to receive(:build) do
-            invocations_at_build.concat(fake.invocations)
+            calls_at_build.concat(client.calls)
             app
           end
-          invocations_at_build
+          calls_at_build
         end
 
         it "returns stranded panes and clears stale bindings before building the app" do
           isolate_global_config
+          inject_fake_client
           app = global_app_with_close_spy
           install_terminal_backend(char("q"))
-          with_fake_cmd do |fake|
-            script_hub_cleanup(fake)
-            invocations_at_build = stub_global_app_build(fake, app)
+          calls_at_build = stub_global_app_build(app)
 
-            preserving_signal_traps { described_class.run_global_direct }
+          preserving_signal_traps { described_class.run_global_direct }
 
-            aggregate_failures do
-              expect(invocations_at_build).to eq([borrowed_list_argv, *unbind_argvs])
-              expect(app).to have_received(:close_all_tabs)
-            end
+          aggregate_failures do
+            expect(calls_at_build).to eq(hub_cleanup_calls)
+            expect(app).to have_received(:close_all_tabs)
           end
         end
 
         it "closes all tabs even when the loop fails" do
           isolate_global_config
+          inject_fake_client
           app = global_app_with_close_spy
           allow(app).to receive(:poll_focus).and_raise(RuntimeError, "loop crashed")
           install_terminal_backend
-          with_fake_cmd do |fake|
-            script_hub_cleanup(fake)
-            allow(GlobalApp).to receive(:build).and_return(app)
+          allow(GlobalApp).to receive(:build).and_return(app)
 
-            expect do
-              preserving_signal_traps { described_class.run_global_direct }
-            end.to raise_error(RuntimeError, "loop crashed")
-            expect(app).to have_received(:close_all_tabs)
-          end
+          expect do
+            preserving_signal_traps { described_class.run_global_direct }
+          end.to raise_error(RuntimeError, "loop crashed")
+          expect(app).to have_received(:close_all_tabs)
         end
       end
 
@@ -336,52 +317,45 @@ module Orn
         it "selects the live TUI window, pinning the base branch second" do
           project = make_project(make_bare_project)
           session = File.basename(project.root)
-          swap_argv = ["tmux", "swap-window", "-d", "-s", "#{session}:main", "-t", "#{session}:orn"]
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv(session), stdout: "main\norn\n")
-            fake.script(tui_pane_command_argv(session), stdout: "orn\n")
-            fake.script(swap_argv)
-            fake.script(select_tui_window_argv(session))
+          inject_fake_client
+          live_tui_window(session)
 
-            described_class.bootstrap(project)
+          described_class.bootstrap(project)
 
-            expect(fake.invocations).to eq(
-              [
-                list_windows_argv(session),
-                tui_pane_command_argv(session),
-                list_windows_argv(session),
-                swap_argv,
-                select_tui_window_argv(session)
-              ]
-            )
-          end
+          expect(client.calls).to eq(
+            [
+              [:window_exists?, session, "orn"],
+              [:pane_command, session, "orn"],
+              [:reorder_windows, session, "main"],
+              [:select_window, session, "orn"]
+            ]
+          )
         end
       end
 
       describe ".bootstrap_global" do
         it "selects the live global TUI window in the configured session" do
           isolate_global_config
-          with_fake_cmd do |fake|
-            script_live_tui_window(fake, "orn")
+          inject_fake_client
+          live_tui_window("orn")
 
-            described_class.bootstrap_global
+          described_class.bootstrap_global
 
-            expect(fake.invocations).to eq(
-              [
-                list_windows_argv("orn"),
-                tui_pane_command_argv("orn"),
-                list_windows_argv("orn"),
-                select_tui_window_argv("orn")
-              ]
-            )
-          end
+          expect(client.calls).to eq(
+            [
+              [:window_exists?, "orn", "orn"],
+              [:pane_command, "orn", "orn"],
+              [:reorder_windows, "orn", ""],
+              [:select_window, "orn", "orn"]
+            ]
+          )
         end
       end
 
       describe ".bootstrap_tui" do
         def bootstrap_repo_tui
           described_class.bootstrap_tui(
-            output_mode,
+            client,
             "repo",
             "/tmp/wt",
             default_window_name: "main",
@@ -392,64 +366,45 @@ module Orn
 
         it "launches nothing when a live TUI window is reused" do
           ENV["TMUX"] = "/tmp/tmux-1000/default,1234,0"
-          with_fake_cmd do |fake|
-            script_live_tui_window(fake, "repo")
+          live_tui_window("repo")
 
-            bootstrap_repo_tui
+          bootstrap_repo_tui
 
-            expect(fake.invocations).to eq(
-              [
-                list_windows_argv("repo"),
-                tui_pane_command_argv("repo"),
-                list_windows_argv("repo"),
-                select_tui_window_argv("repo")
-              ]
-            )
-          end
+          expect(client.calls).to eq(
+            [
+              [:window_exists?, "repo", "orn"],
+              [:pane_command, "repo", "orn"],
+              [:reorder_windows, "repo", "main"],
+              [:select_window, "repo", "orn"]
+            ]
+          )
         end
 
         it "adds the TUI window to the ensured session when already inside tmux" do
           ENV["TMUX"] = "/tmp/tmux-1000/default,1234,0"
-          new_window_argv = [
-            "tmux",
-            "new-window",
-            "-a",
-            "-t",
-            "repo:",
-            "-n",
-            "orn",
-            "-c",
-            "/tmp/wt",
-            Orn::TUI.relaunch_command("")
-          ]
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv("repo"), stdout: "main\n")
-            fake.script(["tmux", "has-session", "-t", "repo"])
-            fake.script(new_window_argv)
-            fake.script(select_tui_window_argv("repo"))
+          client.windows = { "repo" => ["main"] }
 
-            bootstrap_repo_tui
+          bootstrap_repo_tui
 
-            expect(fake.invocations).to eq(
-              [
-                list_windows_argv("repo"),
-                ["tmux", "has-session", "-t", "repo"],
-                new_window_argv,
-                list_windows_argv("repo"),
-                select_tui_window_argv("repo")
-              ]
-            )
-          end
+          expect(client.calls).to eq(
+            [
+              [:window_exists?, "repo", "orn"],
+              [:ensure_session, "repo", "/tmp/wt", "main"],
+              [:new_window_running, "repo", "orn", "/tmp/wt", Orn::TUI.relaunch_command("")],
+              [:reorder_windows, "repo", "main"],
+              [:select_window, "repo", "orn"]
+            ]
+          )
         end
 
         it "creates and attaches a new session when outside tmux" do
           ENV.delete("TMUX")
           allow(described_class).to receive(:system).and_return(true)
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv("repo"), stdout: "main\n")
+          client.windows = { "repo" => ["main"] }
 
-            bootstrap_repo_tui
+          bootstrap_repo_tui
 
+          aggregate_failures do
             expect(described_class).to have_received(:system).with(
               "tmux",
               "new-session",
@@ -461,63 +416,67 @@ module Orn
               "/tmp/wt",
               Orn::TUI.relaunch_command("")
             )
+            expect(client.count(:new_window_running)).to eq(0)
           end
         end
       end
 
       describe ".reuse_existing_window" do
         it "reports false when no TUI window exists" do
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv("repo"), stdout: "main\n")
+          client.windows = { "repo" => ["main"] }
 
-            reused = described_class.reuse_existing_window(output_mode, "repo", "main")
+          reused = described_class.reuse_existing_window(
+            client,
+            "repo",
+            "main"
+          )
 
-            expect(reused).to be(false)
-          end
+          expect(reused).to be(false)
         end
 
         it "selects a window whose pane still runs orn and reports true" do
-          with_fake_cmd do |fake|
-            script_live_tui_window(fake, "repo")
+          live_tui_window("repo")
 
-            reused = described_class.reuse_existing_window(output_mode, "repo", "main")
+          reused = described_class.reuse_existing_window(
+            client,
+            "repo",
+            "main"
+          )
 
-            aggregate_failures do
-              expect(reused).to be(true)
-              expect(fake.invocations).to include(select_tui_window_argv("repo"))
-            end
+          aggregate_failures do
+            expect(reused).to be(true)
+            expect(client.calls).to include([:select_window, "repo", "orn"])
           end
         end
 
         it "kills a stale window whose pane no longer runs orn and reports false" do
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv("repo"), stdout: "orn\n")
-            fake.script(tui_pane_command_argv("repo"), stdout: "zsh\n")
-            fake.script(kill_tui_window_argv("repo"))
+          client.windows = { "repo" => ["orn"] }
+          client.pane_commands = { "repo:orn" => "zsh" }
 
-            reused = described_class.reuse_existing_window(output_mode, "repo", "main")
+          reused = described_class.reuse_existing_window(
+            client,
+            "repo",
+            "main"
+          )
 
-            aggregate_failures do
-              expect(reused).to be(false)
-              expect(fake.invocations).to include(kill_tui_window_argv("repo"))
-            end
+          aggregate_failures do
+            expect(reused).to be(false)
+            expect(client.calls).to include([:kill_window, "repo", "orn"])
           end
         end
 
         it "reports false even when killing the stale window fails" do
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv("repo"), stdout: "orn\n")
-            fake.script(tui_pane_command_argv("repo"), stdout: "zsh\n")
-            fake.script(
-              kill_tui_window_argv("repo"),
-              stderr: "no such window",
-              status: 1
-            )
+          client.windows = { "repo" => ["orn"] }
+          client.pane_commands = { "repo:orn" => "zsh" }
+          client.fail_on = [:kill_window]
 
-            reused = described_class.reuse_existing_window(output_mode, "repo", "main")
+          reused = described_class.reuse_existing_window(
+            client,
+            "repo",
+            "main"
+          )
 
-            expect(reused).to be(false)
-          end
+          expect(reused).to be(false)
         end
       end
 

@@ -6,8 +6,19 @@ require "socket"
 require "tmpdir"
 
 RSpec.describe Orn::Commands::Switch do
-  let(:command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
-  let(:human_command) { described_class.new(output_mode: Orn::OutputMode.default) }
+  let(:client) { FakeTmuxClient.new }
+  let(:command) do
+    described_class.new(
+      output_mode: Orn::OutputMode.quiet,
+      client: client
+    )
+  end
+  let(:human_command) do
+    described_class.new(
+      output_mode: Orn::OutputMode.default,
+      client: client
+    )
+  end
 
   def standard_project(seed_branch)
     remote = make_remote_with_branch(seed_branch)
@@ -238,26 +249,6 @@ RSpec.describe Orn::Commands::Switch do
 
     # --- Command lines ---
 
-    def list_windows_argv(session)
-      ["tmux", "list-windows", "-t", "#{session}:", "-F", "\#{window_name}"]
-    end
-
-    def select_window_argv(session)
-      ["tmux", "select-window", "-t", "#{session}:feat"]
-    end
-
-    def has_session_argv
-      ["tmux", "has-session", "-t", "proj"]
-    end
-
-    def new_session_argv(worktree_path)
-      ["tmux", "new-session", "-d", "-s", "proj", "-n", "main", "-c", worktree_path]
-    end
-
-    def new_window_argv(worktree_path)
-      ["tmux", "new-window", "-a", "-P", "-F", "\#{pane_id}", "-t", "proj:", "-n", "feat", "-c", worktree_path]
-    end
-
     def ls_remote_argv(root)
       ["git", "-C", root, "ls-remote", "--heads", "origin", "feat"]
     end
@@ -282,36 +273,6 @@ RSpec.describe Orn::Commands::Switch do
       ["sbx", "exec", "-d", "proj-feat", "--", "sh", "-c", "bin/serve"]
     end
 
-    # --- Scripting helpers ---
-
-    # has-session is probed twice with the same argv (window creation and the
-    # ensure-session guard), so one script answers both.
-    def script_window_open(fake, worktree_path, session_exists:)
-      fake.script(["tmux", "-V"], stdout: "tmux 3.4\n")
-      fake.script(has_session_argv, status: session_exists ? 0 : 1)
-      fake.script(new_session_argv(worktree_path)) unless session_exists
-      fake.script(new_window_argv(worktree_path), stdout: "%1\n")
-      fake.script(select_window_argv("proj"))
-    end
-
-    def window_open_argvs(worktree_path, session_exists:)
-      argvs = [
-        has_session_argv,
-        has_session_argv
-      ]
-      argvs << new_session_argv(worktree_path) unless session_exists
-      argvs + [
-        new_window_argv(worktree_path),
-        select_window_argv("proj")
-      ]
-    end
-
-    # tmux -V is dropped: the version warning runs once per process, so whether
-    # it appears depends on which spec file ran first.
-    def ordered_invocations(fake)
-      fake.invocations.reject { |argv| argv == ["tmux", "-V"] }
-    end
-
     it "rejects an invalid branch name before running any command" do
       with_fake_cmd do |fake|
         expect { human_command.run("feat..bad") }
@@ -332,81 +293,67 @@ RSpec.describe Orn::Commands::Switch do
       project = discoverable_project("")
       session = File.basename(project.root)
       ENV.delete("TMUX")
-      with_fake_cmd do |fake|
-        fake.script(["tmux", "has-session", "-t", session])
-        # The session path resolves to this project, so the collision check
-        # decides the session is ours and switch proceeds without a prompt.
-        fake.script(
-          ["tmux", "display-message", "-t", "#{session}:", "-p", "\#{session_path}"],
-          stdout: "#{project.root}\n"
-        )
-        fake.script(list_windows_argv(session), stdout: "feat\n")
-        fake.script(select_window_argv(session))
+      # The session path resolves to this project, so the collision check
+      # decides the session is ours and switch proceeds without a prompt.
+      client.sessions = [session]
+      client.session_paths = { session => project.root }
+      client.windows = { session => ["feat"] }
 
-        expect { Dir.chdir(project.root) { human_command.run("feat") } }
-          .to output("Switched to window: feat\n").to_stdout
+      expect { Dir.chdir(project.root) { human_command.run("feat") } }
+        .to output("Switched to window: feat\n").to_stdout
 
-        expect(ordered_invocations(fake)).to eq(
-          [
-            ["tmux", "has-session", "-t", session],
-            ["tmux", "display-message", "-t", "#{session}:", "-p", "\#{session_path}"],
-            list_windows_argv(session),
-            select_window_argv(session)
-          ]
-        )
-      end
+      expect(client.calls).to eq(
+        [
+          [:session_exists?, session],
+          [:session_path, session],
+          [:window_exists?, session, "feat"],
+          [:select_window, session, "feat"]
+        ]
+      )
     end
 
     it "prints the result as json in json mode" do
       project = discoverable_project(plain_switch_config)
-      with_fake_cmd do |fake|
-        fake.script(list_windows_argv("proj"), stdout: "feat\n")
-        fake.script(select_window_argv("proj"))
+      client.windows = { "proj" => ["feat"] }
 
-        expected_json = <<~JSON
-          {
-            "branch": "feat",
-            "action": "switched"
-          }
-        JSON
+      expected_json = <<~JSON
+        {
+          "branch": "feat",
+          "action": "switched"
+        }
+      JSON
 
-        expect { Dir.chdir(project.root) { command.run("feat") } }
-          .to output(expected_json).to_stdout
-      end
+      expect { Dir.chdir(project.root) { command.run("feat") } }
+        .to output(expected_json).to_stdout
     end
 
     it "fetches a remote-only branch, creates its worktree, and opens its window" do
       project = discoverable_project(plain_switch_config)
       with_fake_cmd do |fake|
-        fake.script(list_windows_argv("proj"), status: 1)
         fake.script(ls_remote_argv(project.root), stdout: "abc123\trefs/heads/feat\n")
         fake.script(fetch_argv(project.root, "main"))
         fake.script(fetch_argv(project.root, "feat"))
         fake.script(worktree_add_argv(project.root, "origin/feat"))
-        script_window_open(
-          fake,
-          feat_path(project),
-          session_exists: false
-        )
 
         expect { Dir.chdir(project.root) { human_command.run("feat") } }
           .to output("Fetched from remote and opened: feat\n").to_stdout
           .and output(/Checking remote for feat/).to_stderr
 
-        expect(ordered_invocations(fake)).to eq(
-          [
-            list_windows_argv("proj"),
-            ls_remote_argv(project.root),
-            fetch_argv(project.root, "main"),
-            ls_remote_argv(project.root),
-            fetch_argv(project.root, "feat"),
-            worktree_add_argv(project.root, "origin/feat"),
-            *window_open_argvs(
-              feat_path(project),
-              session_exists: false
-            )
-          ]
-        )
+        aggregate_failures do
+          expect(fake.invocations).to eq(
+            [
+              ls_remote_argv(project.root),
+              fetch_argv(project.root, "main"),
+              ls_remote_argv(project.root),
+              fetch_argv(project.root, "feat"),
+              worktree_add_argv(project.root, "origin/feat")
+            ]
+          )
+          expect(client.calls).to include(
+            [:window_exists?, "proj", "feat"],
+            [:open_window, "feat"]
+          )
+        end
       end
     end
 
@@ -414,77 +361,58 @@ RSpec.describe Orn::Commands::Switch do
       project = discoverable_project(plain_switch_config)
       FileUtils.mkdir_p(feat_path(project))
       with_fake_cmd do |fake|
-        fake.script(list_windows_argv("proj"), status: 1)
         fake.script(inspect_argv, status: 1)
-        script_window_open(
-          fake,
-          feat_path(project),
-          session_exists: true
-        )
 
         expect { Dir.chdir(project.root) { human_command.run("feat") } }
           .to output("Reopened window for feat\n").to_stdout
           .and output(/Reopening window for feat/).to_stderr
 
-        expect(ordered_invocations(fake)).to eq(
-          [
-            list_windows_argv("proj"),
-            inspect_argv,
-            *window_open_argvs(
-              feat_path(project),
-              session_exists: true
-            )
-          ]
-        )
+        aggregate_failures do
+          expect(fake.invocations).to eq([inspect_argv])
+          expect(client.calls).to include([:open_window, "feat"])
+        end
       end
     end
 
-    def script_sandbox_reopen(fake, project, host_port)
-      fake.script(list_windows_argv("proj"), status: 1)
+    # A discoverable sbx project whose "feat" worktree already exists on disk
+    # and whose sbx commands are pre-approved.
+    def approved_sandbox_project
+      project = discoverable_project(sbx_start_config)
+      approve_sbx_commands(project)
+      FileUtils.mkdir_p(feat_path(project))
+      project
+    end
+
+    def script_sandbox_reopen(fake, host_port)
       fake.script(inspect_argv)
-      script_window_open(
-        fake,
-        feat_path(project),
-        session_exists: true
-      )
       fake.script(publish_argv(host_port))
       fake.script(start_exec_argv)
     end
 
-    def sandbox_reopen_argvs(project, host_port)
-      [
-        list_windows_argv("proj"),
-        inspect_argv,
-        *window_open_argvs(
-          feat_path(project),
-          session_exists: true
-        ),
-        publish_argv(host_port),
-        start_exec_argv
-      ]
-    end
-
     it "reopens through the sandbox path, republishing ports and restarting services" do
-      project = discoverable_project(sbx_start_config)
-      approve_sbx_commands(project)
-      FileUtils.mkdir_p(feat_path(project))
+      project = approved_sandbox_project
       # A live listener stands in for the sandbox service, so the real
       # verify_port probe connects instead of timing out.
       listener = TCPServer.new("127.0.0.1", 0)
       host_port = listener.addr[1]
       write_ports_file(project.root, host_port)
       with_fake_cmd do |fake|
-        script_sandbox_reopen(
-          fake,
-          project,
-          host_port
-        )
+        script_sandbox_reopen(fake, host_port)
 
         expect { Dir.chdir(project.root) { human_command.run("feat") } }
           .to output("Reopened window for feat\nSandbox: proj-feat\nPort: #{host_port}:3000\n").to_stdout
           .and output(/Reopening window for feat/).to_stderr
 
-        expect(ordered_invocations(fake)).to eq(sandbox_reopen_argvs(project, host_port))
+        aggregate_failures do
+          expect(fake.invocations).to eq(
+            [
+              inspect_argv,
+              publish_argv(host_port),
+              start_exec_argv
+            ]
+          )
+          expect(client.calls).to include([:open_window_with_layout, "feat"])
+        end
       end
     ensure
       listener&.close
@@ -493,19 +421,15 @@ RSpec.describe Orn::Commands::Switch do
     it "creates a brand-new branch and prints the created fields" do
       project = discoverable_project(plain_switch_config)
       with_fake_cmd do |fake|
-        fake.script(list_windows_argv("proj"), status: 1)
         fake.script(ls_remote_argv(project.root))
         fake.script(fetch_argv(project.root, "main"))
         fake.script(worktree_add_argv(project.root, "origin/main"))
-        script_window_open(
-          fake,
-          feat_path(project),
-          session_exists: false
-        )
 
         expect { Dir.chdir(project.root) { human_command.run("feat") } }
           .to output("Branch: feat\nBase: main\nPath: #{feat_path(project)}\n").to_stdout
           .and output(/Creating worktree/).to_stderr
+
+        expect(client.calls).to include([:open_window, "feat"])
       end
     end
   end
@@ -513,11 +437,13 @@ RSpec.describe Orn::Commands::Switch do
   context "with a real tmux server", :real_cmd, if: TmuxSpecSupport::AVAILABLE do
     include_context "with an isolated tmux server"
 
+    let(:real_command) { described_class.new(output_mode: Orn::OutputMode.quiet) }
+
     it "creates the worktree and its tmux window for a brand-new branch" do
       root = standard_project("feature/other")
       project = load_project(root)
 
-      result = command.perform(
+      result = real_command.perform(
         project,
         "feature/fresh",
         nil,
@@ -529,11 +455,8 @@ RSpec.describe Orn::Commands::Switch do
         expect(result.action).to eq(:created)
         expect(File).to be_directory(File.join(root, "feature/fresh"))
         expect(
-          Orn::Tmux.window_exists?(
-            Orn::OutputMode.quiet,
-            session,
-            "feature/fresh"
-          )
+          Orn::Tmux::Client.new(output_mode: Orn::OutputMode.quiet)
+            .window_exists?(session, "feature/fresh")
         ).to be(true)
       end
     end
@@ -541,14 +464,14 @@ RSpec.describe Orn::Commands::Switch do
     it "just selects the window when it already exists" do
       root = standard_project("feature/other")
       project = load_project(root)
-      command.perform(
+      real_command.perform(
         project,
         "feature/fresh",
         nil,
         false
       )
 
-      result = command.perform(
+      result = real_command.perform(
         project,
         "feature/fresh",
         nil,

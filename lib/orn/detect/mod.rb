@@ -189,9 +189,9 @@ module Orn
     end
 
     # Detect the agent and state for a single pane. Evaluates the cheap OSC
-    # title first and only captures the pane's screen when that is not
-    # definitive.
-    def self.detect_pane(output_mode, pane, sbx_agent_type)
+    # title first and only captures the pane's screen (through `client`) when
+    # that is not definitive.
+    def self.detect_pane(client, pane, sbx_agent_type)
       agent = resolve_agent(pane, sbx_agent_type)
       if agent.nil?
         return PaneAgentState.new(
@@ -215,7 +215,7 @@ module Orn
         )
       end
 
-      screen = Orn::Tmux.capture_pane(output_mode, pane.pane_id) || ""
+      screen = client.capture_pane(pane.pane_id) || ""
       full = Manifest.detect(
         agent,
         Manifest::DetectionInput.new(
@@ -233,13 +233,13 @@ module Orn
     # Detect agent state per window, keyed by window name. The first pane with
     # an identified agent wins its window; an agent-less result is replaced if a
     # later pane in the same window yields one.
-    def self.detect_all_panes(output_mode, panes, sbx_agent_type)
+    def self.detect_all_panes(client, panes, sbx_agent_type)
       results = {}
       panes.each do |pane|
         next if results[pane.window_name]&.agent
 
         results[pane.window_name] = detect_pane(
-          output_mode,
+          client,
           pane,
           sbx_agent_type
         )

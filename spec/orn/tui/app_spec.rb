@@ -5,13 +5,18 @@ require "tmpdir"
 module Orn
   module TUI
     RSpec.describe App do
+      def client
+        @client ||= FakeTmuxClient.new
+      end
+
       def build_app(branches, root: "/tmp/nonexistent", symlinks: nil)
         app = described_class.new(
           output_mode: Orn::OutputMode.quiet,
           root: root,
           session: "test",
           base_branch: "main",
-          symlinks: symlinks
+          symlinks: symlinks,
+          client: client
         )
         app.entries = branches.map { |name| status(name) }
         app
@@ -53,57 +58,19 @@ module Orn
         )
       end
 
-      def list_windows_argv(session = "test")
-        ["tmux", "list-windows", "-t", "#{session}:", "-F", "\#{window_name}"]
-      end
-
-      def borrowed_panes_argv
-        ["tmux", "list-panes", "-a", "-F", "\#{pane_id}\t\#{@orn_home_session}\t\#{@orn_home_window}"]
-      end
-
-      def session_panes_argv(session = "test")
-        pane_format = "\#{window_name}\t\#{pane_pid}\t\#{pane_current_command}\t\#{pane_id}\t\#{pane_title}"
-        ["tmux", "list-panes", "-s", "-t", "#{session}:", "-F", pane_format]
-      end
-
-      def new_window_argv(root, branch)
-        [
-          "tmux",
-          "new-window",
-          "-a",
-          "-P",
-          "-F",
-          "\#{pane_id}",
-          "-t",
-          "test:",
-          "-n",
-          branch,
-          "-c",
-          File.join(root, branch)
-        ]
-      end
-
-      def kill_window_argv(branch)
-        ["tmux", "kill-window", "-t", "test:#{branch}"]
-      end
-
-      def select_window_argv(branch)
-        ["tmux", "select-window", "-t", "test:#{branch}"]
-      end
-
-      # The tmux calls a bare (no layout) window creation issues against an
-      # existing session. `tmux -V` runs at most once per process, so it is
-      # scripted but never asserted on.
-      def script_bare_window(fake, root, branch)
-        fake.script(["tmux", "-V"], stdout: "tmux 3.4\n")
-        fake.script(["tmux", "has-session", "-t", "test"])
-        fake.script(new_window_argv(root, branch), stdout: "%9\n")
-        fake.script(select_window_argv(branch))
-      end
-
-      def script_refresh(fake, root, windows: "")
-        fake.script(list_windows_argv, stdout: windows)
+      def script_refresh(fake, root)
         fake.script(worktree_list_argv(root))
+      end
+
+      def session_pane(window, pane_id, command, pid: 4_999_999_999)
+        Orn::Tmux::PaneMetadata.new(
+          session_name: nil,
+          window_name: window,
+          pane_pid: pid,
+          pane_title: "t",
+          pane_current_command: command,
+          pane_id: pane_id
+        )
       end
 
       def monotonic_now
@@ -278,12 +245,12 @@ module Orn
         it "reads the session, base, and repo name from the project and refreshes" do
           project = project_with_sbx_agent
           with_fake_cmd do |fake|
-            fake.script(list_windows_argv("appsess"), status: 1)
             fake.script(worktree_list_argv(project.root))
 
             app = described_class.for_project(
               Orn::OutputMode.quiet,
-              project
+              project,
+              client: client
             )
 
             aggregate_failures do
@@ -300,12 +267,12 @@ module Orn
           project = make_project(root, "git:\n  base: main\n")
           session = File.basename(root)
           with_fake_cmd do |fake|
-            fake.script(list_windows_argv(session), status: 1)
             fake.script(worktree_list_argv(root))
 
             app = described_class.for_project(
               Orn::OutputMode.quiet,
-              project
+              project,
+              client: client
             )
 
             expect(app.session).to eq(session)
@@ -316,20 +283,16 @@ module Orn
           stub_host_os("linux")
           isolate_global_config
           project = project_with_sbx_agent
+          # A pane whose command is a container runtime and whose pid cannot
+          # exist, so detection falls through to the sbx agent type.
+          client.panes = { "appsess" => [session_pane("feat", "%1", "docker")] }
           with_fake_cmd do |fake|
-            fake.script(list_windows_argv("appsess"), status: 1)
             fake.script(worktree_list_argv(project.root))
-            # A pane whose command is a container runtime and whose pid cannot
-            # exist, so detection falls through to the sbx agent type.
-            fake.script(
-              session_panes_argv("appsess"),
-              stdout: "feat\t4999999999\tdocker\t%1\tt\n"
-            )
-            fake.script(["tmux", "capture-pane", "-p", "-t", "%1"])
 
             app = described_class.for_project(
               Orn::OutputMode.quiet,
-              project
+              project,
+              client: client
             )
             app.refresh_agents
 
@@ -346,8 +309,8 @@ module Orn
           )
           app.selected = 2
           wt_path = File.join(scripted_root, "feat")
+          client.windows = { "test" => ["feat"] }
           with_fake_cmd do |fake|
-            fake.script(list_windows_argv, stdout: "feat\n")
             fake.script(
               worktree_list_argv(scripted_root),
               stdout: "worktree #{wt_path}\nbranch refs/heads/feat\n"
@@ -388,33 +351,25 @@ module Orn
         it "records a state per window from the session's panes" do
           stub_host_os("linux")
           app = build_app([], root: scripted_root)
-          with_fake_cmd do |fake|
-            fake.script(
-              session_panes_argv,
-              stdout: "feat\t4999999999\tzsh\t%1\tt\n"
-            )
+          client.panes = { "test" => [session_pane("feat", "%1", "zsh")] }
 
-            app.refresh_agents
+          app.refresh_agents
 
-            expect(app.agent_states).to eq(
-              "feat" => Orn::Detect::PaneAgentState.new(
-                agent: nil,
-                state: :unknown
-              )
+          expect(app.agent_states).to eq(
+            "feat" => Orn::Detect::PaneAgentState.new(
+              agent: nil,
+              state: :unknown
             )
-          end
+          )
         end
 
-        it "clears the states when the pane listing fails" do
+        it "clears the states when the pane listing comes back empty" do
           app = build_app([], root: scripted_root)
           app.agent_states["feat"] = working_state
-          with_fake_cmd do |fake|
-            fake.script(session_panes_argv, status: 1)
 
-            app.refresh_agents
+          app.refresh_agents
 
-            expect(app.agent_states).to be_empty
-          end
+          expect(app.agent_states).to be_empty
         end
       end
 
@@ -427,25 +382,23 @@ module Orn
           app.instance_variable_set(:@last_refresh, monotonic_now - 60)
           app.instance_variable_set(:@last_agent_refresh, monotonic_now - 60)
           with_fake_cmd do |fake|
-            fake.script(session_panes_argv, status: 1)
             script_refresh(fake, scripted_root)
 
             app.maybe_refresh
 
-            expect(fake.invocations).to include(
-              session_panes_argv,
-              list_windows_argv
-            )
+            aggregate_failures do
+              expect(client.count(:list_panes_metadata)).to eq(1)
+              expect(client.count(:list_windows)).to eq(1)
+            end
           end
         end
 
         it "skips both refreshes inside their intervals" do
           app = build_app([], root: scripted_root)
-          with_fake_cmd do |fake|
-            app.maybe_refresh
 
-            expect(fake.invocations).to be_empty
-          end
+          app.maybe_refresh
+
+          expect(client.calls).to be_empty
         end
       end
 
@@ -762,7 +715,6 @@ module Orn
             status: 1
           )
           fake.script(git_argv(wt_path, "add", ".gitignore"))
-          script_bare_window(fake, root, "feat")
           script_refresh(fake, root)
         end
 
@@ -784,9 +736,9 @@ module Orn
               expect(app.error).to be_nil
               expect(File.read(File.join(wt_path, ".gitignore"))).to eq("shared.txt\n")
               expect(File.symlink?(File.join(wt_path, "shared.txt"))).to be(true)
-              expect(fake.invocations).to include(
-                new_window_argv(root, "feat"),
-                select_window_argv("feat")
+              expect(client.calls).to include(
+                [:create_window, "test", "feat"],
+                [:select_window, "test", "feat"]
               )
             end
           end
@@ -797,38 +749,30 @@ module Orn
         it "switches to the window of a worktree that has one" do
           app = build_app([], root: scripted_root)
           app.entries = [status("feat", has_window: true)]
+          client.windows = { "test" => ["feat"] }
           with_fake_cmd do |fake|
-            script_refresh(
-              fake,
-              scripted_root,
-              windows: "feat\n"
-            )
-            fake.script(select_window_argv("feat"))
+            script_refresh(fake, scripted_root)
 
             app.open_selected
 
             aggregate_failures do
-              expect(fake.invocations).to include(select_window_argv("feat"))
-              expect(fake.invocations).not_to include(new_window_argv(scripted_root, "feat"))
+              expect(client.calls).to include([:select_window, "test", "feat"])
+              expect(client.count(:create_window)).to eq(0)
             end
           end
         end
 
         it "creates a bare window for a worktree without one" do
           app = build_app(%w[feat], root: scripted_root)
+          client.windows = { "test" => ["feat"] }
           with_fake_cmd do |fake|
-            script_bare_window(fake, scripted_root, "feat")
-            script_refresh(
-              fake,
-              scripted_root,
-              windows: "feat\n"
-            )
+            script_refresh(fake, scripted_root)
 
             app.open_selected
 
             aggregate_failures do
               expect(app.error).to be_nil
-              expect(fake.invocations).to include(new_window_argv(scripted_root, "feat"))
+              expect(client.calls).to include([:create_window, "test", "feat"])
             end
           end
         end
@@ -836,51 +780,34 @@ module Orn
         it "records the error when the window selection fails" do
           app = build_app([], root: scripted_root)
           app.entries = [status("feat", has_window: true)]
+          client.fail_on = [:select_window]
           with_fake_cmd do |fake|
-            script_refresh(
-              fake,
-              scripted_root,
-              windows: "feat\n"
-            )
-            fake.script(
-              select_window_argv("feat"),
-              stderr: "no window",
-              status: 1
-            )
+            script_refresh(fake, scripted_root)
 
             app.open_selected
 
-            expect(app.error).to eq("tmux failed: no window")
+            expect(app.error).to eq("select_window failed")
           end
         end
 
         it "records the error and stops when the window creation fails" do
           app = build_app(%w[feat], root: scripted_root)
-          with_fake_cmd do |fake|
-            fake.script(["tmux", "-V"], stdout: "tmux 3.4\n")
-            fake.script(["tmux", "has-session", "-t", "test"])
-            fake.script(
-              new_window_argv(scripted_root, "feat"),
-              stderr: "boom",
-              status: 1
-            )
+          client.fail_on = [:create_window]
 
-            app.open_selected
+          app.open_selected
 
-            aggregate_failures do
-              expect(app.error).to eq("tmux failed: boom")
-              expect(fake.invocations).not_to include(list_windows_argv)
-            end
+          aggregate_failures do
+            expect(app.error).to eq("create_window failed")
+            expect(client.count(:list_windows)).to eq(0)
           end
         end
 
         it "does nothing on an empty list" do
           app = build_app([], root: scripted_root)
-          with_fake_cmd do |fake|
-            app.open_selected
 
-            expect(fake.invocations).to be_empty
-          end
+          app.open_selected
+
+          expect(client.calls).to be_empty
         end
       end
 
@@ -889,14 +816,12 @@ module Orn
           app = build_app([], root: scripted_root)
           app.entries = [status("feat", has_window: true)]
           with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
-            fake.script(kill_window_argv("feat"))
             script_refresh(fake, scripted_root)
 
             app.close_selected
 
             aggregate_failures do
-              expect(fake.invocations).to include(kill_window_argv("feat"))
+              expect(client.calls).to include([:kill_window, "test", "feat"])
               expect(app.error).to be_nil
             end
           end
@@ -904,32 +829,30 @@ module Orn
 
         it "does nothing without a window or borrowed pane" do
           app = build_app(%w[feat], root: scripted_root)
-          with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
 
-            app.close_selected
+          app.close_selected
 
-            expect(fake.invocations).not_to include(kill_window_argv("feat"))
-          end
+          expect(client.count(:kill_window)).to eq(0)
         end
 
         it "returns a hub-borrowed agent pane before the kill" do
           app = build_app(%w[feat], root: scripted_root)
-          join_argv = ["tmux", "join-pane", "-h", "-d", "-s", "%5", "-t", "test:feat", "-l", "50%"]
+          client.borrowed = [
+            Orn::Tmux::BorrowedPane.new(
+              pane_id: "%5",
+              home_session: "test",
+              home_window: "feat"
+            )
+          ]
+          client.windows = { "test" => ["feat"] }
           with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv, stdout: "%5\ttest\tfeat\n")
-            fake.script(list_windows_argv, stdout: "feat\n")
-            fake.script(join_argv)
-            fake.script(["tmux", "set-option", "-p", "-u", "-t", "%5", "@orn_home_session"])
-            fake.script(["tmux", "set-option", "-p", "-u", "-t", "%5", "@orn_home_window"])
-            fake.script(kill_window_argv("feat"))
-            fake.script(worktree_list_argv(scripted_root))
+            script_refresh(fake, scripted_root)
 
             app.close_selected
 
-            expect(fake.invocations).to include(
-              join_argv,
-              kill_window_argv("feat")
+            expect(client.calls).to include(
+              [:join_pane, "%5", "test:feat", 50, false],
+              [:kill_window, "test", "feat"]
             )
           end
         end
@@ -937,27 +860,19 @@ module Orn
         it "records the error when the window kill fails" do
           app = build_app([], root: scripted_root)
           app.entries = [status("feat", has_window: true)]
-          with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
-            fake.script(
-              kill_window_argv("feat"),
-              stderr: "no window",
-              status: 1
-            )
+          client.fail_on = [:kill_window]
 
-            app.close_selected
+          app.close_selected
 
-            expect(app.error).to eq("tmux failed: no window")
-          end
+          expect(app.error).to eq("kill_window failed")
         end
 
         it "does nothing on an empty list" do
           app = build_app([], root: scripted_root)
-          with_fake_cmd do |fake|
-            app.close_selected
 
-            expect(fake.invocations).to be_empty
-          end
+          app.close_selected
+
+          expect(client.calls).to be_empty
         end
       end
 
@@ -974,19 +889,16 @@ module Orn
 
         it "does nothing outside confirm-remove mode" do
           app = build_app(%w[feat], root: scripted_root)
-          with_fake_cmd do |fake|
-            app.confirm_remove
 
-            expect(fake.invocations).to be_empty
-          end
+          app.confirm_remove
+
+          expect(client.calls).to be_empty
         end
 
         it "removes the worktree of a branch without a window" do
           app = build_app(%w[feat], root: scripted_root)
           app.start_remove
           with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
-            fake.script(list_windows_argv)
             fake.script(remove_argv(scripted_root, "feat"))
             fake.script(worktree_list_argv(scripted_root))
 
@@ -994,7 +906,7 @@ module Orn
 
             aggregate_failures do
               expect(fake.invocations).to include(remove_argv(scripted_root, "feat"))
-              expect(fake.invocations).not_to include(kill_window_argv("feat"))
+              expect(client.count(:kill_window)).to eq(0)
               expect(app.mode).to eq(Mode.normal)
             end
           end
@@ -1003,39 +915,31 @@ module Orn
         it "kills the window before removing the worktree" do
           app = build_app(%w[feat], root: scripted_root)
           app.start_remove
+          client.windows = { "test" => ["feat"] }
           with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
-            fake.script(list_windows_argv, stdout: "feat\n")
-            fake.script(kill_window_argv("feat"))
             fake.script(remove_argv(scripted_root, "feat"))
             fake.script(worktree_list_argv(scripted_root))
 
             app.confirm_remove
 
-            expect(fake.invocations).to include(
-              kill_window_argv("feat"),
-              remove_argv(scripted_root, "feat")
-            )
+            aggregate_failures do
+              expect(client.calls).to include([:kill_window, "test", "feat"])
+              expect(fake.invocations).to include(remove_argv(scripted_root, "feat"))
+            end
           end
         end
 
         it "stops before the removal when the window kill fails" do
           app = build_app(%w[feat], root: scripted_root)
           app.start_remove
+          client.windows = { "test" => ["feat"] }
+          client.fail_on = [:kill_window]
           with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
-            fake.script(list_windows_argv, stdout: "feat\n")
-            fake.script(
-              kill_window_argv("feat"),
-              stderr: "boom",
-              status: 1
-            )
-
             app.confirm_remove
 
             aggregate_failures do
-              expect(app.error).to eq("tmux failed: boom")
-              expect(fake.invocations).not_to include(remove_argv(scripted_root, "feat"))
+              expect(app.error).to eq("kill_window failed")
+              expect(fake.invocations).to be_empty
             end
           end
         end
@@ -1044,8 +948,6 @@ module Orn
           app = build_app(%w[feat], root: scripted_root)
           app.start_remove
           with_fake_cmd do |fake|
-            fake.script(borrowed_panes_argv)
-            fake.script(list_windows_argv)
             fake.script(
               remove_argv(scripted_root, "feat"),
               stderr: "locked",

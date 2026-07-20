@@ -30,22 +30,26 @@ module Orn
         )
       end
 
+      def client
+        @client ||= FakeTmuxClient.new
+      end
+
       def app_with(entries, tabs: nil, mru_state: nil)
         described_class.new(
           output_mode: Orn::OutputMode.quiet,
           config: global_config,
           entries: entries,
           mru_state: mru_state,
+          client: client,
           tabs: tabs
         )
       end
 
       def tabs_with_hub(hub, hub_pane: "%0", hub_location: %w[orn orn])
         Tabs.new(
-          output_mode: Orn::OutputMode.quiet,
+          hub: hub,
           hub_pane: hub_pane,
-          hub_location: hub_location,
-          hub: hub
+          hub_location: hub_location
         )
       end
 
@@ -60,24 +64,6 @@ module Orn
 
       def monotonic_now
         Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      end
-
-      def all_panes_argv
-        pane_format = "\#{session_name}\t\#{window_name}\t\#{pane_pid}\t" \
-          "\#{pane_current_command}\t\#{pane_id}\t\#{pane_title}"
-        ["tmux", "list-panes", "-a", "-F", pane_format]
-      end
-
-      def list_sessions_argv
-        ["tmux", "list-sessions", "-F", "\#{session_name}\t\#{session_activity}"]
-      end
-
-      def has_session_argv(session)
-        ["tmux", "has-session", "-t", session]
-      end
-
-      def list_windows_argv(session)
-        ["tmux", "list-windows", "-t", "#{session}:", "-F", "\#{window_name}"]
       end
 
       def open_tab_for(tabs, repo, branch)
@@ -95,44 +81,37 @@ module Orn
 
       describe ".build" do
         def build_app
+          allow(Orn::Tmux::Client).to receive(:new).and_return(client)
           described_class.build(
             Orn::OutputMode.quiet,
             global_config
           )
         end
 
-        def hub_window_argv(pane)
-          ["tmux", "display-message", "-p", "-t", pane, "\#{session_name}\t\#{window_name}"]
-        end
-
         it "captures the hosting pane and its window for hub tabs" do
           ENV["XDG_STATE_HOME"] = register_temp_dir(Dir.mktmpdir("orn-state"))
           ENV["TMUX_PANE"] = "%3"
-          with_fake_cmd do |fake|
-            fake.script(hub_window_argv("%3"), stdout: "orn\thub\n")
-            fake.script(all_panes_argv, status: 1)
+          client.pane_locations = { "%3" => %w[orn hub] }
+          client.all_panes = nil
 
-            app = build_app
+          app = build_app
 
-            aggregate_failures do
-              expect(app.tabs.hub_pane).to eq("%3")
-              expect(app.tabs.hub_location).to eq(%w[orn hub])
-            end
+          aggregate_failures do
+            expect(app.tabs.hub_pane).to eq("%3")
+            expect(app.tabs.hub_location).to eq(%w[orn hub])
           end
         end
 
         it "builds without hub tabs when running outside tmux" do
           ENV["XDG_STATE_HOME"] = register_temp_dir(Dir.mktmpdir("orn-state"))
           ENV.delete("TMUX_PANE")
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, status: 1)
+          client.all_panes = nil
 
-            app = build_app
+          app = build_app
 
-            aggregate_failures do
-              expect(app.tabs.hub_pane).to be_nil
-              expect(app.tabs.hub_location).to be_nil
-            end
+          aggregate_failures do
+            expect(app.tabs.hub_pane).to be_nil
+            expect(app.tabs.hub_location).to be_nil
           end
         end
       end
@@ -523,49 +502,41 @@ module Orn
 
         it "keeps tabs and stamps the refresh time when the pane listing fails" do
           app = due_app_with_open_tab(fake_tabs)
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, status: 1)
+          client.all_panes = nil
 
-            app.maybe_refresh
-            app.maybe_refresh
+          app.maybe_refresh
+          app.maybe_refresh
 
-            aggregate_failures do
-              expect(app.tabs.visible.branch).to eq("feat")
-              # One listing only: the failed refresh still stamped the time,
-              # so the second poll is not due yet.
-              expect(fake.invocations).to eq([all_panes_argv])
-            end
+          aggregate_failures do
+            expect(app.tabs.visible.branch).to eq("feat")
+            # One listing only: the failed refresh still stamped the time,
+            # so the second poll is not due yet.
+            expect(client.count(:list_all_panes_metadata)).to eq(1)
           end
         end
 
         it "runs a full discovery when the discovery refresh is due" do
           app = app_with([entry("a")])
           app.instance_variable_set(:@last_discovery, monotonic_now - 60)
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, status: 1)
+          client.all_panes = nil
 
-            app.maybe_refresh
+          app.maybe_refresh
 
-            # No scan roots are configured, so rediscovery replaces the stale
-            # entries with an empty list.
-            expect(app.entries).to be_empty
-          end
+          # No scan roots are configured, so rediscovery replaces the stale
+          # entries with an empty list.
+          expect(app.entries).to be_empty
         end
 
         it "prunes tabs whose panes are gone on a successful pane listing" do
           hub = FakeHub.new
           app = due_app_with_open_tab(tabs_with_hub(hub))
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, stdout: "")
-            fake.script(list_sessions_argv, status: 1)
 
-            app.maybe_refresh
+          app.maybe_refresh
 
-            aggregate_failures do
-              expect(app.tabs.visible).to be_nil
-              expect(hub.count(:remove_bindings)).to eq(1)
-              expect(app.entries[0].session_alive).to be(false)
-            end
+          aggregate_failures do
+            expect(app.tabs.visible).to be_nil
+            expect(hub.count(:remove_bindings)).to eq(1)
+            expect(app.entries[0].session_alive).to be(false)
           end
         end
       end
@@ -658,16 +629,14 @@ module Orn
             tabs: tabs_with_hub(hub),
             mru_state: state
           )
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, status: 1)
+          client.all_panes = nil
 
-            app.enter_selected
+          app.enter_selected
 
-            aggregate_failures do
-              expect(app.tabs.visible.branch).to eq("feat")
-              expect(hub.calls).to include([:open_tab, ["feat", "%0"]])
-              expect(state.timestamp(repo.root)).not_to be_nil
-            end
+          aggregate_failures do
+            expect(app.tabs.visible.branch).to eq("feat")
+            expect(hub.calls).to include([:open_tab, ["feat", "%0"]])
+            expect(state.timestamp(repo.root)).not_to be_nil
           end
         end
 
@@ -682,15 +651,13 @@ module Orn
           app = app_on_worktree_row(repo, tabs: tabs)
           open_tab_for(tabs, repo, "feat")
           open_tab_for(tabs, repo, "main")
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, status: 1)
+          client.all_panes = nil
 
-            app.enter_selected
+          app.enter_selected
 
-            aggregate_failures do
-              expect(app.tabs.visible.branch).to eq("feat")
-              expect(hub.calls).to include([:show_tab, "feat"])
-            end
+          aggregate_failures do
+            expect(app.tabs.visible.branch).to eq("feat")
+            expect(hub.calls).to include([:show_tab, "feat"])
           end
         end
 
@@ -705,14 +672,13 @@ module Orn
           app = app_on_worktree_row(repo, tabs: tabs)
           open_tab_for(tabs, repo, "feat")
           open_tab_for(tabs, repo, "main")
-          with_fake_cmd do |fake|
-            app.enter_selected
 
-            aggregate_failures do
-              expect(app.tabs.visible).to be_nil
-              expect(app.tabs.tab_index_for(repo.root, "feat")).to be_nil
-              expect(fake.invocations).to be_empty
-            end
+          app.enter_selected
+
+          aggregate_failures do
+            expect(app.tabs.visible).to be_nil
+            expect(app.tabs.tab_index_for(repo.root, "feat")).to be_nil
+            expect(client.count(:list_all_panes_metadata)).to eq(0)
           end
         end
 
@@ -725,13 +691,10 @@ module Orn
           )
           app = app_on_worktree_row(repo, tabs: tabs)
           open_tab_for(tabs, repo, "feat")
-          with_fake_cmd do |fake|
-            fake.script(["tmux", "select-pane", "-t", "%1"])
 
-            app.enter_selected
+          app.enter_selected
 
-            expect(fake.invocations).to eq([["tmux", "select-pane", "-t", "%1"]])
-          end
+          expect(client.calls).to eq([[:select_pane, "%1"]])
         end
 
         it "suppresses a failing pane focus" do
@@ -743,17 +706,11 @@ module Orn
           )
           app = app_on_worktree_row(repo, tabs: tabs)
           open_tab_for(tabs, repo, "feat")
-          with_fake_cmd do |fake|
-            fake.script(
-              ["tmux", "select-pane", "-t", "%1"],
-              stderr: "no such pane",
-              status: 1
-            )
+          client.fail_on = [:select_pane]
 
-            app.enter_selected
+          app.enter_selected
 
-            expect(app.error).to be_nil
-          end
+          expect(app.error).to be_nil
         end
 
         it "reports a tab-open failure onto the error line through the default tabs" do
@@ -767,21 +724,15 @@ module Orn
             config: global_config,
             entries: [repo],
             hub_pane: "%0",
-            hub_location: %w[orn orn]
+            hub_location: %w[orn orn],
+            client: client
           )
           select_row(app, 1)
-          pane_format = "\#{window_name}\t\#{pane_pid}\t\#{pane_current_command}\t\#{pane_id}\t\#{pane_title}"
-          with_fake_cmd do |fake|
-            fake.script(list_windows_argv("nonexistent"), stdout: "feat\n")
-            fake.script(
-              ["tmux", "list-panes", "-s", "-t", "nonexistent:", "-F", pane_format],
-              stdout: ""
-            )
+          client.windows = { "nonexistent" => ["feat"] }
 
-            app.enter_selected
+          app.enter_selected
 
-            expect(app.error).to eq("no pane found for 'feat' in session 'nonexistent'")
-          end
+          expect(app.error).to eq("no pane found for 'feat' in session 'nonexistent'")
         end
 
         it "records the repo row in the MRU state and reports a tmux failure" do
@@ -792,30 +743,18 @@ module Orn
             [entry("a").with(root: root)],
             mru_state: state
           )
-          session = File.basename(root)
-          with_fake_cmd do |fake|
-            fake.script(has_session_argv(session), status: 1)
-            fake.script(
-              ["tmux", "new-session", "-d", "-s", session, "-n", "main", "-c", root],
-              stderr: "no server",
-              status: 1
-            )
+          client.fail_on = [:ensure_session]
 
-            app.enter_selected
+          app.enter_selected
 
-            aggregate_failures do
-              expect(app.error).to eq("tmux failed: no server")
-              expect(state.timestamp(root)).not_to be_nil
-            end
+          aggregate_failures do
+            expect(app.error).to eq("ensure_session failed")
+            expect(state.timestamp(root)).not_to be_nil
           end
         end
       end
 
       describe "#poll_focus" do
-        def active_pane_argv
-          ["tmux", "list-panes", "-t", "orn:orn", "-F", "\#{pane_id}\t\#{?pane_active,1,0}"]
-        end
-
         # The focus poll is rate-limited against a monotonic clock with no
         # injection seam, so these examples rewrite the recorded poll time to
         # place the next poll inside or past the interval.
@@ -848,26 +787,26 @@ module Orn
           app = app_with_visible_tab
           app.tabs.agent_focused = true
           record_last_focus_poll(app, monotonic_now)
-          with_fake_cmd do |_fake|
-            app.poll_focus
 
+          app.poll_focus
+
+          aggregate_failures do
             expect(app.tabs.agent_focused).to be(true)
+            expect(client.count(:active_pane)).to eq(0)
           end
         end
 
         it "marks the agent focused once the interval has passed, then rate limits" do
           app = app_with_visible_tab
           record_last_focus_poll(app, monotonic_now - 1)
-          with_fake_cmd do |fake|
-            fake.script(active_pane_argv, stdout: "%0\t0\n%1\t1\n")
+          client.active_panes = { "orn:orn" => "%1" }
 
-            app.poll_focus
-            app.poll_focus
+          app.poll_focus
+          app.poll_focus
 
-            aggregate_failures do
-              expect(app.tabs.agent_focused).to be(true)
-              expect(fake.invocations).to eq([active_pane_argv])
-            end
+          aggregate_failures do
+            expect(app.tabs.agent_focused).to be(true)
+            expect(client.count(:active_pane)).to eq(1)
           end
         end
 
@@ -875,21 +814,15 @@ module Orn
           app = app_with_visible_tab
           app.tabs.agent_focused = true
           record_last_focus_poll(app, monotonic_now - 1)
-          with_fake_cmd do |fake|
-            fake.script(active_pane_argv, stdout: "%0\t1\n%1\t0\n")
+          client.active_panes = { "orn:orn" => "%0" }
 
-            app.poll_focus
+          app.poll_focus
 
-            expect(app.tabs.agent_focused).to be(false)
-          end
+          expect(app.tabs.agent_focused).to be(false)
         end
       end
 
       describe "#enforce_layout" do
-        def resize_argv
-          ["tmux", "resize-pane", "-t", "%0", "-x", "33%"]
-        end
-
         def app_with_visible_tab(tabs)
           repo = entry_with_worktrees(
             "a",
@@ -903,35 +836,25 @@ module Orn
 
         it "re-applies the sidebar width while a tab is visible" do
           app = app_with_visible_tab(fake_tabs)
-          with_fake_cmd do |fake|
-            fake.script(resize_argv)
 
-            app.enforce_layout
+          app.enforce_layout
 
-            expect(fake.invocations).to eq([resize_argv])
-          end
+          expect(client.calls).to eq([[:resize_pane_width, "%0", 33]])
         end
 
         it "does nothing without a visible tab" do
           app = app_with([entry("a")], tabs: fake_tabs)
-          with_fake_cmd do |fake|
-            app.enforce_layout
 
-            expect(fake.invocations).to be_empty
-          end
+          app.enforce_layout
+
+          expect(client.calls).to be_empty
         end
 
         it "suppresses a failing resize" do
           app = app_with_visible_tab(fake_tabs)
-          with_fake_cmd do |fake|
-            fake.script(
-              resize_argv,
-              stderr: "no such pane",
-              status: 1
-            )
+          client.fail_on = [:resize_pane_width]
 
-            expect { app.enforce_layout }.not_to raise_error
-          end
+          expect { app.enforce_layout }.not_to raise_error
         end
       end
 
@@ -946,27 +869,24 @@ module Orn
           app = app_with([repo], tabs: tabs)
           open_tab_for(tabs, repo, "feat")
           open_tab_for(tabs, repo, "main")
-          with_fake_cmd do |fake|
-            fake.script(all_panes_argv, status: 1)
+          client.all_panes = nil
 
-            app.cycle_tab(true)
+          app.cycle_tab(true)
 
-            aggregate_failures do
-              expect(app.tabs.visible.branch).to eq("feat")
-              expect(app.selected_row).to eq(TreeRow.worktree(0, 0))
-            end
+          aggregate_failures do
+            expect(app.tabs.visible.branch).to eq("feat")
+            expect(app.selected_row).to eq(TreeRow.worktree(0, 0))
           end
         end
 
         it "is a no-op with no open tabs" do
           app = app_with([entry("a")], tabs: fake_tabs)
-          with_fake_cmd do |fake|
-            app.cycle_tab(true)
 
-            aggregate_failures do
-              expect(fake.invocations).to be_empty
-              expect(app.selected).to eq(0)
-            end
+          app.cycle_tab(true)
+
+          aggregate_failures do
+            expect(client.calls).to be_empty
+            expect(app.selected).to eq(0)
           end
         end
       end
@@ -1053,72 +973,41 @@ module Orn
       end
 
       describe ".enter_repo" do
-        def switch_client_argv(session)
-          ["tmux", "switch-client", "-t", "#{session}:orn"]
-        end
-
-        def new_window_argv(session, root)
-          [
-            "tmux",
-            "new-window",
-            "-a",
-            "-t",
-            "#{session}:",
-            "-n",
-            "orn",
-            "-c",
-            root,
-            Orn::TUI.relaunch_command
-          ]
-        end
-
         it "creates the session and its TUI window, then switches the client" do
           isolate_global_config
           root = make_bare_project
           session = File.basename(root)
-          new_session_argv = ["tmux", "new-session", "-d", "-s", session, "-n", "main", "-c", root]
-          with_fake_cmd do |fake|
-            fake.script(has_session_argv(session), status: 1)
-            fake.script(new_session_argv)
-            fake.script(list_windows_argv(session), stdout: "main\n")
-            fake.script(new_window_argv(session, root))
-            fake.script(switch_client_argv(session))
+          client.windows = { session => ["main"] }
 
-            described_class.enter_repo(Orn::OutputMode.quiet, root)
+          described_class.enter_repo(client, root)
 
-            expect(fake.invocations).to eq(
-              [
-                has_session_argv(session),
-                new_session_argv,
-                list_windows_argv(session),
-                new_window_argv(session, root),
-                list_windows_argv(session),
-                switch_client_argv(session)
-              ]
-            )
-          end
+          expect(client.calls).to eq(
+            [
+              [:ensure_session, session, root, "main"],
+              [:window_exists?, session, "orn"],
+              [:new_window_running, session, "orn", root, Orn::TUI.relaunch_command],
+              [:reorder_windows, session, "main"],
+              [:switch_client, session, "orn"]
+            ]
+          )
         end
 
         it "reuses an existing session and TUI window" do
           isolate_global_config
           root = make_bare_project
           session = File.basename(root)
-          with_fake_cmd do |fake|
-            fake.script(has_session_argv(session))
-            fake.script(list_windows_argv(session), stdout: "orn\nmain\n")
-            fake.script(switch_client_argv(session))
+          client.windows = { session => %w[orn main] }
 
-            described_class.enter_repo(Orn::OutputMode.quiet, root)
+          described_class.enter_repo(client, root)
 
-            expect(fake.invocations).to eq(
-              [
-                has_session_argv(session),
-                list_windows_argv(session),
-                list_windows_argv(session),
-                switch_client_argv(session)
-              ]
-            )
-          end
+          expect(client.calls).to eq(
+            [
+              [:ensure_session, session, root, "main"],
+              [:window_exists?, session, "orn"],
+              [:reorder_windows, session, "main"],
+              [:switch_client, session, "orn"]
+            ]
+          )
         end
       end
 

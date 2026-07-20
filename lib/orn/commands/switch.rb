@@ -43,8 +43,9 @@ module Orn
         end
       end
 
-      def initialize(output_mode:)
+      def initialize(output_mode:, client: nil)
         @output_mode = output_mode
+        @client = client || Orn::Tmux::Client.new(output_mode: output_mode)
       end
 
       # Resolves the branch through four escalating cases (window exists,
@@ -55,16 +56,8 @@ module Orn
         wt_path = project.worktree_path(branch)
 
         # Case 1: tmux window exists, just switch to it.
-        if Orn::Tmux.window_exists?(
-          @output_mode,
-          session,
-          branch
-        )
-          Orn::Tmux.select_window(
-            @output_mode,
-            session,
-            branch
-          )
+        if @client.window_exists?(session, branch)
+          @client.select_window(session, branch)
           return Result.simple(branch, :switched)
         end
 
@@ -85,11 +78,7 @@ module Orn
             branch,
             nil
           )
-          Orn::Tmux.open_window(
-            @output_mode,
-            project,
-            branch
-          )
+          @client.open_window(project, branch)
           return Result.simple(branch, :fetched)
         end
 
@@ -99,7 +88,8 @@ module Orn
             @output_mode,
             project,
             branch,
-            base_override
+            base_override,
+            @client
           )
         else
           create_plain(
@@ -115,7 +105,7 @@ module Orn
         Orn::Git::BranchName.new(base_override).validate! if base_override
 
         project = Orn::Git::Project.discover
-        project = Orn::Session.check_collision(@output_mode, project)
+        project = Orn::Session.check_collision(@client, project)
         result = perform(
           project,
           branch,
@@ -137,15 +127,12 @@ module Orn
             @output_mode,
             project,
             branch,
-            sbx_name
+            sbx_name,
+            @client
           )
         end
 
-        Orn::Tmux.open_window(
-          @output_mode,
-          project,
-          branch
-        )
+        @client.open_window(project, branch)
         Result.simple(branch, :reopened)
       end
 
@@ -157,11 +144,7 @@ module Orn
           branch,
           base_override
         )
-        Orn::Tmux.open_window(
-          @output_mode,
-          project,
-          branch
-        )
+        @client.open_window(project, branch)
         Result.new(
           branch: wt_result.branch,
           action: :created,

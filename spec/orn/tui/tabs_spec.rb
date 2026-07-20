@@ -13,10 +13,9 @@ module Orn
 
       def build_tabs(hub_pane: "%0", hub_location: %w[orn orn])
         described_class.new(
-          output_mode: Orn::OutputMode.quiet,
+          hub: hub,
           hub_pane: hub_pane,
           hub_location: hub_location,
-          hub: hub,
           on_error: ->(message) { errors << message }
         )
       end

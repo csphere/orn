@@ -15,6 +15,7 @@ module Orn
       # needs a long positional parameter list.
       Context = Data.define(
         :output_mode,
+        :client,
         :project,
         :branch,
         :sbx_config,
@@ -23,7 +24,7 @@ module Orn
 
       # Case 4 with `--sbx`: validate config/trust/preflight, create the
       # worktree, then provision the sandbox and window under a rollback guard.
-      def create_with_sandbox(output_mode, project, branch, base_override)
+      def create_with_sandbox(output_mode, project, branch, base_override, client)
         sbx_config = project.config.require_sbx!
         Orn::Trust.check_sbx_trust(project.root, sbx_config)
         agent_type = sbx_config.require_agent_type!
@@ -41,6 +42,7 @@ module Orn
         )
         context = Context.new(
           output_mode: output_mode,
+          client: client,
           project: project,
           branch: branch,
           sbx_config: sbx_config,
@@ -108,8 +110,7 @@ module Orn
 
       def open_window(context, name, state)
         layout, layout_source = context.project.config.effective_sbx_layout
-        result = Orn::Tmux.open_window_with_layout(
-          context.output_mode,
+        result = context.client.open_window_with_layout(
           context.project,
           context.branch,
           layout,
@@ -144,13 +145,12 @@ module Orn
 
       # Case 2 when the branch's sandbox still exists: reopen the window with the
       # sbx layout, republish ports, and rerun the configured start command.
-      def reopen_with_sandbox(output_mode, project, branch, sbx_name)
+      def reopen_with_sandbox(output_mode, project, branch, sbx_name, client)
         sbx_config = project.config.sbx
         Orn::Trust.check_sbx_trust(project.root, sbx_config) if sbx_config
 
         layout, layout_source = project.config.effective_sbx_layout
-        Orn::Tmux.open_window_with_layout(
-          output_mode,
+        client.open_window_with_layout(
           project,
           branch,
           layout,
@@ -203,11 +203,7 @@ module Orn
       end
 
       def safe_kill_window(context, session)
-        Orn::Tmux.kill_window(
-          context.output_mode,
-          session,
-          context.branch
-        )
+        context.client.kill_window(session, context.branch)
       rescue Orn::Error
         nil
       end

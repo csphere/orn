@@ -31,8 +31,9 @@ module Orn
         end
       end
 
-      def initialize(output_mode:)
+      def initialize(output_mode:, client: nil)
         @output_mode = output_mode
+        @client = client || Orn::Tmux::Client.new(output_mode: output_mode)
       end
 
       # Removes one branch's sandbox (with its ports file) and tmux window,
@@ -84,17 +85,9 @@ module Orn
       end
 
       def close_window(session, branch)
-        return false unless Orn::Tmux.window_exists?(
-          @output_mode,
-          session,
-          branch
-        )
+        return false unless @client.window_exists?(session, branch)
 
-        Orn::Tmux.kill_window(
-          @output_mode,
-          session,
-          branch
-        )
+        @client.kill_window(session, branch)
         true
       end
 

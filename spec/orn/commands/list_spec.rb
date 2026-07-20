@@ -54,11 +54,8 @@ RSpec.describe Orn::Commands::List do
         loaded = load_project(project)
 
         result = Dir.chdir(project) do
-          Orn::Tmux.open_window(
-            Orn::OutputMode.quiet,
-            loaded,
-            "feature/listed"
-          )
+          Orn::Tmux::Client.new(output_mode: Orn::OutputMode.quiet)
+            .open_window(loaded, "feature/listed")
           described_class.new(output_mode: Orn::OutputMode.quiet).run_inner(loaded)
         end
 
@@ -81,11 +78,8 @@ RSpec.describe Orn::Commands::List do
 
         expect do
           Dir.chdir(project) do
-            Orn::Tmux.open_window(
-              Orn::OutputMode.quiet,
-              load_project(project),
-              "feature/listed"
-            )
+            Orn::Tmux::Client.new(output_mode: Orn::OutputMode.quiet)
+              .open_window(load_project(project), "feature/listed")
             command.run
           end
         end.to output(%r{feature/listed\s*│\s*window\s*│}).to_stdout

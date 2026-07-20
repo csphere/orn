@@ -61,7 +61,7 @@ module Orn
       attr_reader :session, :base_branch
 
       # Build the app from a discovered project and run an initial refresh.
-      def self.for_project(output_mode, project)
+      def self.for_project(output_mode, project, client: nil)
         sbx = project.config.sbx
         agent_type = sbx&.agent_type && Orn::Detect.identify_agent(sbx.agent_type)
         app = new(
@@ -71,15 +71,17 @@ module Orn
           base_branch: project.config.base,
           repo_name: File.basename(project.root.to_s),
           symlinks: project.config.symlinks,
-          sbx_agent_type: agent_type
+          sbx_agent_type: agent_type,
+          client: client
         )
         app.refresh
         app
       end
 
       def initialize(output_mode:, root:, session:, base_branch:,
-        repo_name: nil, symlinks: nil, sbx_agent_type: nil)
+        repo_name: nil, symlinks: nil, sbx_agent_type: nil, client: nil)
         @output = output_mode
+        @client = client || Orn::Tmux::Client.new(output_mode: output_mode)
         @root = root
         @session = session
         @base_branch = base_branch
@@ -89,6 +91,7 @@ module Orn
           root: []
         )
         @sbx_agent_type = sbx_agent_type
+        @hub = Hub.new(client: @client)
         @entries = []
         @selected = 0
         @error = nil
@@ -106,25 +109,21 @@ module Orn
           root: @root,
           output_mode: @output
         )
-        windows = Orn::Tmux.list_windows(@output, @session)
+        windows = @client.list_windows(@session)
         entries = worktree.entries.map { |branch| status_for(branch, windows) }
         entries.sort_by! { |entry| [entry.branch == @base_branch ? 0 : 1, entry.branch] }
         @entries = entries
 
         @selected = @entries.length - 1 if @selected >= @entries.length && !@entries.empty?
         @last_refresh = monotonic
-        Orn::TUI.reorder_windows(
-          @output,
-          @session,
-          @base_branch
-        )
+        @client.reorder_windows(@session, @base_branch)
       end
 
       # Re-detect agent state for every pane in the session.
       def refresh_agents
-        panes = Orn::Tmux.list_panes_metadata(@output, @session)
+        panes = @client.list_panes_metadata(@session)
         @agent_states = Orn::Detect.detect_all_panes(
-          @output,
+          @client,
           panes,
           @sbx_agent_type
         )
@@ -181,11 +180,7 @@ module Orn
         branch = entry.branch
         # Closing a worktree whose agent pane is borrowed by the hub first
         # returns the pane so the kill reaches it.
-        returned = Hub.return_borrowed_for_branch(
-          @output,
-          @session,
-          branch
-        )
+        returned = @hub.return_borrowed_for_branch(@session, branch)
         return if !entry.has_window && !returned
 
         kill_window_and_refresh(branch)
@@ -233,11 +228,7 @@ module Orn
         branch = @mode.branch
         @mode = Mode.normal
 
-        Hub.return_borrowed_for_branch(
-          @output,
-          @session,
-          branch
-        )
+        @hub.return_borrowed_for_branch(@session, branch)
         return if window_kill_failed?(branch)
 
         remove_worktree(branch)
@@ -355,8 +346,7 @@ module Orn
       end
 
       def create_window(branch, wt_path)
-        Orn::Tmux.create_window(
-          @output,
+        @client.create_window(
           @session,
           branch,
           wt_path,
@@ -367,21 +357,13 @@ module Orn
       end
 
       def select_window(branch)
-        Orn::Tmux.select_window(
-          @output,
-          @session,
-          branch
-        )
+        @client.select_window(@session, branch)
       rescue Orn::Error => e
         @error = e.message
       end
 
       def kill_window_and_refresh(branch)
-        Orn::Tmux.kill_window(
-          @output,
-          @session,
-          branch
-        )
+        @client.kill_window(@session, branch)
         refresh
       rescue Orn::Error => e
         @error = e.message
@@ -390,17 +372,9 @@ module Orn
       # Kill the branch's window if it exists; true when that kill failed and
       # the caller should stop (the error is already recorded).
       def window_kill_failed?(branch)
-        return false unless Orn::Tmux.window_exists?(
-          @output,
-          @session,
-          branch
-        )
+        return false unless @client.window_exists?(@session, branch)
 
-        Orn::Tmux.kill_window(
-          @output,
-          @session,
-          branch
-        )
+        @client.kill_window(@session, branch)
         false
       rescue Orn::Error => e
         @error = e.message

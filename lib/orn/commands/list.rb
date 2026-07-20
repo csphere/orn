@@ -23,8 +23,9 @@ module Orn
         end
       end
 
-      def initialize(output_mode:)
+      def initialize(output_mode:, client: nil)
         @output_mode = output_mode
+        @client = client || Orn::Tmux::Client.new(output_mode: output_mode)
       end
 
       # The resolved result: worktree branches joined with the tmux window list
@@ -34,7 +35,7 @@ module Orn
           root: project.root,
           output_mode: @output_mode
         )
-        windows = Orn::Tmux.list_windows(@output_mode, Orn::Session.session_name(project))
+        windows = @client.list_windows(Orn::Session.session_name(project))
         entries = worktree.entries.map do |branch|
           Entry.new(
             branch: branch,

@@ -7,6 +7,7 @@ require "tmpdir"
 
 RSpec.describe Orn::Commands::SwitchSandbox do
   let(:output_mode) { Orn::OutputMode.quiet }
+  let(:client) { FakeTmuxClient.new }
 
   # A project directory with a git identity in .bare/config (so preflight's
   # identity check passes) and a private XDG data dir for trust approvals.
@@ -83,12 +84,6 @@ RSpec.describe Orn::Commands::SwitchSandbox do
     Orn::Cmd.backend = wrapper
   end
 
-  # tmux -V is dropped: the version warning runs once per process, so whether
-  # it appears depends on which spec file ran first.
-  def ordered_invocations(fake)
-    fake.invocations.reject { |argv| argv == ["tmux", "-V"] }
-  end
-
   # --- Command lines ---
 
   # The git identity check probes user.name and user.email through Cmd, so
@@ -150,26 +145,6 @@ RSpec.describe Orn::Commands::SwitchSandbox do
     ["sbx", "rm", "--force", "proj-feat"]
   end
 
-  def has_session_argv
-    ["tmux", "has-session", "-t", "proj"]
-  end
-
-  def new_session_argv(worktree_path)
-    ["tmux", "new-session", "-d", "-s", "proj", "-n", "main", "-c", worktree_path]
-  end
-
-  def new_window_argv(worktree_path)
-    ["tmux", "new-window", "-a", "-P", "-F", "\#{pane_id}", "-t", "proj:", "-n", "feat", "-c", worktree_path]
-  end
-
-  def select_window_argv
-    ["tmux", "select-window", "-t", "proj:feat"]
-  end
-
-  def kill_window_argv
-    ["tmux", "kill-window", "-t", "proj:feat"]
-  end
-
   # --- Scripting helpers ---
 
   def script_git_identity(fake, project)
@@ -192,16 +167,6 @@ RSpec.describe Orn::Commands::SwitchSandbox do
     fake.script(worktree_add_argv(root, base))
   end
 
-  # has-session is probed twice with the same argv (window creation and the
-  # ensure-session guard), so one script answers both.
-  def script_window_open(fake, worktree_path, session_exists:)
-    fake.script(["tmux", "-V"], stdout: "tmux 3.4\n")
-    fake.script(has_session_argv, status: session_exists ? 0 : 1)
-    fake.script(new_session_argv(worktree_path)) unless session_exists
-    fake.script(new_window_argv(worktree_path), stdout: "%1\n")
-    fake.script(select_window_argv)
-  end
-
   def script_provision_through_window(fake, project, base)
     script_passing_preflight(fake, project)
     script_worktree_creation(
@@ -210,11 +175,6 @@ RSpec.describe Orn::Commands::SwitchSandbox do
       base
     )
     fake.script(sandbox_create_argv(project.root))
-    script_window_open(
-      fake,
-      feat_path(project),
-      session_exists: false
-    )
   end
 
   def script_full_provision(fake, project, host_port, listeners)
@@ -289,20 +249,20 @@ RSpec.describe Orn::Commands::SwitchSandbox do
         worktree_add_argv(project.root, "main"),
         sandbox_create_argv(project.root),
         setup_exec_argv,
-        has_session_argv,
-        has_session_argv,
-        new_session_argv(feat_path(project)),
-        new_window_argv(feat_path(project)),
-        select_window_argv,
         publish_argv(host_port),
         start_exec_argv
       ]
     end
 
-    it "provisions the worktree, sandbox, window, ports, and services in order" do
-      host_port = pick_free_port
+    def approved_provision_project(host_port)
       project = sbx_project(provision_config(host_port))
       approve_sbx_commands(project)
+      project
+    end
+
+    it "provisions the worktree, sandbox, window, ports, and services in order" do
+      host_port = pick_free_port
+      project = approved_provision_project(host_port)
       listeners = []
       with_fake_cmd do |fake|
         script_full_provision(
@@ -316,7 +276,8 @@ RSpec.describe Orn::Commands::SwitchSandbox do
           output_mode,
           project,
           "feat",
-          nil
+          nil,
+          client
         )
 
         aggregate_failures do
@@ -333,7 +294,8 @@ RSpec.describe Orn::Commands::SwitchSandbox do
               )
             ]
           )
-          expect(ordered_invocations(fake)).to eq(expected_provision_argvs(project, host_port))
+          expect(fake.invocations).to eq(expected_provision_argvs(project, host_port))
+          expect(client.calls).to eq([[:open_window_with_layout, "feat"]])
           expect(File).to exist(ports_file_path(project))
         end
       end
@@ -350,7 +312,8 @@ RSpec.describe Orn::Commands::SwitchSandbox do
             output_mode,
             project,
             "feat",
-            nil
+            nil,
+            client
           )
         end.to raise_error(Orn::Error, /untrusted sandbox commands/)
         expect(fake.invocations).to be_empty
@@ -371,7 +334,8 @@ RSpec.describe Orn::Commands::SwitchSandbox do
             output_mode,
             project,
             "feat",
-            nil
+            nil,
+            client
           )
         end.to raise_error(Orn::Error, /Preflight check failed: docker not found on PATH/)
         expect(fake.invocations).to eq(preflight_argvs(project))
@@ -381,6 +345,9 @@ RSpec.describe Orn::Commands::SwitchSandbox do
     it "tears down the window, sandbox, and worktree when a later step fails, keeping the original error" do
       project = sbx_project(start_only_config)
       approve_sbx_commands(project)
+      # The window kill in the rollback fails too; it is suppressed so the
+      # teardown continues and the original error still surfaces.
+      client.fail_on = [:kill_window]
       with_fake_cmd do |fake|
         script_provision_through_window(
           fake,
@@ -390,13 +357,6 @@ RSpec.describe Orn::Commands::SwitchSandbox do
         fake.script(
           start_exec_argv,
           stderr: "service refused to start",
-          status: 1
-        )
-        # The first two rollback steps fail too; each is suppressed so the
-        # teardown continues and the original error still surfaces.
-        fake.script(
-          kill_window_argv,
-          stderr: "no such window",
           status: 1
         )
         fake.script(
@@ -411,16 +371,19 @@ RSpec.describe Orn::Commands::SwitchSandbox do
             output_mode,
             project,
             "feat",
-            "develop"
+            "develop",
+            client
           )
         end.to raise_error(Orn::Error, "sbx failed: service refused to start")
-        expect(fake.invocations.last(3)).to eq(
-          [
-            kill_window_argv,
-            sandbox_remove_argv,
-            worktree_remove_argv(project.root)
-          ]
-        )
+        aggregate_failures do
+          expect(client.calls.last).to eq([:kill_window, "proj", "feat"])
+          expect(fake.invocations.last(2)).to eq(
+            [
+              sandbox_remove_argv,
+              worktree_remove_argv(project.root)
+            ]
+          )
+        end
       end
     end
 
@@ -450,19 +413,23 @@ RSpec.describe Orn::Commands::SwitchSandbox do
             output_mode,
             project,
             "feat",
-            nil
+            nil,
+            client
           )
         end.to raise_error(Orn::Error, "sbx failed: no such template")
-        expect(ordered_invocations(fake)).to eq(
-          [
-            *preflight_argvs(project),
-            fetch_argv(project.root, "main"),
-            ls_remote_argv(project.root),
-            worktree_add_argv(project.root, "main"),
-            sandbox_create_argv(project.root),
-            worktree_remove_argv(project.root)
-          ]
-        )
+        aggregate_failures do
+          expect(fake.invocations).to eq(
+            [
+              *preflight_argvs(project),
+              fetch_argv(project.root, "main"),
+              ls_remote_argv(project.root),
+              worktree_add_argv(project.root, "main"),
+              sandbox_create_argv(project.root),
+              worktree_remove_argv(project.root)
+            ]
+          )
+          expect(client.count(:kill_window)).to eq(0)
+        end
       end
     end
   end
@@ -509,18 +476,14 @@ RSpec.describe Orn::Commands::SwitchSandbox do
       project = sbx_project(reopen_start_config)
       approve_sbx_commands(project)
       with_fake_cmd do |fake|
-        script_window_open(
-          fake,
-          feat_path(project),
-          session_exists: true
-        )
         fake.script(start_exec_argv)
 
         result = described_class.reopen_with_sandbox(
           output_mode,
           project,
           "feat",
-          "proj-feat"
+          "proj-feat",
+          client
         )
 
         aggregate_failures do
@@ -532,15 +495,8 @@ RSpec.describe Orn::Commands::SwitchSandbox do
             sandbox_name: "proj-feat",
             host_ports: []
           )
-          expect(ordered_invocations(fake)).to eq(
-            [
-              has_session_argv,
-              has_session_argv,
-              new_window_argv(feat_path(project)),
-              select_window_argv,
-              start_exec_argv
-            ]
-          )
+          expect(client.calls).to eq([[:open_window_with_layout, "feat"]])
+          expect(fake.invocations).to eq([start_exec_argv])
         end
       end
     end
@@ -553,18 +509,14 @@ RSpec.describe Orn::Commands::SwitchSandbox do
       host_port = listener.addr[1]
       write_ports_file(project.root, host_port)
       with_fake_cmd do |fake|
-        script_window_open(
-          fake,
-          feat_path(project),
-          session_exists: true
-        )
         fake.script(publish_argv(host_port))
 
         result = described_class.reopen_with_sandbox(
           output_mode,
           project,
           "feat",
-          "proj-feat"
+          "proj-feat",
+          client
         )
 
         aggregate_failures do
@@ -576,7 +528,7 @@ RSpec.describe Orn::Commands::SwitchSandbox do
               )
             ]
           )
-          expect(ordered_invocations(fake)).to include(publish_argv(host_port))
+          expect(fake.invocations).to include(publish_argv(host_port))
         end
       end
     ensure

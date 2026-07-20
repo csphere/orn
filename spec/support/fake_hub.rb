@@ -14,7 +14,7 @@ class FakeHub
     @pane_counter = 0
   end
 
-  def open_tab(_output_mode, root:, session:, base_branch:, branch:, hub_pane:)
+  def open_tab(root:, session:, base_branch:, branch:, hub_pane:)
     record(:open_tab, [branch, hub_pane])
     @pane_counter += 1
     Orn::TUI::Hub::Tab.new(
@@ -26,19 +26,19 @@ class FakeHub
     )
   end
 
-  def show_tab(_output_mode, tab, _hub_pane)
+  def show_tab(tab, _hub_pane)
     record(:show_tab, tab.branch)
   end
 
-  def hide_tab(_output_mode, tab)
+  def hide_tab(tab)
     record(:hide_tab, tab.branch)
   end
 
-  def install_bindings(_output_mode, _hub_session, _hub_window, _hub_pane, agent_pane)
+  def install_bindings(_hub_session, _hub_window, _hub_pane, agent_pane)
     record(:install_bindings, agent_pane)
   end
 
-  def remove_bindings(_output_mode)
+  def remove_bindings
     record(:remove_bindings, nil)
   end
 

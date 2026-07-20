@@ -3,23 +3,14 @@
 module Orn
   module TUI
     RSpec.describe RepoStatus do
-      def list_sessions_argv
-        [
-          "tmux",
-          "list-sessions",
-          "-F",
-          "\#{session_name}\t\#{session_activity}"
-        ]
-      end
+      let(:client) { FakeTmuxClient.new }
 
-      def list_windows_argv(session = "api")
-        [
-          "tmux",
-          "list-windows",
-          "-t",
-          "#{session}:",
-          "-F",
-          "\#{window_name}"
+      def live_session(name, activity)
+        client.session_infos = [
+          Orn::Tmux::SessionInfo.new(
+            name: name,
+            activity: activity
+          )
         ]
       end
 
@@ -56,7 +47,7 @@ module Orn
 
       def refresh(repos, tab: nil, all_panes: [])
         described_class.refresh(
-          Orn::OutputMode.quiet,
+          client,
           repos,
           tab,
           all_panes
@@ -68,13 +59,10 @@ module Orn
           repo = entry("api").with(
             worktrees: [WorktreeRow.new(branch: "main"), WorktreeRow.new(branch: "feat")]
           )
+          live_session("api", 123)
+          client.windows = { "api" => %w[orn main] }
 
-          refreshed = nil
-          with_fake_cmd do |fake|
-            fake.script(list_sessions_argv, stdout: "api\t123\n")
-            fake.script(list_windows_argv, stdout: "orn\nmain\n")
-            refreshed = refresh([repo]).first
-          end
+          refreshed = refresh([repo]).first
 
           aggregate_failures do
             expect(refreshed.session_alive).to be(true)
@@ -107,11 +95,7 @@ module Orn
         end
 
         it "clears live state when the session is gone" do
-          refreshed = nil
-          with_fake_cmd do |fake|
-            fake.script(list_sessions_argv, stdout: "")
-            refreshed = refresh([live_repo]).first
-          end
+          refreshed = refresh([live_repo]).first
 
           worktree = refreshed.worktrees[0]
           aggregate_failures do
@@ -123,30 +107,6 @@ module Orn
             expect(worktree.agent).to be_nil
             expect(worktree.sandboxed).to be(false)
           end
-        end
-
-        it "treats a failed session listing as no sessions" do
-          repo = entry("api").with(session_alive: true)
-
-          refreshed = nil
-          with_fake_cmd do |fake|
-            fake.script(list_sessions_argv, status: 1)
-            refreshed = refresh([repo]).first
-          end
-
-          expect(refreshed.session_alive).to be(false)
-        end
-
-        it "treats a missing tmux binary as no sessions" do
-          repo = entry("api").with(session_alive: true)
-
-          refreshed = nil
-          with_fake_cmd do |fake|
-            fake.script_missing(list_sessions_argv)
-            refreshed = refresh([repo]).first
-          end
-
-          expect(refreshed.session_alive).to be(false)
         end
 
         it "flags a worktree sandboxed when a pane in its window runs a container command" do
@@ -174,18 +134,16 @@ module Orn
             pid: 4_999_999_999
           )
 
-          refreshed = nil
-          with_fake_cmd do |fake|
-            fake.script(list_sessions_argv, stdout: "api\t123\n")
-            fake.script(list_windows_argv, stdout: "main\nfeat\n")
-            refreshed = refresh(
-              [repo],
-              all_panes: [
-                container_pane,
-                shell_pane
-              ]
-            ).first
-          end
+          live_session("api", 123)
+          client.windows = { "api" => %w[main feat] }
+
+          refreshed = refresh(
+            [repo],
+            all_panes: [
+              container_pane,
+              shell_pane
+            ]
+          ).first
 
           aggregate_failures do
             expect(refreshed.worktrees[1].sandboxed).to be(true)
@@ -202,7 +160,6 @@ module Orn
 
           refreshed = nil
           with_fake_cmd do |fake|
-            fake.script(list_sessions_argv, stdout: "")
             fake.script(
               [
                 "git",
@@ -252,15 +209,11 @@ module Orn
             title: "⠋ claude"
           )
 
-          refreshed = nil
-          with_fake_cmd do |fake|
-            fake.script(list_sessions_argv, stdout: "")
-            refreshed = refresh(
-              [repo],
-              tab: tab(repo.root, "feat", "%5"),
-              all_panes: [hub_pane]
-            ).first
-          end
+          refreshed = refresh(
+            [repo],
+            tab: tab(repo.root, "feat", "%5"),
+            all_panes: [hub_pane]
+          ).first
 
           feat_worktree = refreshed.worktrees[1]
           aggregate_failures do

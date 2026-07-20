@@ -15,46 +15,17 @@ module Orn
       directory_name(project.root)
     end
 
-    # Whether a tmux session named `session` currently exists.
-    def self.session_exists?(output_mode, session)
-      result = tmux_output(
-        output_mode,
-        "has-session",
-        "-t",
-        session
-      )
-      result ? result.success? : false
-    end
-
-    # The session name of the attached tmux client, or nil when not running
-    # inside tmux or on any tmux error.
-    def self.current_session(output_mode)
-      return nil unless ENV.key?("TMUX")
-
-      # The escaped \#{...} is a literal tmux format string, not Ruby interpolation.
-      result = tmux_output(
-        output_mode,
-        "display-message",
-        "-p",
-        "\#{client_session}"
-      )
-      return nil unless result&.success?
-
-      name = result.stdout.strip
-      name.empty? ? nil : name
-    end
-
     # Resolves a tmux session-name collision with another project. May prompt
     # interactively and, if the user picks a new name, rewrite
     # .orn/config.yaml and re-discover the project.
-    def self.check_collision(output_mode, project)
+    def self.check_collision(client, project)
       return project if project.config.session
 
       session = session_name(project)
-      return project unless session_exists?(output_mode, session)
-      return project if current_session(output_mode) == session
+      return project unless client.session_exists?(session)
+      return project if client.client_session == session
 
-      existing_path = session_path(output_mode, session)
+      existing_path = client.session_path(session)
       return project if existing_path.nil?
 
       our_path = safe_realpath(project.root)
@@ -86,30 +57,6 @@ module Orn
       "#{parent_name}-#{dir_name}"
     end
 
-    # The canonicalized #{session_path} of `session`, used to tell which project
-    # directory an existing session belongs to.
-    def self.session_path(output_mode, session)
-      # Trailing colon forces session interpretation: display-message takes a
-      # target-pane, so a bare name can resolve to a same-named window in the
-      # caller's current session instead.
-      # "#{session}:" interpolates the session; "\#{session_path}" is a literal
-      # tmux format string.
-      result = tmux_output(
-        output_mode,
-        "display-message",
-        "-t",
-        "#{session}:",
-        "-p",
-        "\#{session_path}"
-      )
-      return nil unless result&.success?
-
-      path = result.stdout.strip
-      return nil if path.empty?
-
-      safe_realpath(path)
-    end
-
     def self.resolve_collision(project, session, existing_path)
       unless $stdin.tty?
         raise Orn::Error,
@@ -128,12 +75,6 @@ module Orn
       Orn::Git::Project.discover
     end
 
-    def self.tmux_output(output_mode, *args)
-      Orn::Cmd.new(output_mode: output_mode).output("tmux", *args)
-    rescue Orn::Error
-      nil
-    end
-
     def self.directory_name(root)
       name = File.basename(root)
       name.empty? || name == File::SEPARATOR ? "default" : name
@@ -149,9 +90,7 @@ module Orn
       nil
     end
 
-    private_class_method :session_path,
-      :resolve_collision,
-      :tmux_output,
+    private_class_method :resolve_collision,
       :directory_name,
       :path_components,
       :safe_realpath

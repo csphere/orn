@@ -12,7 +12,7 @@ module Orn
     # involved is dropped or demoted to hidden, never left marked visible, and
     # the failure is reported through `on_error`. tmux itself may keep
     # leftovers (a tagged pane, a stale key binding); the startup pass
-    # (Hub.reconcile plus Hub.remove_bindings) and the periodic prune against
+    # (Hub#reconcile plus Hub#remove_bindings) and the periodic prune against
     # the live pane listing clean those up.
     class Tabs
       attr_reader :hub_pane,
@@ -20,8 +20,7 @@ module Orn
         :visible_index
       attr_accessor :agent_focused
 
-      def initialize(output_mode:, hub_pane:, hub_location:, hub: Hub, on_error: nil)
-        @output = output_mode
+      def initialize(hub:, hub_pane:, hub_location:, on_error: nil)
         @hub_pane = hub_pane
         @hub_location = hub_location
         @hub = hub
@@ -47,7 +46,6 @@ module Orn
 
         hide_visible
         tab = @hub.open_tab(
-          @output,
           root: root,
           session: session,
           base_branch: base_branch,
@@ -70,7 +68,7 @@ module Orn
         return false unless @hub_pane
 
         hide_visible
-        @hub.show_tab(@output, @tabs[index], @hub_pane)
+        @hub.show_tab(@tabs[index], @hub_pane)
         @visible_index = index
         install_bindings_for_visible
         true
@@ -88,7 +86,7 @@ module Orn
         @visible_index = nil
         return unless index
 
-        @hub.hide_tab(@output, @tabs[index])
+        @hub.hide_tab(@tabs[index])
       rescue Orn::Error => e
         report(e.message)
       end
@@ -98,7 +96,7 @@ module Orn
       def close(index)
         hide_visible if @visible_index == index
         remove_tab(index)
-        @hub.remove_bindings(@output) if @visible_index.nil?
+        @hub.remove_bindings if @visible_index.nil?
       end
 
       # Hide and forget every tab; called when the TUI exits.
@@ -106,7 +104,7 @@ module Orn
         hide_visible
         @tabs.clear
         @visible_index = nil
-        @hub.remove_bindings(@output)
+        @hub.remove_bindings
       end
 
       # Show the next or previous open tab. Returns true when the visible tab
@@ -130,7 +128,7 @@ module Orn
             remove_tab(index)
           end
         end
-        @hub.remove_bindings(@output) if had_visible && @visible_index.nil?
+        @hub.remove_bindings if had_visible && @visible_index.nil?
       end
 
       # A visible tab's pane can be moved out of the hub behind our back
@@ -149,7 +147,7 @@ module Orn
         return if in_hub
 
         @visible_index = nil
-        @hub.remove_bindings(@output)
+        @hub.remove_bindings
       end
 
       private
@@ -160,7 +158,6 @@ module Orn
 
         hub_session, hub_window = @hub_location
         @hub.install_bindings(
-          @output,
           hub_session,
           hub_window,
           @hub_pane,

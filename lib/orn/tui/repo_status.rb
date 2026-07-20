@@ -2,8 +2,9 @@
 
 module Orn
   module TUI
-    # Name and last-activity time of a live tmux session.
-    SessionInfo = Data.define(:name, :activity)
+    # Name and last-activity time of a live tmux session, as reported by the
+    # client's session listing.
+    SessionInfo = Orn::Tmux::SessionInfo
 
     # Live status for discovered repos: which tmux sessions are alive, their
     # window counts, per-worktree agent state and sandbox flags, and git stats
@@ -14,40 +15,24 @@ module Orn
       # shared pane listing, returning the updated entries. `tab` is the
       # visible hub tab, if any: its borrowed pane is attributed back to its
       # home repo and branch.
-      def self.refresh(output, repos, tab, all_panes)
-        sessions = list_sessions(output)
+      def self.refresh(client, repos, tab, all_panes)
+        sessions = client.list_sessions
         repos.map do |repo|
           info = sessions.find { |session| session.name == repo.session_name }
           borrowed = borrowed_pane_for_repo(tab, repo, all_panes)
           refreshed = if info
             alive_repo(
-              output,
+              client,
               repo,
               info,
               all_panes,
               borrowed
             )
           else
-            dead_repo(output, repo, borrowed)
+            dead_repo(client, repo, borrowed)
           end
-          refreshed.expanded ? with_worktree_git_stats(output, refreshed) : refreshed
+          refreshed.expanded ? with_worktree_git_stats(client.output_mode, refreshed) : refreshed
         end
-      end
-
-      def self.list_sessions(output)
-        result = Orn::Cmd.new(output_mode: output)
-          .output("tmux", "list-sessions", "-F", "\#{session_name}\t\#{session_activity}")
-        return [] unless result.success?
-
-        result.stdout.lines.filter_map do |line|
-          name, activity = line.chomp.split("\t", 2)
-          activity && SessionInfo.new(
-            name: name,
-            activity: activity.to_i
-          )
-        end
-      rescue Orn::Error
-        []
       end
 
       # The visible tab's pane remapped to its home repo and branch, so agent
@@ -67,13 +52,13 @@ module Orn
       # A repo whose session is alive, with window and agent state refreshed.
       # The borrowed pane, when this repo owns it, stands in for its home
       # window.
-      def self.alive_repo(output, repo, info, all_panes, borrowed)
-        windows = Orn::Tmux.list_windows(output, info.name)
+      def self.alive_repo(client, repo, info, all_panes, borrowed)
+        windows = client.list_windows(info.name)
         repo_panes = session_panes(repo, all_panes, borrowed)
         states = if repo_panes.empty?
           {}
         else
-          Orn::Detect.detect_all_panes(output, repo_panes, repo.sbx_agent_type)
+          Orn::Detect.detect_all_panes(client, repo_panes, repo.sbx_agent_type)
         end
         worktrees = repo.worktrees.map do |wt|
           worktree_with_agent(
@@ -116,7 +101,7 @@ module Orn
       # A repo whose session is gone, with its live state cleared. Borrowing
       # a repo's only pane can kill its session; the agent still runs in the
       # hub, so its status stays visible through the borrowed pane.
-      def self.dead_repo(output, repo, borrowed)
+      def self.dead_repo(client, repo, borrowed)
         cleared = repo.with(
           session_alive: false,
           session_activity: nil,
@@ -132,12 +117,12 @@ module Orn
         )
         return cleared unless borrowed
 
-        attribute_borrowed_agent(output, cleared, borrowed)
+        attribute_borrowed_agent(client, cleared, borrowed)
       end
 
-      def self.attribute_borrowed_agent(output, repo, borrowed)
+      def self.attribute_borrowed_agent(client, repo, borrowed)
         branch = borrowed.window_name
-        states = Orn::Detect.detect_all_panes(output, [borrowed], repo.sbx_agent_type)
+        states = Orn::Detect.detect_all_panes(client, [borrowed], repo.sbx_agent_type)
         worktrees = repo.worktrees.map do |wt|
           next wt unless wt.branch == branch
 

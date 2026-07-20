@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.describe Orn::Commands::Remove do
+  let(:client) { FakeTmuxClient.new }
+
   def project_with_worktree(branch)
     remote = make_remote_with_branch(branch)
     project = make_bare_project
@@ -53,10 +55,6 @@ RSpec.describe Orn::Commands::Remove do
     make_project(File.realpath(make_bare_project), "tmux:\n  session: proj\n")
   end
 
-  def list_windows_argv
-    ["tmux", "list-windows", "-t", "proj:", "-F", "\#{window_name}"]
-  end
-
   describe "Result#print_summary" do
     it "prints the sandbox and window lines above the worktree summary" do
       summary = result(
@@ -92,12 +90,14 @@ RSpec.describe Orn::Commands::Remove do
         "sandbox",
         "proj-feat.ports"
       )
-      command = described_class.new(output_mode: Orn::OutputMode.quiet)
+      command = described_class.new(
+        output_mode: Orn::OutputMode.quiet,
+        client: client
+      )
+      client.windows = { "proj" => ["feat"] }
 
       with_fake_cmd do |fake|
         fake.script(%w[sbx rm --force proj-feat])
-        fake.script(list_windows_argv, stdout: "feat\n")
-        fake.script(%w[tmux kill-window -t proj:feat])
 
         removal = command.run_inner(
           project,
@@ -108,6 +108,7 @@ RSpec.describe Orn::Commands::Remove do
         aggregate_failures do
           expect(removal.sandbox_removed).to be(true)
           expect(removal.window_closed).to be(true)
+          expect(client.calls).to include([:kill_window, "proj", "feat"])
           expect(File).not_to exist(ports_path)
         end
       end
@@ -136,12 +137,14 @@ RSpec.describe Orn::Commands::Remove do
     it "prompts for each branch before pruning interactively" do
       project = sandbox_project
       isolate_global_config
-      command = described_class.new(output_mode: Orn::OutputMode.default)
+      command = described_class.new(
+        output_mode: Orn::OutputMode.default,
+        client: client
+      )
       allow(Orn::Confirm).to receive(:prune_interactive)
 
       with_fake_cmd do |fake|
         %w[feature/a feature/b].each { |branch| script_nothing_to_remove(fake, project, branch) }
-        fake.script(list_windows_argv)
 
         expect do
           Dir.chdir(project.root) do
@@ -190,13 +193,10 @@ RSpec.describe Orn::Commands::Remove do
 
     it "closes the tmux window and removes the worktree" do
       project = project_with_worktree("feature/gone")
+      real_client = Orn::Tmux::Client.new(output_mode: Orn::OutputMode.quiet)
 
       Dir.chdir(project) do
-        Orn::Tmux.open_window(
-          Orn::OutputMode.quiet,
-          load_project(project),
-          "feature/gone"
-        )
+        real_client.open_window(load_project(project), "feature/gone")
         described_class.new(output_mode: Orn::OutputMode.quiet).run(
           ["feature/gone"],
           prune: false,
@@ -207,13 +207,7 @@ RSpec.describe Orn::Commands::Remove do
       session = Orn::Session.session_name(load_project(project))
       aggregate_failures do
         expect(File).not_to exist(File.join(project, "feature/gone"))
-        expect(
-          Orn::Tmux.window_exists?(
-            Orn::OutputMode.quiet,
-            session,
-            "feature/gone"
-          )
-        ).to be(false)
+        expect(real_client.window_exists?(session, "feature/gone")).to be(false)
       end
     end
 
