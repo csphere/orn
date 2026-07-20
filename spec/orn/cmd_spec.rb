@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+
 RSpec.describe Orn::Cmd, :real_cmd do
   subject(:cmd) { described_class.new(output_mode: Orn::OutputMode.default) }
 
@@ -88,6 +90,20 @@ RSpec.describe Orn::Cmd, :real_cmd do
     end
   end
 
+  describe "chdir" do
+    it "runs the command in the given directory" do
+      dir = register_temp_dir(Dir.mktmpdir("orn-cmd-chdir"))
+      chdir_cmd = described_class.new(
+        output_mode: Orn::OutputMode.default,
+        chdir: dir
+      )
+
+      result = chdir_cmd.run("pwd")
+
+      expect(result.stdout.strip).to eq(File.realpath(dir))
+    end
+  end
+
   describe "verbose logging" do
     subject(:verbose_cmd) do
       described_class.new(
@@ -133,6 +149,11 @@ RSpec.describe Orn::Cmd, :real_cmd do
         expect { result = verbose_cmd.output("echo", "--build-arg", "TOKEN=hunter2") }
           .to output(a_string_including("[cmd] echo --build-arg TOKEN=***")).to_stderr
         expect(result.stdout).to include("TOKEN=hunter2")
+      end
+
+      it "leaves a --build-arg value without an equals sign unmasked" do
+        expect { verbose_cmd.output("echo", "--build-arg", "TOKEN") }
+          .to output(a_string_including("[cmd] echo --build-arg TOKEN\n")).to_stderr
       end
 
       it "masks every KEY=VALUE entry after an env token" do

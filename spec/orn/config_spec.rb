@@ -70,6 +70,14 @@ RSpec.describe Orn::Config do
         expect(root.map(&:source)).to eq(["_", "_shared/doc"])
         expect(root.map(&:effective_dest)).to eq(%w[_ shared_doc])
       end
+
+      it "falls back to the source as dest when the source has no basename" do
+        project = project_with("symlinks:\n  root:\n    - source: \"\"\n")
+
+        root = described_class.load_from(project, nil).symlinks.root
+
+        expect(root[0].effective_dest).to eq("")
+      end
     end
 
     context "with layouts across layers" do
@@ -225,6 +233,132 @@ RSpec.describe Orn::Config do
 
         expect(config.base).to eq("main")
       end
+
+      it "warns when the config root is not a mapping" do
+        project = project_with("- one\n- two\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/config root must be a mapping/).to_stderr
+        expect(config.base).to eq("main")
+      end
+
+      it "warns when a section is not a mapping" do
+        project = project_with("git: main\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/git must be a mapping/).to_stderr
+        expect(config.base).to eq("main")
+      end
+
+      it "warns when symlinks is not a mapping" do
+        project = project_with("symlinks: [\".env\"]\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/symlinks must be a mapping/).to_stderr
+        expect(config.symlinks.base).to be_empty
+      end
+
+      it "warns when symlinks.base is not a list of strings" do
+        project = project_with("symlinks:\n  base: \".env\"\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/symlinks\.base must be a list of strings/).to_stderr
+        expect(config.symlinks.base).to be_empty
+      end
+
+      it "warns when symlinks.root is not a list" do
+        project = project_with("symlinks:\n  root: \"_\"\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/symlinks\.root must be a list/).to_stderr
+        expect(config.symlinks.root).to be_empty
+      end
+
+      it "warns when a symlinks.root entry is not a mapping" do
+        project = project_with("symlinks:\n  root:\n    - \"_\"\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/symlinks\.root entry must be a mapping/).to_stderr
+        expect(config.symlinks.root).to be_empty
+      end
+
+      it "warns when a symlinks.root source is missing or not a string" do
+        project = project_with("symlinks:\n  root:\n    - dest: doc\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/symlinks\.root source must be a string/).to_stderr
+        expect(config.symlinks.root).to be_empty
+      end
+
+      it "warns when a symlinks.root dest is not a string" do
+        project = project_with("symlinks:\n  root:\n    - source: \"_\"\n      dest: 42\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/symlinks\.root dest must be a string/).to_stderr
+        expect(config.symlinks.root).to be_empty
+      end
+
+      it "warns when columns is not a list" do
+        project = project_with("tmux:\n  columns: vim\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/columns must be a list/).to_stderr
+        expect(config.layout.columns.length).to eq(2)
+      end
+
+      it "warns when a column entry is neither a string list nor a mapping" do
+        project = project_with("tmux:\n  columns:\n    - 42\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/invalid column entry/).to_stderr
+        expect(config.layout.columns.length).to eq(2)
+      end
+
+      it "warns when column panes is not a list of strings" do
+        project = project_with("tmux:\n  columns:\n    - panes: vim\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/column panes must be a list of strings/).to_stderr
+        expect(config.layout.columns.length).to eq(2)
+      end
+
+      it "warns when rows is not a list" do
+        project = project_with("tmux:\n  rows: top\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/rows must be a list/).to_stderr
+        expect(config.layout.columns.length).to eq(2)
+      end
+
+      it "warns when a row entry is not a mapping" do
+        project = project_with("tmux:\n  rows:\n    - top\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/row must be a mapping/).to_stderr
+        expect(config.layout.columns.length).to eq(2)
+      end
+
+      it "warns when row panes is not a list of strings" do
+        project = project_with("tmux:\n  rows:\n    - panes: top\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/row panes must be a list of strings/).to_stderr
+        expect(config.layout.columns.length).to eq(2)
+      end
     end
 
     context "with a session name" do
@@ -352,6 +486,15 @@ RSpec.describe Orn::Config do
         expect(described_class.load_from(project, nil).sbx.ports).to be_empty
       end
 
+      it "keeps a port entry that has no host_range" do
+        project = project_with("sbx:\n  template: img\n  ports:\n    container: 3000\n")
+
+        ports = described_class.load_from(project, nil).sbx.ports
+
+        expect(ports.map(&:container)).to eq([3000])
+        expect(ports[0].host_range).to be_nil
+      end
+
       it "merges the legacy singular kit into kits, de-duplicated" do
         merged = project_with("sbx:\n  agent_type: claude\n  kit: legacy-kit\n  kits: [ruby]\n")
         deduped = project_with("sbx:\n  agent_type: claude\n  kit: ruby\n  kits: [ruby, gh-cli]\n")
@@ -384,6 +527,60 @@ RSpec.describe Orn::Config do
         config = nil
         expect { config = described_class.load_from(project, nil) }
           .to output(/sbx\.ports must be a mapping or a list of mappings/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when sbx is not a mapping" do
+        project = project_with("sbx: claude\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx must be a mapping/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when cpus is not an integer" do
+        project = project_with("sbx:\n  agent_type: claude\n  cpus: \"two\"\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx\.cpus must be an integer/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when build is not a mapping" do
+        project = project_with("sbx:\n  agent_type: claude\n  build: Dockerfile\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx\.build must be a mapping/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when a port entry in a list is not a mapping" do
+        project = project_with("sbx:\n  template: img\n  ports:\n    - 3000\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx port must be a mapping/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when a port container is not an integer" do
+        project = project_with("sbx:\n  template: img\n  ports:\n    container: \"3000\"\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx port container must be an integer/).to_stderr
+        expect(config.sbx).to be_nil
+      end
+
+      it "warns when a port host_range is not a two-integer list" do
+        project = project_with("sbx:\n  template: img\n  ports:\n    container: 3000\n    host_range: 3001\n")
+
+        config = nil
+        expect { config = described_class.load_from(project, nil) }
+          .to output(/sbx port host_range must be \[start, end\]/).to_stderr
         expect(config.sbx).to be_nil
       end
 

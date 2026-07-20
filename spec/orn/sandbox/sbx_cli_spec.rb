@@ -461,6 +461,16 @@ RSpec.describe Orn::Sandbox::SbxCli do
     it "rejects anything against an empty listing" do
       expect(described_class.template_listed?("No template images found\n", "orn-system-rails:latest")).to be(false)
     end
+
+    it "skips blank lines and still matches a template listed after them" do
+      listing_with_blank_line = <<~LISTING
+        REPOSITORY                           TAG      IMAGE ID
+
+        docker.io/library/orn-system-rails   latest   0464b62418c6
+      LISTING
+
+      expect(described_class.template_listed?(listing_with_blank_line, "orn-system-rails:latest")).to be(true)
+    end
   end
 
   describe ".docker_build" do
@@ -554,6 +564,20 @@ RSpec.describe Orn::Sandbox::SbxCli do
         expect(described_class.colima_status(mode)).to have_attributes(
           running: true,
           arch: "aarch64"
+        )
+      end
+    end
+
+    it "reports running without an arch when the status JSON has no string arch" do
+      with_fake_cmd do |fake|
+        fake.script(
+          ["colima", "status", "--json"],
+          stdout: '{"arch": 42}'
+        )
+
+        expect(described_class.colima_status(mode)).to have_attributes(
+          running: true,
+          arch: nil
         )
       end
     end

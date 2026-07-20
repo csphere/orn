@@ -31,6 +31,35 @@ module Orn
         end
       end
 
+      it "draws nothing and keeps the scroll state for a zero-height area" do
+        zero_area = Rect.new(
+          x: 0,
+          y: 0,
+          width: 20,
+          height: 0
+        )
+        buffer_area = Rect.new(
+          x: 0,
+          y: 0,
+          width: 20,
+          height: 4
+        )
+        buffer = Buffer.new(buffer_area)
+        state = ListState.new
+        state.select(4)
+
+        described_class.new(items(5)).render(
+          zero_area,
+          buffer,
+          state
+        )
+
+        aggregate_failures do
+          expect(buffer.to_s.strip).to be_empty
+          expect(state.offset).to eq(0)
+        end
+      end
+
       describe ".follow_offset" do
         it "pulls the offset up to a selection above the viewport" do
           expect(

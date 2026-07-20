@@ -157,6 +157,25 @@ module Orn
           expect(render(app_with_agent(:idle), width: 80).to_s).to include("idle")
         end
 
+        it "renders the indicator without the selection highlight on an unselected row" do
+          app = app_with([entry("main", has_window: true), entry("dev")])
+          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(
+            agent: :claude,
+            state: :idle
+          )
+          app.selected = 1
+
+          buffer = render(app, width: 80)
+          row_text = (0...80).map { |x| buffer[[x, 2]].symbol }.join
+          label_x = row_text.index("idle")
+
+          aggregate_failures do
+            expect(label_x).not_to be_nil
+            expect(buffer[[label_x, 2]].fg).to eq(Color::GREEN)
+            expect(buffer[[label_x, 2]].bg).to eq(Color::RESET)
+          end
+        end
+
         it "shows no status when no agent is detected" do
           screen = render(app_with([entry("main", has_window: true)]), width: 80).to_s
 

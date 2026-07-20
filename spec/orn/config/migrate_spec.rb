@@ -374,6 +374,23 @@ RSpec.describe Orn::Config::Migrate do
     ensure
       FileUtils.remove_entry(project, true) if project
     end
+
+    it "checks the global config when a global config dir resolves" do
+      # Empty project dir: only the global config is in play. The env
+      # isolation hook points XDG_CONFIG_HOME at a per-example tmpdir.
+      project = Dir.mktmpdir
+      global_dir = File.join(
+        ENV.fetch("XDG_CONFIG_HOME"),
+        "orn"
+      )
+      FileUtils.mkdir_p(global_dir)
+      File.write(File.join(global_dir, "default.yaml"), "base: main\n")
+
+      expect { described_class.enforce_project_versions(project) }
+        .to raise_error(Orn::Error, /needs migration/)
+    ensure
+      FileUtils.remove_entry(project, true) if project
+    end
   end
 
   describe ".enforce_file_version" do

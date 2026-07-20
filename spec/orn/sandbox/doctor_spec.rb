@@ -446,5 +446,19 @@ RSpec.describe Orn::Sandbox::Doctor do
         expect(names).to include("template", "env:MY_BUILD_ARG")
       end
     end
+
+    context "with a dockerfile configured" do
+      let(:config_yaml) { "sbx:\n  build:\n    dockerfile: Dockerfile\n" }
+
+      it "includes the dockerfile check" do
+        names = described_class.run(
+          mode,
+          project.config.sbx,
+          project.root
+        ).map(&:name)
+
+        expect(names).to include("dockerfile")
+      end
+    end
   end
 end

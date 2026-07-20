@@ -197,6 +197,125 @@ RSpec.describe Orn::Detect::Manifest do
       expect { described_class.parse_manifest(rule("contains" => ["a" * 513])) }
         .to raise_error(described_class::InvalidManifest, /max length 512/)
     end
+
+    it "rejects a manifest that is not a mapping" do
+      expect { described_class.parse_manifest(%w[not a mapping]) }
+        .to raise_error(described_class::InvalidManifest, /manifest must be a mapping/)
+    end
+
+    it "rejects a non-string manifest id" do
+      expect { described_class.parse_manifest("id" => 5) }
+        .to raise_error(described_class::InvalidManifest, /manifest id must be a string/)
+    end
+
+    it "rejects rules that are not a list" do
+      expect do
+        described_class.parse_manifest(
+          "id" => "test",
+          "rules" => "rule_a"
+        )
+      end
+        .to raise_error(described_class::InvalidManifest, /manifest rules must be a list/)
+    end
+
+    it "rejects a rule that is not a mapping" do
+      expect do
+        described_class.parse_manifest(
+          "id" => "test",
+          "rules" => ["rule_a"]
+        )
+      end
+        .to raise_error(described_class::InvalidManifest, /rule must be a mapping/)
+    end
+
+    it "rejects a rule without a string id" do
+      expect do
+        described_class.parse_manifest(
+          "id" => "test",
+          "rules" => [{ "state" => "working" }]
+        )
+      end
+        .to raise_error(described_class::InvalidManifest, /rule id must be a string/)
+    end
+
+    it "rejects a rule id that is only whitespace" do
+      manifest = rule(
+        "id" => "  ",
+        "contains" => ["ready"]
+      )
+
+      expect { described_class.parse_manifest(manifest) }
+        .to raise_error(described_class::InvalidManifest, /rule id must not be empty/)
+    end
+
+    it "rejects a non-string region" do
+      expect { described_class.parse_manifest(rule("region" => 5)) }
+        .to raise_error(described_class::InvalidManifest, /rule region must be a string/)
+    end
+
+    it "rejects a non-integer priority" do
+      expect { described_class.parse_manifest(rule("priority" => "high")) }
+        .to raise_error(described_class::InvalidManifest, /priority must be an integer/)
+    end
+
+    it "rejects an unrecognized state name" do
+      expect { described_class.parse_manifest(rule("state" => "sleeping")) }
+        .to raise_error(described_class::InvalidManifest, /invalid state: sleeping/)
+    end
+
+    it "rejects a nested gate that is not a mapping" do
+      expect { described_class.parse_manifest(rule("all" => ["not a gate"])) }
+        .to raise_error(described_class::InvalidManifest, /gate must be a mapping/)
+    end
+
+    it "rejects a gate list that is not a list" do
+      expect { described_class.parse_manifest(rule("all" => "not a list")) }
+        .to raise_error(described_class::InvalidManifest, /gate list must be a list/)
+    end
+
+    it "rejects a contains value that is not a list of strings" do
+      expect { described_class.parse_manifest(rule("contains" => "ready")) }
+        .to raise_error(described_class::InvalidManifest, /contains must be a list of strings/)
+    end
+
+    it "rejects an empty not gate" do
+      manifest = rule(
+        "contains" => ["base"],
+        "not" => [{}]
+      )
+
+      expect { described_class.parse_manifest(manifest) }
+        .to raise_error(described_class::InvalidManifest, /contains an empty not gate/)
+    end
+
+    it "rejects an empty not gate nested inside a not gate" do
+      manifest = rule(
+        "contains" => ["base"],
+        "not" => [{ "not" => [{}] }]
+      )
+
+      expect { described_class.parse_manifest(manifest) }
+        .to raise_error(described_class::InvalidManifest, /not gate must contain a matcher/)
+    end
+
+    it "defaults a rule with no state to unknown" do
+      manifest = described_class.parse_manifest(
+        "id" => "test",
+        "rules" => [
+          {
+            "id" => "stateless",
+            "contains" => ["marker"]
+          }
+        ]
+      )
+      input = described_class::DetectionInput.new(
+        screen: "marker text",
+        osc_title: "",
+        osc_progress: ""
+      )
+
+      expect(described_class.evaluate_manifest(manifest, input).state).to eq(:unknown)
+    end
   end
 
   describe ".region" do
@@ -226,6 +345,12 @@ RSpec.describe Orn::Detect::Manifest do
 
     it "returns content above the top border for above_prompt_box" do
       expect(region_of("above\n─────────\nbody\n─────────\nbelow", "above_prompt_box")).to eq("above\n")
+    end
+
+    it "returns the whole content for above_prompt_box when there is no box" do
+      content = "no box here\njust text"
+
+      expect(region_of(content, "above_prompt_box")).to eq(content)
     end
 
     it "returns content after the last rule for after_last_horizontal_rule" do
@@ -271,6 +396,7 @@ RSpec.describe Orn::Detect::Manifest do
       aggregate_failures do
         expect(region_of("a\nb", "mystery_region")).to eq("")
         expect(region_of("a\nb", "bottom_lines(x)")).to eq("")
+        expect(region_of("a\nb", "bottom_lines(3")).to eq("")
       end
     end
   end
@@ -454,6 +580,10 @@ RSpec.describe Orn::Detect::Manifest do
         expect(result.state).to eq(:idle)
         expect(result.visible_idle).to be(false)
       end
+    end
+
+    it "returns the idle fallback for an agent with no manifest" do
+      expect(det(:no_such_agent)).to eq(described_class::AgentDetection.idle)
     end
   end
 

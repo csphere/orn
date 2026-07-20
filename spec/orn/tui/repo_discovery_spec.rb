@@ -114,6 +114,38 @@ module Orn
           expect(repos[0].session_name).to eq("custom-name")
         end
 
+        it "identifies the configured sbx agent" do |example|
+          root = example.metadata[:dir]
+          make_bare(root, "my-project")
+          FileUtils.mkdir_p(
+            File.join(root, "my-project", ".orn")
+          )
+          File.write(
+            File.join(
+              root,
+              "my-project",
+              ".orn",
+              "config.yaml"
+            ),
+            "sbx:\n  agent_type: claude\n"
+          )
+
+          repos = discover(root)
+
+          expect(repos[0].sbx_agent_type).to eq(:claude)
+        end
+
+        it "uses the absolute path as the name when the scan root itself is a project" do |example|
+          root = example.metadata[:dir]
+          bare = File.join(root, ".bare")
+          FileUtils.mkdir_p(bare)
+          File.write(File.join(bare, "HEAD"), "ref: refs/heads/main\n")
+
+          repos = discover(root)
+
+          expect(repos.map(&:display_name)).to eq([root])
+        end
+
         it "sorts unseen repos alphabetically" do |example|
           root = example.metadata[:dir]
           %w[zebra alpha middle].each { |name| make_bare(root, name) }
@@ -249,6 +281,32 @@ module Orn
           aggregate_failures do
             expect(renamed[0].display_name).to eq("dev/orn")
             expect(renamed[1].display_name).to eq("work/orn")
+          end
+        end
+
+        it "keeps a colliding name whose root sits outside every scan root" do
+          repos = [
+            RepoEntry.new(
+              display_name: "orn",
+              root: "/home/user/dev/orn",
+              healthy: true,
+              session_name: "orn",
+              base_branch: "main"
+            ),
+            RepoEntry.new(
+              display_name: "orn",
+              root: "/elsewhere/orn",
+              healthy: true,
+              session_name: "orn",
+              base_branch: "main"
+            )
+          ]
+
+          renamed = described_class.disambiguate_names(["/home/user/dev", "/home/user/work"], repos)
+
+          aggregate_failures do
+            expect(renamed[0].display_name).to eq("dev/orn")
+            expect(renamed[1].display_name).to eq("orn")
           end
         end
 

@@ -247,31 +247,8 @@ module Orn
       )
     end
 
-    def self.sourced_global(value, default)
-      unless value.nil?
-        return Sourced.new(
-          value: value,
-          source: :global
-        )
-      end
-
-      Sourced.new(
-        value: default,
-        source: :default
-      )
-    end
-
-    def self.read_yaml_mapping(path)
-      return {} unless File.exist?(path)
-
-      data = YAML.safe_load_file(path)
-      data.is_a?(Hash) ? data : {}
-    rescue Psych::Exception
-      {}
-    end
-
-    # Like read_yaml_mapping, but raises instead of degrading to {} when the
-    # file has content that does not parse as a mapping.
+    # Reads the file as a YAML mapping, raising instead of degrading to {}
+    # when the file has content that does not parse as a mapping.
     def self.read_mapping_for_rewrite(path)
       return {} unless File.exist?(path)
 
@@ -297,9 +274,7 @@ module Orn
       :sourced_or_default,
       :sourced_symlinks,
       :tui_info,
-      :sourced_global,
       :sourced_tui,
-      :read_yaml_mapping,
       :read_mapping_for_rewrite,
       :rewrite_refused_message
   end

@@ -742,7 +742,12 @@ RSpec.describe Orn::Detect do
         @proc_roots ||= []
       end
 
-      after { proc_roots.each { |root| FileUtils.remove_entry(root) } }
+      after do
+        proc_roots.each do |root|
+          FileUtils.chmod(0o700, root)
+          FileUtils.remove_entry(root)
+        end
+      end
 
       # A real stat line has ~52 fields and comm may contain spaces and parens
       # (a tmux client reports as `(tmux: client)`).
@@ -878,6 +883,17 @@ RSpec.describe Orn::Detect do
 
       it "returns nil for a nonexistent proc root" do
         expect(described_class.foreground_job(1234, proc_root: "/nonexistent/proc-root")).to be_nil
+      end
+
+      it "returns nil when the proc root cannot be listed" do
+        skip "chmod cannot revoke read access from root" if Process.uid.zero?
+
+        root = build_proc_root(
+          1234 => { stat: "1234 (bash) S 1233 5678 1234 34816 5678 4194304" }
+        )
+        FileUtils.chmod(0o311, root)
+
+        expect(described_class.foreground_job(1234, proc_root: root)).to be_nil
       end
     end
   end

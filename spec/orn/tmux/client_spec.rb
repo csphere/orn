@@ -587,6 +587,42 @@ RSpec.describe Orn::Tmux::Client do
         expect(fake.invocations).to eq([list_windows_argv("gone")])
       end
     end
+
+    it "pins no base and sorts the rest after orn when the base branch is empty" do
+      with_fake_cmd do |fake|
+        fake.script(list_windows_argv("work"), stdout: "b\norn\na\n")
+        fake.script(swap_argv("work:b", "work:orn"))
+        fake.script(swap_argv("work:b", "work:a"))
+
+        client.reorder_windows("work", "")
+
+        expect(fake.invocations).to eq(
+          [
+            list_windows_argv("work"),
+            swap_argv("work:b", "work:orn"),
+            swap_argv("work:b", "work:a")
+          ]
+        )
+      end
+    end
+
+    it "puts the base first and sorts worktrees when the TUI window is absent" do
+      with_fake_cmd do |fake|
+        fake.script(list_windows_argv("work"), stdout: "b\nmain\na\n")
+        fake.script(swap_argv("work:b", "work:main"))
+        fake.script(swap_argv("work:b", "work:a"))
+
+        client.reorder_windows("work", "main")
+
+        expect(fake.invocations).to eq(
+          [
+            list_windows_argv("work"),
+            swap_argv("work:b", "work:main"),
+            swap_argv("work:b", "work:a")
+          ]
+        )
+      end
+    end
   end
 
   describe "#list_panes_metadata" do
@@ -616,6 +652,14 @@ RSpec.describe Orn::Tmux::Client do
     it "returns no panes when the listing fails" do
       with_fake_cmd do |fake|
         fake.script(list_panes_argv("work"), status: 1)
+
+        expect(client.list_panes_metadata("work")).to eq([])
+      end
+    end
+
+    it "returns no panes when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(list_panes_argv("work"))
 
         expect(client.list_panes_metadata("work")).to eq([])
       end
@@ -654,6 +698,14 @@ RSpec.describe Orn::Tmux::Client do
         expect(client.list_all_panes_metadata).to be_nil
       end
     end
+
+    it "returns nil when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(all_panes_argv)
+
+        expect(client.list_all_panes_metadata).to be_nil
+      end
+    end
   end
 
   describe "#capture_pane" do
@@ -672,6 +724,14 @@ RSpec.describe Orn::Tmux::Client do
     it "returns nil when the capture fails" do
       with_fake_cmd do |fake|
         fake.script(capture_argv("%5"), status: 1)
+
+        expect(client.capture_pane("%5")).to be_nil
+      end
+    end
+
+    it "returns nil when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(capture_argv("%5"))
 
         expect(client.capture_pane("%5")).to be_nil
       end
@@ -784,6 +844,40 @@ RSpec.describe Orn::Tmux::Client do
           .to raise_error(Orn::Error, /cannot determine cwd/)
       end
     end
+
+    it "raises when the cwd query fails" do
+      with_fake_cmd do |fake|
+        fake.script(
+          cwd_argv,
+          stderr: "can't find pane",
+          status: 1
+        )
+
+        expect do
+          client.recreate_session_with_pane(
+            "%5",
+            "home",
+            "editor"
+          )
+        end
+          .to raise_error(Orn::Error, /cannot determine cwd/)
+      end
+    end
+
+    it "raises when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(cwd_argv)
+
+        expect do
+          client.recreate_session_with_pane(
+            "%5",
+            "home",
+            "editor"
+          )
+        end
+          .to raise_error(Orn::Error, /cannot determine cwd/)
+      end
+    end
   end
 
   describe "#select_pane" do
@@ -880,6 +974,14 @@ RSpec.describe Orn::Tmux::Client do
         expect(client.list_borrowed_panes).to eq([])
       end
     end
+
+    it "returns no panes when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(list_argv)
+
+        expect(client.list_borrowed_panes).to eq([])
+      end
+    end
   end
 
   describe "#active_pane" do
@@ -913,6 +1015,22 @@ RSpec.describe Orn::Tmux::Client do
         expect(client.active_pane("hub", "tabs")).to be_nil
       end
     end
+
+    it "returns nothing when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(panes_argv)
+
+        expect(client.active_pane("hub", "tabs")).to be_nil
+      end
+    end
+
+    it "returns nothing when no pane is marked active" do
+      with_fake_cmd do |fake|
+        fake.script(panes_argv, stdout: "%1\t0\n%2\t0\n")
+
+        expect(client.active_pane("hub", "tabs")).to be_nil
+      end
+    end
   end
 
   describe "#current_session_window" do
@@ -933,6 +1051,22 @@ RSpec.describe Orn::Tmux::Client do
           stderr: "can't find pane",
           status: 1
         )
+
+        expect(client.current_session_window("%5")).to be_nil
+      end
+    end
+
+    it "returns nothing when tmux is not installed" do
+      with_fake_cmd do |fake|
+        fake.script_missing(display_argv)
+
+        expect(client.current_session_window("%5")).to be_nil
+      end
+    end
+
+    it "returns nothing when the reply carries no window name" do
+      with_fake_cmd do |fake|
+        fake.script(display_argv, stdout: "home\n")
 
         expect(client.current_session_window("%5")).to be_nil
       end

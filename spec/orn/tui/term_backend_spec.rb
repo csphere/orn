@@ -149,6 +149,25 @@ module Orn
 
           expect(output.string).to eq("\e[2J")
         end
+
+        it "toggles raw mode on start and cooked mode on stop for a tty input" do
+          tty_input = instance_double(IO, tty?: true)
+          allow(tty_input).to receive(:raw!)
+          allow(tty_input).to receive(:cooked!)
+          tty_backend = described_class.new(
+            input: tty_input,
+            output: output
+          )
+
+          tty_backend.start
+          tty_backend.stop
+
+          aggregate_failures do
+            expect(tty_input).to have_received(:raw!)
+            expect(tty_input).to have_received(:cooked!)
+            expect(output.string).to eq("\e[?1049h\e[?25l\e[?25h\e[?1049l")
+          end
+        end
       end
 
       it "emits an SGR sequence carrying foreground, background, and bold" do

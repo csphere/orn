@@ -42,6 +42,23 @@ module Orn
         end
       end
 
+      it "drops characters past the buffer edge without wrapping to the next row" do
+        cursor = buffer.set_line(
+          8,
+          0,
+          Line.raw("abcdef"),
+          10
+        )
+
+        aggregate_failures do
+          expect(buffer[[8, 0]].symbol).to eq("a")
+          expect(buffer[[9, 0]].symbol).to eq("b")
+          expect(buffer[[0, 1]].symbol).to eq(" ")
+          expect(buffer.to_s).not_to include("c")
+          expect(cursor).to eq(14)
+        end
+      end
+
       it "leaves cells outside the written run blank and unstyled" do
         aggregate_failures do
           expect(buffer[[5, 2]].symbol).to eq(" ")

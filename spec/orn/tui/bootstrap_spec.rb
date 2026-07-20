@@ -539,6 +539,60 @@ module Orn
           expect(app.mode).to eq(Mode.normal)
         end
 
+        it "confirms the removal on y" do
+          app = project_app
+          app.instance_variable_set(:@mode, Mode.confirm_remove("feat"))
+          allow(app).to receive(:confirm_remove)
+
+          described_class.dispatch_project(app, char("y"))
+
+          expect(app).to have_received(:confirm_remove)
+        end
+
+        it "ignores an unmapped key in normal mode" do
+          app = project_app
+
+          result = described_class.dispatch_project(app, char("z"))
+
+          aggregate_failures do
+            expect(result).to be_nil
+            expect(app.mode).to eq(Mode.normal)
+          end
+        end
+
+        it "keeps the typed input when new-branch mode sees an unmapped key code" do
+          app = project_app
+          app.start_new_branch
+          described_class.dispatch_project(app, char("x"))
+          described_class.dispatch_project(app, KeyEvent.key(:up))
+
+          expect(app.mode).to eq(Mode.new_branch("x"))
+        end
+
+        it "moves the selection on the down-arrow key" do
+          app = project_app
+          app.entries = [
+            WorktreeStatus.new(
+              branch: "main",
+              dirty: false,
+              has_window: false,
+              ahead: 0,
+              behind: 0
+            ),
+            WorktreeStatus.new(
+              branch: "feat",
+              dirty: false,
+              has_window: false,
+              ahead: 0,
+              behind: 0
+            )
+          ]
+
+          described_class.dispatch_project(app, KeyEvent.key(:down))
+
+          expect(app.selected).to eq(1)
+        end
+
         it "cancels a remove confirmation on any key but y" do
           app = project_app
           app.instance_variable_set(:@mode, Mode.confirm_remove("feat"))
@@ -632,6 +686,24 @@ module Orn
           expect(backend.clears).to eq(1)
           expect(backend.buffer.area.width).to eq(20)
         end
+
+        it "advances the spinner while an agent is working" do
+          backend = TestBackend.new(40, 8)
+          backend.feed(
+            char("z"),
+            char("q")
+          )
+          terminal = Terminal.new(backend)
+          app = project_app
+          app.agent_states["main"] = Orn::Detect::PaneAgentState.new(
+            agent: :claude,
+            state: :working
+          )
+
+          described_class.run_loop(terminal, app)
+
+          expect(app.spinner_tick).to eq(1)
+        end
       end
 
       describe ".run_global_loop" do
@@ -657,6 +729,31 @@ module Orn
 
           expect(app).to have_received(:enforce_layout)
           expect(backend.clears).to eq(1)
+        end
+
+        it "advances the spinner while an agent is working" do
+          backend = TestBackend.new(40, 8)
+          backend.feed(
+            char("z"),
+            char("q")
+          )
+          terminal = Terminal.new(backend)
+          app = global_app
+          app.entries = [
+            RepoEntry.new(
+              display_name: "a",
+              root: "/tmp/x",
+              healthy: true,
+              session_name: "a",
+              base_branch: "main",
+              aggregate_agent_state: :working
+            )
+          ]
+          app.sync_list_state
+
+          described_class.run_global_loop(terminal, app)
+
+          expect(app.spinner_tick).to eq(1)
         end
 
         it "does not re-apply the layout without a resize" do

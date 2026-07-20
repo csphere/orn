@@ -107,6 +107,18 @@ module Orn
           end
         end
 
+        it "opens the tab but installs no bindings without a hub location" do
+          tabs = build_tabs(hub_location: nil)
+
+          opened = open_tab(tabs, "feat")
+
+          aggregate_failures do
+            expect(opened).to be(true)
+            expect(tabs.visible.branch).to eq("feat")
+            expect(hub.count(:install_bindings)).to eq(0)
+          end
+        end
+
         it "refuses to open without a hub pane" do
           tabs = build_tabs(hub_pane: nil)
 
@@ -133,6 +145,17 @@ module Orn
             expect(hub.calls).to include([:hide_tab, "two"])
             expect(hub.calls).to include([:show_tab, "one"])
             expect(hub.calls.last).to eq([:install_bindings, "%1"])
+          end
+        end
+
+        it "refuses to show without a hub pane" do
+          tabs = build_tabs(hub_pane: nil)
+
+          shown = tabs.show(0)
+
+          aggregate_failures do
+            expect(shown).to be(false)
+            expect(hub.calls).to be_empty
           end
         end
 
