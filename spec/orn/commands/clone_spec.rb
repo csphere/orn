@@ -41,6 +41,7 @@ RSpec.describe Orn::Commands::Clone do
         "my-project",
         "clone",
         "--bare",
+        "--",
         url,
         ".bare"
       ]
@@ -59,6 +60,14 @@ RSpec.describe Orn::Commands::Clone do
       end
 
       expect(File.exist?(File.join(work, "my-project"))).to be(false)
+    end
+
+    it "rejects a URL that looks like a git option" do
+      with_fake_cmd do |fake|
+        expect { described_class.new(output_mode: Orn::OutputMode.quiet).run("--upload-pack=evil", "main") }
+          .to raise_error(Orn::Error, /Invalid repository URL '--upload-pack=evil'/)
+        expect(fake.invocations).to be_empty
+      end
     end
 
     it "refuses to overwrite an existing directory" do

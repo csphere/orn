@@ -26,9 +26,12 @@ module Orn
         )
 
         output_mode.status("  Cloning repository")
+        # "--" pins the URL to the positional slot so git cannot read it as
+        # an option.
         git.exec(
           "clone",
           "--bare",
+          "--",
           url,
           ".bare"
         )

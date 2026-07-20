@@ -13,6 +13,10 @@ module Orn
       # Creates ./<name>/ (name derived from the URL) and clones into it,
       # deleting the directory again if any step fails.
       def run(url, base)
+        # git parses options anywhere on the line, so a flag-shaped URL
+        # would change what git clone does instead of being cloned.
+        raise Orn::Error, "Invalid repository URL '#{url}': cannot start with '-'" if url.start_with?("-")
+
         project_name = self.class.derive_project_name(url)
         raise Orn::Error, "Directory '#{project_name}' already exists" if File.exist?(project_name)
 
