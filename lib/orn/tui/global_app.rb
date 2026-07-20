@@ -126,7 +126,7 @@ module Orn
       def full_refresh
         anchor = selected_identity
         @entries = RepoDiscovery.discover(@output, @config, @mru_state)
-        refresh_tmux_data
+        reconcile_tabs_and_refresh_tmux
         RepoDiscovery.sort_entries(@entries)
         reanchor_selected(anchor)
         @last_discovery = monotonic
@@ -154,7 +154,7 @@ module Orn
         if monotonic - @last_discovery >= DISCOVERY_REFRESH
           full_refresh
         elsif monotonic - @last_tmux_refresh >= TMUX_REFRESH
-          refresh_tmux
+          refresh_tmux_keeping_selection
         end
       end
 
@@ -260,7 +260,7 @@ module Orn
       def cycle_tab(forward)
         return unless @tabs.cycle(forward)
 
-        refresh_tmux
+        refresh_tmux_keeping_selection
         select_visible_tab_row
       end
 
@@ -409,11 +409,11 @@ module Orn
           base_branch: entry.base_branch,
           branch: branch
         )
-        refresh_tmux if opened
+        refresh_tmux_keeping_selection if opened
       end
 
       def show_tab(idx)
-        refresh_tmux if @tabs.show(idx)
+        refresh_tmux_keeping_selection if @tabs.show(idx)
       end
 
       def selected_tab_index
@@ -435,15 +435,15 @@ module Orn
 
       # Refresh tmux-derived state and resort, keeping the selection anchored to
       # the same row rather than the same index.
-      def refresh_tmux
+      def refresh_tmux_keeping_selection
         anchor = selected_identity
-        refresh_tmux_data
+        reconcile_tabs_and_refresh_tmux
         reanchor_selected(anchor)
       end
 
       # Reconcile tabs against a fresh pane listing, then refresh per-repo tmux
       # state and resort.
-      def refresh_tmux_data
+      def reconcile_tabs_and_refresh_tmux
         # A failed listing means "no information", not "no panes": pruning tabs
         # against it would drop live tabs, strand their borrowed panes in the
         # hub, and tear down the key bindings.
