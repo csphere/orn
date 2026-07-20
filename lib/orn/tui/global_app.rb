@@ -101,6 +101,9 @@ module Orn
         @client = client || Orn::Tmux::Client.new(output_mode: output_mode)
         @config = config
         @entries = entries
+        # @selected is the authoritative selection (a visible_rows index);
+        # @list_state only mirrors it for the list widget and is realigned by
+        # sync_list_state after every change.
         @selected = 0
         @list_state = ListState.new
         @list_state.select(0) unless entries.empty?
