@@ -97,14 +97,14 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
   def passing_check(name, message)
     {
       "name" => name,
-      "kind" => "error",
+      "severity" => "error",
       "passed" => true,
       "message" => message
     }
   end
 
   def passing_warning(name, message)
-    passing_check(name, message).merge("kind" => "warning")
+    passing_check(name, message).merge("severity" => "warning")
   end
 
   def expected_all_passing_json
@@ -216,7 +216,7 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
         "checks" => [
           {
             "name" => "docker",
-            "kind" => "error",
+            "severity" => "error",
             "passed" => false,
             "message" => "docker not found on PATH"
           }

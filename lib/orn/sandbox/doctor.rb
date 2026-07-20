@@ -58,7 +58,7 @@ module Orn
           config,
           project_root
         )
-        failed = checks.find { |check| !check.passed && check.kind == :error }
+        failed = checks.find { |check| !check.passed && check.severity == :error }
         if failed
           raise Orn::Error,
             "Preflight check failed: #{failed.message}\n  " \
@@ -66,7 +66,7 @@ module Orn
         end
 
         checks.each do |check|
-          output_mode.status("Warning: #{check.message}") if !check.passed && check.kind == :warning
+          output_mode.status("Warning: #{check.message}") if !check.passed && check.severity == :warning
         end
         nil
       end

@@ -50,7 +50,7 @@ module Orn
 
         def icon(check)
           return "[ok]" if check.passed
-          return "[--]" if check.kind == :warning
+          return "[--]" if check.severity == :warning
 
           "[!!]"
         end

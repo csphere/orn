@@ -137,7 +137,7 @@ RSpec.describe Orn::Sandbox do
 
       expect(check).to have_attributes(
         passed: true,
-        kind: :error,
+        severity: :error,
         name: "test",
         message: "ok"
       )
@@ -148,7 +148,7 @@ RSpec.describe Orn::Sandbox do
 
       expect(check).to have_attributes(
         passed: false,
-        kind: :error,
+        severity: :error,
         name: "test",
         message: "bad"
       )
@@ -163,7 +163,7 @@ RSpec.describe Orn::Sandbox do
 
       expect(check).to have_attributes(
         passed: false,
-        kind: :warning,
+        severity: :warning,
         name: "test",
         message: "warn msg"
       )
@@ -178,7 +178,7 @@ RSpec.describe Orn::Sandbox do
 
       expect(check).to have_attributes(
         passed: true,
-        kind: :warning
+        severity: :warning
       )
     end
 
@@ -189,9 +189,9 @@ RSpec.describe Orn::Sandbox do
             "test",
             false,
             "msg"
-          ).to_json_hash["kind"]
+          ).to_json_hash["severity"]
         ).to eq("warning")
-        expect(described_class.fail("test", "msg").to_json_hash["kind"]).to eq("error")
+        expect(described_class.fail("test", "msg").to_json_hash["severity"]).to eq("error")
       end
     end
   end

@@ -46,18 +46,20 @@ module Orn
       end
     end
 
-    # Result of a single `doctor` environment check. `kind` is `:error`
-    # (blocks sandbox creation in preflight) or `:warning` (reported only).
+    # Result of a single `doctor` environment check. `severity` is what a
+    # failure of this check means: `:error` (blocks sandbox creation in
+    # preflight) or `:warning` (reported only). Passing checks keep their
+    # severity, so JSON consumers filter on `passed`, not severity.
     Check = Data.define(
       :name,
-      :kind,
+      :severity,
       :passed,
       :message
     ) do
       def self.pass(name, message)
         new(
           name: name,
-          kind: :error,
+          severity: :error,
           passed: true,
           message: message
         )
@@ -66,7 +68,7 @@ module Orn
       def self.fail(name, message)
         new(
           name: name,
-          kind: :error,
+          severity: :error,
           passed: false,
           message: message
         )
@@ -75,17 +77,17 @@ module Orn
       def self.warning(name, passed, message)
         new(
           name: name,
-          kind: :warning,
+          severity: :warning,
           passed: passed,
           message: message
         )
       end
 
-      # The JSON shape (field order + lowercase kind).
+      # The JSON shape (field order + lowercase severity).
       def to_json_hash
         {
           "name" => name,
-          "kind" => kind.to_s,
+          "severity" => severity.to_s,
           "passed" => passed,
           "message" => message
         }

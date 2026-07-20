@@ -13,7 +13,7 @@ RSpec.describe Orn::Sandbox::Doctor do
 
         expect(described_class.tool_check(mode, "docker")).to have_attributes(
           name: "docker",
-          kind: :error,
+          severity: :error,
           passed: true,
           message: "docker found on PATH"
         )
@@ -41,7 +41,7 @@ RSpec.describe Orn::Sandbox::Doctor do
 
         expect(described_class.colima_check(mode)).to have_attributes(
           name: "colima",
-          kind: :error,
+          severity: :error,
           passed: false,
           message: "Colima not running"
         )
@@ -88,7 +88,7 @@ RSpec.describe Orn::Sandbox::Doctor do
 
         expect(described_class.template_check(mode, "img:1")).to have_attributes(
           name: "template",
-          kind: :error,
+          severity: :error,
           passed: true,
           message: "Template 'img:1' found"
         )
@@ -174,7 +174,7 @@ RSpec.describe Orn::Sandbox::Doctor do
 
       expect(check).to have_attributes(
         passed: true,
-        kind: :error,
+        severity: :error,
         name: "git-identity"
       )
     end
@@ -216,7 +216,7 @@ RSpec.describe Orn::Sandbox::Doctor do
 
       expect(check).to have_attributes(
         passed: false,
-        kind: :error
+        severity: :error
       )
     end
 
@@ -242,7 +242,7 @@ RSpec.describe Orn::Sandbox::Doctor do
   describe ".ssh_auth_check" do
     it "is a warning-kind check" do
       expect(described_class.ssh_auth_check).to have_attributes(
-        kind: :warning,
+        severity: :warning,
         name: "ssh-auth"
       )
     end
@@ -273,7 +273,7 @@ RSpec.describe Orn::Sandbox::Doctor do
         fake.script(%w[sbx secret ls], stdout: "github\n")
 
         expect(described_class.github_secret_check(mode)).to have_attributes(
-          kind: :warning,
+          severity: :warning,
           name: "github-secret"
         )
       end
