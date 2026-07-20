@@ -89,8 +89,8 @@ class FakeTmuxClient
     )
   end
 
-  def send_keys(pane, keys)
-    record(:send_keys, pane, keys)
+  def send_line(pane, line)
+    record(:send_line, pane, line)
   end
 
   def window_exists?(session, name)

@@ -155,9 +155,10 @@ module Orn
         )
       end
 
-      # Type `keys` into `pane` followed by Enter.
-      def send_keys(pane, keys)
-        tmux_exec("send-keys", "-t", pane, keys, "Enter")
+      # Type `line` into `pane` and submit it with Enter. For raw key
+      # sending without Enter, call tmux send-keys directly.
+      def send_line(pane, line)
+        tmux_exec("send-keys", "-t", pane, line, "Enter")
       end
 
       def window_exists?(session, name)
@@ -274,7 +275,7 @@ module Orn
           pane_id = pane_ids[pane_command.pane]
           command = Layout.substitute_template_vars(pane_command.command, template_vars)
           wait_for_shell(pane_id)
-          send_keys(pane_id, command)
+          send_line(pane_id, command)
         end
       end
 

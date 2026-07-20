@@ -401,13 +401,13 @@ RSpec.describe Orn::Tmux::Client do
     end
   end
 
-  describe "#send_keys" do
+  describe "#send_line" do
     it "types the keys followed by Enter" do
       with_fake_cmd do |fake|
         argv = ["tmux", "send-keys", "-t", "%5", "echo hi", "Enter"]
         fake.script(argv)
 
-        client.send_keys("%5", "echo hi")
+        client.send_line("%5", "echo hi")
 
         expect(fake.invocations).to eq([argv])
       end
