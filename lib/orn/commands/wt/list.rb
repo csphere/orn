@@ -38,7 +38,7 @@ module Orn
           )
           Result.new(
             repo: File.basename(project.root),
-            worktrees: worktree.entries
+            worktrees: worktree.branches
           )
         end
       end

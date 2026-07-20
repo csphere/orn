@@ -110,7 +110,7 @@ module Orn
           output_mode: @output
         )
         windows = @client.list_windows(@session)
-        entries = worktree.entries.map { |branch| status_for(branch, windows) }
+        entries = worktree.branches.map { |branch| status_for(branch, windows) }
         entries.sort_by! { |entry| [entry.branch == @base_branch ? 0 : 1, entry.branch] }
         @entries = entries
 

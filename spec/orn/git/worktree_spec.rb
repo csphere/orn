@@ -166,7 +166,7 @@ RSpec.describe Orn::Git::Worktree, :real_cmd do
         "origin/feature/listed"
       )
 
-      expect(worktree.entries).to include("feature/listed")
+      expect(worktree.branches).to include("feature/listed")
     end
   end
 end

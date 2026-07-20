@@ -119,7 +119,7 @@ module Orn
       # The sorted branch names of all worktrees, parsed from `git worktree
       # list --porcelain`. Skips bare/detached entries and the project root
       # itself; a failed git call yields an empty list.
-      def entries
+      def branches
         result = @repo.output(
           "worktree",
           "list",

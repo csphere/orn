@@ -28,7 +28,7 @@ module Orn
       Orn::Git::Worktree.new(
         root: project.root,
         output_mode: Orn::OutputMode.quiet
-      ).entries
+      ).branches
     rescue Orn::Error
       []
     end

@@ -35,7 +35,7 @@ RSpec.describe RuboCop::Cop::Orn::ChainBelowMultilineCall, :config do
       Worktree.new(
         root: root,
         output_mode: output_mode
-      ).entries
+      ).branches
     RUBY
   end
 

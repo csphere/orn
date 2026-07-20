@@ -36,7 +36,7 @@ module Orn
           output_mode: @output_mode
         )
         windows = @client.list_windows(Orn::Session.session_name(project))
-        entries = worktree.entries.map do |branch|
+        entries = worktree.branches.map do |branch|
           Entry.new(
             branch: branch,
             has_window: windows.include?(branch)

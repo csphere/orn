@@ -76,7 +76,7 @@ module Orn
         branches = Orn::Git::Worktree.new(
           root: root,
           output_mode: output
-        ).entries
+        ).branches
         sort_branches_base_first(branches, base)
         branches.map { |branch| WorktreeRow.new(branch: branch) }
       end
