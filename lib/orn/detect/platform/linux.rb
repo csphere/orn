@@ -10,11 +10,14 @@ module Orn
         STAT_FIELD_PGRP = 2
         STAT_FIELD_TPGID = 5
 
+        DEFAULT_PROC_ROOT = "/proc"
+
         # The foreground job on `child_pid`'s controlling terminal: read the
         # pane process's `tpgid`, then scan `/proc` for every process whose
-        # `pgrp` matches it.
-        def self.foreground_job(child_pid)
-          child_stat = read_stat(child_pid)
+        # `pgrp` matches it. `proc_root:` is a test seam; production always
+        # uses the default.
+        def self.foreground_job(child_pid, proc_root: DEFAULT_PROC_ROOT)
+          child_stat = read_stat(child_pid, proc_root)
           return nil if child_stat.nil?
 
           tpgid = parse_tpgid(child_stat)
@@ -23,7 +26,8 @@ module Orn
           processes = collect_group(
             child_pid,
             child_stat,
-            tpgid
+            tpgid,
+            proc_root
           )
           return nil if processes.empty?
 
@@ -35,9 +39,9 @@ module Orn
 
         # Every process in `/proc` whose pgrp matches `tpgid`, reusing the
         # already-read stat for `child_pid`.
-        def self.collect_group(child_pid, child_stat, tpgid)
-          proc_pids.filter_map do |pid|
-            stat = pid == child_pid ? child_stat : read_stat(pid)
+        def self.collect_group(child_pid, child_stat, tpgid, proc_root)
+          proc_pids(proc_root).filter_map do |pid|
+            stat = pid == child_pid ? child_stat : read_stat(pid, proc_root)
             next if stat.nil?
 
             parsed = parse_pgrp_and_comm(stat)
@@ -49,7 +53,7 @@ module Orn
             Orn::Detect::ForegroundProcess.new(
               pid: pid,
               name: comm,
-              argv: read_argv(pid)
+              argv: read_argv(pid, proc_root)
             )
           end
         end
@@ -89,23 +93,23 @@ module Orn
           [pgrp, comm]
         end
 
-        def self.read_stat(pid)
-          File.read("/proc/#{pid}/stat")
+        def self.read_stat(pid, proc_root)
+          File.read("#{proc_root}/#{pid}/stat")
         rescue SystemCallError
           nil
         end
 
         # Numeric entries under /proc (process ids).
-        def self.proc_pids
-          Dir.children("/proc").filter_map { |name| Integer(name, exception: false) }
+        def self.proc_pids(proc_root)
+          Dir.children(proc_root).filter_map { |name| Integer(name, exception: false) }
         rescue SystemCallError
           []
         end
 
         # Argv from `/proc/pid/cmdline` (NUL-separated); nil for kernel threads
         # and unreadable processes.
-        def self.read_argv(pid)
-          raw = File.binread("/proc/#{pid}/cmdline")
+        def self.read_argv(pid, proc_root)
+          raw = File.binread("#{proc_root}/#{pid}/cmdline")
           return nil if raw.empty?
 
           args = raw.split("\0").reject(&:empty?).map { |arg| arg.force_encoding("UTF-8").scrub }

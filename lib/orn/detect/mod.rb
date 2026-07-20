@@ -167,12 +167,13 @@ module Orn
 
     # Which agent runs in a pane: by the pane's current command, then its
     # foreground job, then the sbx agent type when the command is a container
-    # runtime.
-    def self.resolve_agent(pane, sbx_agent_type)
+    # runtime. `foreground_job_source` is called lazily with the pane pid only
+    # when the pane's current command is not itself an agent.
+    def self.resolve_agent(pane, sbx_agent_type, foreground_job_source: Platform.method(:foreground_job))
       direct = identify_agent(pane.pane_current_command)
       return direct if direct
 
-      job = Platform.foreground_job(pane.pane_pid)
+      job = foreground_job_source.call(pane.pane_pid)
       wrapped = job && identify_agent_in_job(job)
       return wrapped.first if wrapped
 
@@ -191,8 +192,12 @@ module Orn
     # Detect the agent and state for a single pane. Evaluates the cheap OSC
     # title first and only captures the pane's screen (through `client`) when
     # that is not definitive.
-    def self.detect_pane(client, pane, sbx_agent_type)
-      agent = resolve_agent(pane, sbx_agent_type)
+    def self.detect_pane(client, pane, sbx_agent_type, foreground_job_source: Platform.method(:foreground_job))
+      agent = resolve_agent(
+        pane,
+        sbx_agent_type,
+        foreground_job_source: foreground_job_source
+      )
       if agent.nil?
         return PaneAgentState.new(
           agent: nil,
@@ -233,7 +238,7 @@ module Orn
     # Detect agent state per window, keyed by window name. The first pane with
     # an identified agent wins its window; an agent-less result is replaced if a
     # later pane in the same window yields one.
-    def self.detect_all_panes(client, panes, sbx_agent_type)
+    def self.detect_all_panes(client, panes, sbx_agent_type, foreground_job_source: Platform.method(:foreground_job))
       results = {}
       panes.each do |pane|
         next if results[pane.window_name]&.agent
@@ -241,7 +246,8 @@ module Orn
         results[pane.window_name] = detect_pane(
           client,
           pane,
-          sbx_agent_type
+          sbx_agent_type,
+          foreground_job_source: foreground_job_source
         )
       end
       results

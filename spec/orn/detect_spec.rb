@@ -135,6 +135,73 @@ RSpec.describe Orn::Detect do
       expect(described_class.identify_agent_in_job(j).first).to eq(:codex)
     end
 
+    it "skips non-eval flags before the script argument" do
+      j = job(
+        100,
+        [
+          process(
+            100,
+            "node",
+            ["node", "--enable-source-maps", "/path/to/bin/codex"]
+          )
+        ]
+      )
+
+      expect(described_class.identify_agent_in_job(j)).to eq([:codex, "codex"])
+    end
+
+    it "returns nil when the wrapped script is not an agent" do
+      j = job(
+        100,
+        [
+          process(
+            100,
+            "node",
+            ["node", "server.js"]
+          )
+        ]
+      )
+
+      expect(described_class.identify_agent_in_job(j)).to be_nil
+    end
+
+    it "matches an agent running as a non-leader process" do
+      j = job(
+        100,
+        [
+          process(
+            100,
+            "bash",
+            ["bash"]
+          ),
+          process(101, "claude")
+        ]
+      )
+
+      expect(described_class.identify_agent_in_job(j)).to eq([:claude, "claude"])
+    end
+
+    it "still matches when the group leader is absent from the process list" do
+      j = job(
+        100,
+        [process(101, "claude")]
+      )
+
+      expect(described_class.identify_agent_in_job(j)).to eq([:claude, "claude"])
+    end
+
+    it "skips non-runtime processes and runtimes without argv in the wrapped scan" do
+      j = job(
+        100,
+        [
+          process(100, "vim"),
+          process(101, "node")
+        ]
+      )
+
+      expect(described_class.identify_agent_in_job(j)).to be_nil
+    end
+
     it "ignores eval flags (subsequent args are inline code)" do
       j = job(
         100,
@@ -233,151 +300,369 @@ RSpec.describe Orn::Detect do
     end
   end
 
-  # :real_cmd for the platform foreground-job probe (`ps`/`/proc`), not tmux:
-  # pane capture goes through the fake client.
-  describe ".detect_pane", :real_cmd do
+  describe ".detect_pane" do
     let(:client) { FakeTmuxClient.new }
 
-    it "identifies claude from the pane command" do
-      result = described_class.detect_pane(
-        client,
-        pane(
-          window: "w",
-          command: "claude",
-          pane_id: "%99"
-        ),
-        nil
-      )
-
-      expect(result.agent).to eq(:claude)
-    end
-
-    it "falls through to no agent for a shell" do
-      result = described_class.detect_pane(
-        client,
-        pane(
-          window: "w",
-          command: "bash",
-          pane_id: "%99"
-        ),
-        nil
-      )
-
-      expect(result).to have_attributes(
-        agent: nil,
-        state: :unknown
-      )
-    end
-
-    it "uses the sbx agent type when the command is a container runtime" do
-      result = described_class.detect_pane(
-        client,
-        pane(
-          window: "w",
-          command: "docker",
-          pane_id: "%99"
-        ),
-        :claude
-      )
-
-      expect(result.agent).to eq(:claude)
-    end
-
-    it "reports no agent for a container runtime without an sbx agent type" do
-      result = described_class.detect_pane(
-        client,
-        pane(
-          window: "w",
-          command: "docker",
-          pane_id: "%99"
-        ),
-        nil
-      )
-
-      expect(result).to have_attributes(
-        agent: nil,
-        state: :unknown
-      )
-    end
-
-    it "skips the screen capture when the osc title is definitive" do
-      result = described_class.detect_pane(
-        client,
-        pane(
-          window: "w",
-          command: "claude",
-          title: "\u{2802} project",
-          pane_id: "%99"
-        ),
-        nil
-      )
-
-      aggregate_failures do
-        expect(result).to have_attributes(
-          agent: :claude,
-          state: :working
+    # :real_cmd for the platform foreground-job probe (`ps`/`/proc`), not tmux:
+    # pane capture goes through the fake client.
+    context "with the real platform probe", :real_cmd do
+      it "identifies claude from the pane command" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "claude",
+            pane_id: "%99"
+          ),
+          nil
         )
-        expect(client.count(:capture_pane)).to eq(0)
+
+        expect(result.agent).to eq(:claude)
+      end
+
+      it "falls through to no agent for a shell" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "bash",
+            pane_id: "%99"
+          ),
+          nil
+        )
+
+        expect(result).to have_attributes(
+          agent: nil,
+          state: :unknown
+        )
+      end
+
+      it "uses the sbx agent type when the command is a container runtime" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "docker",
+            pane_id: "%99"
+          ),
+          :claude
+        )
+
+        expect(result.agent).to eq(:claude)
+      end
+
+      it "reports no agent for a container runtime without an sbx agent type" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "docker",
+            pane_id: "%99"
+          ),
+          nil
+        )
+
+        expect(result).to have_attributes(
+          agent: nil,
+          state: :unknown
+        )
+      end
+
+      it "skips the screen capture when the osc title is definitive" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "claude",
+            title: "\u{2802} project",
+            pane_id: "%99"
+          ),
+          nil
+        )
+
+        aggregate_failures do
+          expect(result).to have_attributes(
+            agent: :claude,
+            state: :working
+          )
+          expect(client.count(:capture_pane)).to eq(0)
+        end
+      end
+    end
+
+    context "with an injected foreground job source" do
+      it "skips the screen capture and the job probe when the osc title is definitive" do
+        probe_calls = []
+        source = lambda do |pane_pid|
+          probe_calls << pane_pid
+          nil
+        end
+
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "claude",
+            title: "\u{2802} project",
+            pane_id: "%1"
+          ),
+          nil,
+          foreground_job_source: source
+        )
+
+        aggregate_failures do
+          expect(result).to have_attributes(
+            agent: :claude,
+            state: :working
+          )
+          expect(client.count(:capture_pane)).to eq(0)
+          expect(probe_calls).to be_empty
+        end
+      end
+
+      it "captures the screen when the osc title is not definitive" do
+        client.captures["%1"] = <<~SCREEN
+          Do you want to make this edit?
+          ──────────────────────────────
+          ❯ 1. Yes
+            2. No
+
+          enter to select · esc to cancel · arrow keys to navigate
+        SCREEN
+
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "claude",
+            pane_id: "%1"
+          ),
+          nil,
+          foreground_job_source: ->(_pane_pid) {}
+        )
+
+        aggregate_failures do
+          expect(result).to have_attributes(
+            agent: :claude,
+            state: :blocked
+          )
+          expect(client.calls).to include([:capture_pane, "%1"])
+        end
+      end
+
+      it "does not probe the foreground job when the pane command is an agent" do
+        source = ->(_pane_pid) { raise "foreground job source must not be called" }
+
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "claude",
+            pane_id: "%1"
+          ),
+          nil,
+          foreground_job_source: source
+        )
+
+        expect(result.agent).to eq(:claude)
+      end
+
+      it "treats a failed screen capture as an empty screen (idle fallback)" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "claude",
+            pane_id: "%1"
+          ),
+          nil,
+          foreground_job_source: ->(_pane_pid) {}
+        )
+
+        aggregate_failures do
+          expect(result).to have_attributes(
+            agent: :claude,
+            state: :idle
+          )
+          expect(client.count(:capture_pane)).to eq(1)
+        end
+      end
+
+      it "identifies a wrapped agent through the foreground job" do
+        probe_calls = []
+        source = lambda do |pane_pid|
+          probe_calls << pane_pid
+          job(
+            100,
+            [
+              process(
+                100,
+                "node",
+                ["node", "/x/codex"]
+              )
+            ]
+          )
+        end
+
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "bash",
+            pane_id: "%1"
+          ),
+          nil,
+          foreground_job_source: source
+        )
+
+        aggregate_failures do
+          expect(result.agent).to eq(:codex)
+          expect(probe_calls).to eq([99_999])
+        end
+      end
+
+      it "prefers a job match over the container fallback" do
+        source = ->(_pane_pid) { job(100, [process(100, "claude")]) }
+
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "docker",
+            pane_id: "%1"
+          ),
+          :gemini,
+          foreground_job_source: source
+        )
+
+        expect(result.agent).to eq(:claude)
+      end
+
+      it "falls back to the sbx agent type when a container runtime has no job" do
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "docker",
+            pane_id: "%1"
+          ),
+          :claude,
+          foreground_job_source: ->(_pane_pid) {}
+        )
+
+        expect(result.agent).to eq(:claude)
+      end
+
+      it "reports unknown without capturing when nothing is detected" do
+        source = ->(_pane_pid) { job(100, [process(100, "bash", ["bash"])]) }
+
+        result = described_class.detect_pane(
+          client,
+          pane(
+            window: "w",
+            command: "bash",
+            pane_id: "%1"
+          ),
+          nil,
+          foreground_job_source: source
+        )
+
+        aggregate_failures do
+          expect(result).to have_attributes(
+            agent: nil,
+            state: :unknown
+          )
+          expect(client.count(:capture_pane)).to eq(0)
+        end
       end
     end
   end
 
-  describe ".detect_all_panes", :real_cmd do
+  describe ".detect_all_panes" do
     let(:client) { FakeTmuxClient.new }
 
-    it "lets the first pane with an agent win its window" do
-      panes = [
-        pane(
-          window: "win",
-          command: "bash",
-          pane_id: "%0"
-        ),
-        pane(
-          window: "win",
-          command: "claude",
-          title: "\u{2802} project",
-          pane_id: "%1"
-        ),
-        pane(
-          window: "win",
-          command: "codex",
-          pane_id: "%2"
-        )
-      ]
+    context "with the real platform probe", :real_cmd do
+      it "lets the first pane with an agent win its window" do
+        panes = [
+          pane(
+            window: "win",
+            command: "bash",
+            pane_id: "%0"
+          ),
+          pane(
+            window: "win",
+            command: "claude",
+            title: "\u{2802} project",
+            pane_id: "%1"
+          ),
+          pane(
+            window: "win",
+            command: "codex",
+            pane_id: "%2"
+          )
+        ]
 
-      expect(
-        described_class.detect_all_panes(
+        expect(
+          described_class.detect_all_panes(
+            client,
+            panes,
+            nil
+          )["win"].agent
+        ).to eq(:claude)
+      end
+
+      it "detects each window separately" do
+        panes = [
+          pane(
+            window: "main",
+            command: "claude",
+            pane_id: "%0"
+          ),
+          pane(
+            window: "feature",
+            command: "bash",
+            pane_id: "%1"
+          )
+        ]
+
+        results = described_class.detect_all_panes(
           client,
           panes,
           nil
-        )["win"].agent
-      ).to eq(:claude)
+        )
+
+        aggregate_failures do
+          expect(results.length).to eq(2)
+          expect(results["main"].agent).to eq(:claude)
+          expect(results["feature"].agent).to be_nil
+        end
+      end
     end
 
-    it "detects each window separately" do
-      panes = [
-        pane(
-          window: "main",
-          command: "claude",
-          pane_id: "%0"
-        ),
-        pane(
-          window: "feature",
-          command: "bash",
-          pane_id: "%1"
+    context "with an injected foreground job source" do
+      it "forwards the source and lets the agent pane win the window" do
+        panes = [
+          pane(
+            window: "win",
+            command: "bash",
+            pane_id: "%0"
+          ),
+          pane(
+            window: "win",
+            command: "claude",
+            title: "\u{2802} project",
+            pane_id: "%1"
+          )
+        ]
+
+        results = described_class.detect_all_panes(
+          client,
+          panes,
+          nil,
+          foreground_job_source: ->(_pane_pid) {}
         )
-      ]
 
-      results = described_class.detect_all_panes(
-        client,
-        panes,
-        nil
-      )
-
-      aggregate_failures do
-        expect(results.length).to eq(2)
-        expect(results["main"].agent).to eq(:claude)
-        expect(results["feature"].agent).to be_nil
+        expect(results["win"].agent).to eq(:claude)
       end
     end
   end
@@ -403,6 +688,14 @@ RSpec.describe Orn::Detect do
       it "returns nil for a zero tpgid" do
         expect(described_class.parse_tpgid("1234 (bash) S 1233 1234 1234 34816 0 4194304")).to be_nil
       end
+
+      it "returns nil for a stat line with no closing paren" do
+        expect(described_class.parse_tpgid("1234 bash S 1233 1234 1234 34816 5678 4194304")).to be_nil
+      end
+
+      it "returns nil for a truncated stat line" do
+        expect(described_class.parse_tpgid("1234 (bash) S 1233 1234")).to be_nil
+      end
     end
 
     describe ".parse_pgrp_and_comm" do
@@ -415,22 +708,48 @@ RSpec.describe Orn::Detect do
         expect(described_class.parse_pgrp_and_comm("1234 (my agent) S 1233 5678 1234 34816 5678 4194304"))
           .to eq([5678, "my agent"])
       end
+
+      it "returns nil for a stat line with no parens" do
+        expect(described_class.parse_pgrp_and_comm("1234 bash S 1233 5678 1234 34816 5678 4194304")).to be_nil
+      end
+
+      it "returns nil for a truncated stat line" do
+        expect(described_class.parse_pgrp_and_comm("1234 (bash) S")).to be_nil
+      end
+
+      it "returns nil for a non-numeric pgrp field" do
+        expect(described_class.parse_pgrp_and_comm("1234 (bash) S 1233 xyz 1234 34816 5678 4194304")).to be_nil
+      end
     end
 
     describe ".foreground_job" do
-      # Fake the /proc filesystem: `stats` maps pid to stat-line content,
-      # `cmdlines` maps pid to raw cmdline bytes (or an exception to raise).
-      def stub_proc(stats:, cmdlines: {})
-        allow(Dir).to receive(:children).and_call_original
-        allow(Dir).to receive(:children).with("/proc").and_return(stats.keys.map(&:to_s) + ["self"])
-        allow(File).to receive(:read).and_call_original
-        stats.each do |pid, stat_line|
-          allow(File).to receive(:read).with("/proc/#{pid}/stat").and_return(stat_line)
+      # Build a fake /proc tree in a temp dir: `entries` maps each directory
+      # name (usually a pid) to its files. An absent :stat or :cmdline key
+      # means that file does not exist, exercising the SystemCallError rescues.
+      def build_proc_root(entries)
+        root = Dir.mktmpdir("orn-proc")
+        proc_roots << root
+        entries.each do |pid, files|
+          dir = File.join(root, pid.to_s)
+          FileUtils.mkdir_p(dir)
+          File.write(File.join(dir, "stat"), files[:stat]) if files.key?(:stat)
+          File.binwrite(File.join(dir, "cmdline"), files[:cmdline]) if files.key?(:cmdline)
         end
-        cmdlines.each do |pid, raw_cmdline|
-          stub = allow(File).to receive(:binread).with("/proc/#{pid}/cmdline")
-          raw_cmdline.is_a?(Class) ? stub.and_raise(raw_cmdline) : stub.and_return(raw_cmdline)
-        end
+        root
+      end
+
+      def proc_roots
+        @proc_roots ||= []
+      end
+
+      after { proc_roots.each { |root| FileUtils.remove_entry(root) } }
+
+      # A real stat line has ~52 fields and comm may contain spaces and parens
+      # (a tmux client reports as `(tmux: client)`).
+      def full_stat_line(pid, comm, pgrp)
+        "#{pid} (#{comm}) S 1233 #{pgrp} 5678 34816 5678 4194304 1010 0 12 0 8 4 0 0 20 0 1 0 " \
+          "12345678 12345678 512 18446744073709551615 1 1 0 0 0 0 0 3670020 1266777851 1 0 0 17 " \
+          "0 0 0 0 0 0 0 0 0 0 0 0 0"
       end
 
       it "runs against the current process without raising" do
@@ -438,45 +757,127 @@ RSpec.describe Orn::Detect do
       end
 
       it "builds the job from /proc, with nil argv for empty or unreadable cmdlines" do
-        stub_proc(
-          stats: {
-            1234 => "1234 (bash) S 1233 5678 1234 34816 5678 4194304",
-            4321 => "4321 (vim) S 1233 5678 4321 34816 5678 4194304",
-            5678 => "5678 (claude) S 1233 5678 5678 34816 5678 4194304",
-            999 => "999 (other) S 1 999 999 34816 5678 4194304"
+        root = build_proc_root(
+          1234 => {
+            stat: "1234 (bash) S 1233 5678 1234 34816 5678 4194304",
+            cmdline: ""
           },
-          cmdlines: {
-            1234 => "",
-            4321 => "vim\0notes.txt\0",
-            5678 => Errno::EACCES
+          4321 => {
+            stat: "4321 (vim) S 1233 5678 4321 34816 5678 4194304",
+            cmdline: "vim\0notes.txt\0"
+          },
+          5678 => { stat: "5678 (claude) S 1233 5678 5678 34816 5678 4194304" },
+          999 => {
+            stat: "999 (other) S 1 999 999 34816 5678 4194304",
+            cmdline: "other\0"
+          },
+          "self" => {}
+        )
+
+        result = described_class.foreground_job(1234, proc_root: root)
+
+        aggregate_failures do
+          expect(result.process_group_id).to eq(5678)
+          expect(result.processes).to contain_exactly(
+            process(1234, "bash"),
+            process(
+              4321,
+              "vim",
+              ["vim", "notes.txt"]
+            ),
+            process(5678, "claude")
+          )
+        end
+      end
+
+      it "skips a process whose stat vanishes mid-scan and a malformed stat entry" do
+        root = build_proc_root(
+          1234 => {
+            stat: "1234 (bash) S 1233 5678 1234 34816 5678 4194304",
+            cmdline: ""
+          },
+          777 => { cmdline: "gone\0" },
+          888 => {
+            stat: "not a stat line",
+            cmdline: "junk\0"
           }
         )
 
-        expect(described_class.foreground_job(1234)).to eq(
-          job(
-            5678,
-            [
-              process(1234, "bash"),
-              process(
-                4321,
-                "vim",
-                ["vim", "notes.txt"]
-              ),
-              process(5678, "claude")
-            ]
+        expect(described_class.foreground_job(1234, proc_root: root)).to eq(
+          job(5678, [process(1234, "bash")])
+        )
+      end
+
+      it "treats an all-NUL cmdline as nil argv and scrubs invalid UTF-8" do
+        root = build_proc_root(
+          1234 => {
+            stat: "1234 (bash) S 1233 5678 1234 34816 5678 4194304",
+            cmdline: "\0\0"
+          },
+          4321 => {
+            stat: "4321 (vim) S 1233 5678 4321 34816 5678 4194304",
+            cmdline: "vim\0\xFFnotes.txt\0".b
+          }
+        )
+
+        result = described_class.foreground_job(1234, proc_root: root)
+
+        expect(result.processes).to contain_exactly(
+          process(1234, "bash"),
+          process(
+            4321,
+            "vim",
+            ["vim", "\u{FFFD}notes.txt"]
           )
         )
       end
 
-      it "returns nil when /proc cannot be listed" do
-        allow(File).to receive(:read).and_call_original
-        allow(File).to receive(:read)
-          .with("/proc/1234/stat")
-          .and_return("1234 (bash) S 1233 5678 1234 34816 5678 4194304")
-        allow(Dir).to receive(:children).and_call_original
-        allow(Dir).to receive(:children).with("/proc").and_raise(Errno::EACCES)
+      it "parses a full-length real stat line with parens in the comm field" do
+        root = build_proc_root(
+          1234 => {
+            stat: full_stat_line(1234, "bash", 5678),
+            cmdline: "bash\0"
+          },
+          5678 => {
+            stat: full_stat_line(5678, "tmux: client", 5678),
+            cmdline: "tmux\0attach\0"
+          }
+        )
 
-        expect(described_class.foreground_job(1234)).to be_nil
+        result = described_class.foreground_job(1234, proc_root: root)
+
+        expect(result.processes).to contain_exactly(
+          process(
+            1234,
+            "bash",
+            ["bash"]
+          ),
+          process(
+            5678,
+            "tmux: client",
+            %w[tmux attach]
+          )
+        )
+      end
+
+      it "returns nil when the pane process has no controlling terminal" do
+        root = build_proc_root(
+          1234 => { stat: "1234 (bash) S 1233 1234 1234 34816 -1 4194304" }
+        )
+
+        expect(described_class.foreground_job(1234, proc_root: root)).to be_nil
+      end
+
+      it "returns nil when no process belongs to the foreground group" do
+        root = build_proc_root(
+          1234 => { stat: "1234 (bash) S 1233 1234 1234 34816 5678 4194304" }
+        )
+
+        expect(described_class.foreground_job(1234, proc_root: root)).to be_nil
+      end
+
+      it "returns nil for a nonexistent proc root" do
+        expect(described_class.foreground_job(1234, proc_root: "/nonexistent/proc-root")).to be_nil
       end
     end
   end
