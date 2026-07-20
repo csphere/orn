@@ -48,3 +48,5 @@
 #   columns:
 #     - panes: [""]
 #     - panes: ["sbx run {{sandbox}}"]
+#   # {{key}} placeholders in pane commands are filled in when the window is
+#   # created; {{sandbox}} (the sandbox name) is the only one available.
