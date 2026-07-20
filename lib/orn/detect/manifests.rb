@@ -3,9 +3,9 @@
 module Orn
   module Detect
     module Manifest
-      # Detection manifests bundled with the gem, keyed by agent label. These
-      # are the bundled agent-detection manifests as Ruby data
-      # (regex strings copied verbatim). A user override in
+      # Detection manifests bundled with the gem, keyed by agent label.
+      # These Ruby hashes are the source of truth; there are no upstream
+      # YAML files to edit. A user override in
       # `<global_config_dir>/agent-detection/<agent>.yaml` supersedes these.
       BUNDLED_MANIFESTS = {
         "claude" => {
