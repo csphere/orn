@@ -53,22 +53,12 @@ module Orn
           name = project.sandbox_name(branch)
           raise Orn::Error, "Sandbox '#{name}' already exists" if Orn::Sandbox::SbxCli.exists?(@output_mode, name)
 
-          @output_mode.status("Creating sandbox '#{name}'...")
-          Orn::Sandbox::SbxCli.create(
+          _, host_ports = Orn::Sandbox.provision(
             @output_mode,
-            create_params(
-              project,
-              sbx_config,
-              agent_type,
-              name,
-              wt_path
-            )
-          )
-          run_setup(sbx_config, name)
-          host_ports = publish_ports(
             project,
+            branch,
             sbx_config,
-            name
+            agent_type
           )
 
           Result.new(
@@ -88,41 +78,6 @@ module Orn
         end
 
         private
-
-        def create_params(project, sbx_config, agent_type, name, wt_path)
-          Orn::Sandbox::CreateParams.new(
-            name: name,
-            template: sbx_config.template,
-            kits: sbx_config.all_kits,
-            cpus: sbx_config.cpus,
-            memory: sbx_config.memory,
-            agent_type: agent_type,
-            worktree_path: wt_path,
-            bare_path: File.join(project.root, ".bare")
-          )
-        end
-
-        def run_setup(sbx_config, name)
-          return if sbx_config.setup.empty?
-
-          Orn::Sandbox.run_setup(
-            @output_mode,
-            name,
-            sbx_config.setup,
-            sbx_config.env
-          )
-        end
-
-        def publish_ports(project, sbx_config, name)
-          return [] if sbx_config.ports.empty?
-
-          Orn::Sandbox::Ports.setup_ports(
-            @output_mode,
-            name,
-            sbx_config.ports,
-            File.join(project.root, ".orn")
-          )
-        end
 
         def emit(result)
           return Commands::Output.print_json(result.to_json_hash) if @output_mode.json

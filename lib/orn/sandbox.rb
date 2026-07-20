@@ -112,6 +112,73 @@ module Orn
 
     # --- Lifecycle ---
 
+    # The shared provisioning sequence behind `orn switch --sbx` and
+    # `orn sbx new`: create the sandbox, run the configured setup, publish
+    # the configured ports. `on_created` fires right after the create
+    # succeeds (switch records it for rollback); the block runs between
+    # setup and ports (switch opens its tmux window there). Returns
+    # [name, host_ports].
+    def self.provision(output_mode, project, branch, sbx_config, agent_type, on_created: nil)
+      name = project.sandbox_name(branch)
+      output_mode.status("Creating sandbox '#{name}'...")
+      SbxCli.create(
+        output_mode,
+        provision_params(
+          project,
+          branch,
+          sbx_config,
+          agent_type,
+          name
+        )
+      )
+      on_created&.call(name)
+
+      unless sbx_config.setup.empty?
+        run_setup(
+          output_mode,
+          name,
+          sbx_config.setup,
+          sbx_config.env
+        )
+      end
+      yield name if block_given?
+      [
+        name,
+        publish_provision_ports(
+          output_mode,
+          project,
+          sbx_config,
+          name
+        )
+      ]
+    end
+
+    def self.provision_params(project, branch, sbx_config, agent_type, name)
+      CreateParams.new(
+        name: name,
+        template: sbx_config.template,
+        kits: sbx_config.all_kits,
+        cpus: sbx_config.cpus,
+        memory: sbx_config.memory,
+        agent_type: agent_type,
+        worktree_path: project.worktree_path(branch),
+        bare_path: File.join(project.root, ".bare")
+      )
+    end
+    private_class_method :provision_params
+
+    def self.publish_provision_ports(output_mode, project, sbx_config, name)
+      return [] if sbx_config.ports.empty?
+
+      Ports.setup_ports(
+        output_mode,
+        name,
+        sbx_config.ports,
+        File.join(project.root, ".orn")
+      )
+    end
+    private_class_method :publish_provision_ports
+
     # Runs the configured setup commands in order with progress output,
     # stopping at the first failure.
     def self.run_setup(output_mode, name, commands, env)

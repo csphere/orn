@@ -75,39 +75,32 @@ module Orn
         raise e
       end
 
-      # Creates the sandbox, runs setup, opens the sbx-layout window, publishes
-      # ports, and starts services, recording progress in `state` so a failure
-      # rolls back exactly what was created.
+      # Runs the shared provisioning sequence (create, setup, ports), opening
+      # the sbx-layout window between setup and ports and starting services
+      # after, recording progress in `state` so a failure rolls back exactly
+      # what was created.
       def provision(context, state)
-        state[:name] = name = context.project.sandbox_name(context.branch)
-        context.output_mode.status("Creating sandbox '#{name}'...")
-        Orn::Sandbox::SbxCli.create(context.output_mode, sandbox_params(context, name))
-        state[:sandbox_created] = true
-
-        run_setup(context, name)
-        open_window(
-          context,
-          name,
-          state
-        )
-        host_ports = publish_ports(context, name)
+        state[:name] = context.project.sandbox_name(context.branch)
+        name, host_ports = Orn::Sandbox.provision(
+          context.output_mode,
+          context.project,
+          context.branch,
+          context.sbx_config,
+          context.agent_type,
+          on_created: ->(_created) { state[:sandbox_created] = true }
+        ) do |created|
+          open_window(
+            context,
+            created,
+            state
+          )
+        end
         start_services(
           context.output_mode,
           context.sbx_config,
           name
         )
         host_ports
-      end
-
-      def run_setup(context, name)
-        return if context.sbx_config.setup.empty?
-
-        Orn::Sandbox.run_setup(
-          context.output_mode,
-          name,
-          context.sbx_config.setup,
-          context.sbx_config.env
-        )
       end
 
       def open_window(context, name, state)
@@ -120,17 +113,6 @@ module Orn
           template_vars: { "sandbox" => name }
         )
         state[:session] = result.session
-      end
-
-      def publish_ports(context, name)
-        return [] if context.sbx_config.ports.empty?
-
-        Orn::Sandbox::Ports.setup_ports(
-          context.output_mode,
-          name,
-          context.sbx_config.ports,
-          File.join(context.project.root, ".orn")
-        )
       end
 
       def start_services(output_mode, sbx_config, name)
@@ -178,20 +160,6 @@ module Orn
           worktree_path: nil,
           sandbox_name: sbx_name,
           host_ports: host_ports
-        )
-      end
-
-      def sandbox_params(context, name)
-        sbx_config = context.sbx_config
-        Orn::Sandbox::CreateParams.new(
-          name: name,
-          template: sbx_config.template,
-          kits: sbx_config.all_kits,
-          cpus: sbx_config.cpus,
-          memory: sbx_config.memory,
-          agent_type: context.agent_type,
-          worktree_path: context.project.worktree_path(context.branch),
-          bare_path: File.join(context.project.root, ".bare")
         )
       end
 
