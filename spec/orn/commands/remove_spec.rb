@@ -113,6 +113,34 @@ RSpec.describe Orn::Commands::Remove do
         end
       end
     end
+
+    it "raises before touching the sandbox or window when run from inside the worktree" do
+      project = sandbox_project
+      wt_path = File.join(project.root, "feat")
+      FileUtils.mkdir_p(wt_path)
+      command = described_class.new(
+        output_mode: Orn::OutputMode.quiet,
+        client: client
+      )
+      client.windows = { "proj" => ["feat"] }
+
+      with_fake_cmd do |fake|
+        Dir.chdir(wt_path) do
+          expect do
+            command.run_inner(
+              project,
+              "feat",
+              false
+            )
+          end.to raise_error(Orn::Error, /while inside it/)
+        end
+
+        aggregate_failures do
+          expect(fake.invocations).to be_empty
+          expect(client.calls).not_to include([:kill_window, "proj", "feat"])
+        end
+      end
+    end
   end
 
   describe "#run" do

@@ -38,15 +38,25 @@ module Orn
 
       # Removes one branch's sandbox (with its ports file) and tmux window,
       # then delegates worktree and branch removal to Wt::Remove. Called once
-      # per branch by the CLI batch path.
+      # per branch by the CLI batch path. Guards run first: killing the
+      # window before them could take down the very window orn runs in, or
+      # leave a half-removed branch when the worktree removal is refused.
       def run_inner(project, branch, prune)
+        wt_remove = Wt::Remove.new(output_mode: @output_mode)
+        wt_remove.check_removable!(
+          project,
+          branch,
+          prune
+        )
+
         session = Orn::Session.session_name(project)
         sandbox_removed = teardown_sandbox(project, branch)
         window_closed = close_window(session, branch)
-        wt_result = Wt::Remove.new(output_mode: @output_mode)
-          .run_inner(project,
-            branch,
-            prune)
+        wt_result = wt_remove.run_inner(
+          project,
+          branch,
+          prune
+        )
         Result.new(
           sandbox_removed: sandbox_removed,
           window_closed: window_closed,

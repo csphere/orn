@@ -73,13 +73,24 @@ module Orn
         # branches. Refuses to prune the base branch or to run from inside
         # the worktree being removed; a missing worktree is not an error, so
         # prune-only invocations work.
-        def run_inner(project, branch, prune)
+        # All preconditions for removing this branch, raised before anything
+        # is destroyed. The top-level `orn remove` runs this first so the
+        # sandbox and tmux window survive when removal would be refused.
+        def check_removable!(project, branch, prune)
           reject_base_prune!(
             project,
             branch,
             prune
           )
           reject_inside_worktree!(project, branch)
+        end
+
+        def run_inner(project, branch, prune)
+          check_removable!(
+            project,
+            branch,
+            prune
+          )
 
           worktree = Orn::Git::Worktree.new(
             root: project.root,
