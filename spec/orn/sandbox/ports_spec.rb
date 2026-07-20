@@ -306,6 +306,77 @@ RSpec.describe Orn::Sandbox::Ports do
       end
     end
 
+    def pick_free_port_pair
+      candidate = pick_free_port
+      loop do
+        return candidate if port_bindable?(candidate) && port_bindable?(candidate + 1)
+
+        candidate = pick_free_port
+      end
+    end
+
+    def port_bindable?(port)
+      TCPServer.new("127.0.0.1", port).close
+      true
+    rescue SystemCallError
+      false
+    end
+
+    # Like listen_after_publish, but only for the publish carrying
+    # `mapping_arg`, so a scripted failed publish opens no listener.
+    def listen_after_matching_publish(fake_backend, mapping_arg, host_port, listeners)
+      wrapper = Object.new
+      wrapper.define_singleton_method(:capture) do |command, **options|
+        result = fake_backend.capture(command, **options)
+        listeners << TCPServer.new("127.0.0.1", host_port) if command.include?(mapping_arg)
+        result
+      end
+      Orn::Cmd.backend = wrapper
+    end
+
+    it "tries the next free port when the publish loses the race" do
+      first_port = pick_free_port_pair
+      second_port = first_port + 1
+      listeners = []
+      with_fake_cmd do |fake|
+        fake.script(
+          ["sbx", "ports", "my-sbx", "--publish", "#{first_port}:3000"],
+          stderr: "port is already allocated",
+          status: 1
+        )
+        fake.script(["sbx", "ports", "my-sbx", "--publish", "#{second_port}:3000"])
+        listen_after_matching_publish(
+          fake,
+          "#{second_port}:3000",
+          second_port,
+          listeners
+        )
+
+        mappings = described_class.setup_ports(
+          quiet_mode,
+          "my-sbx",
+          [
+            port_entry(
+              container: 3000,
+              host_range: [first_port, second_port]
+            )
+          ],
+          orn_dir
+        )
+
+        expect(mappings).to eq(
+          [
+            Orn::Sandbox::PortMapping.new(
+              host: second_port,
+              container: 3000
+            )
+          ]
+        )
+      end
+    ensure
+      listeners.each(&:close)
+    end
+
     # The reserved port depends on what is free, so every port in the range is
     # scripted to fail.
     def script_publish_failures(fake)

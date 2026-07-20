@@ -26,13 +26,10 @@ module Orn
         ports.each do |entry|
           next if entry.container.nil? || entry.host_range.nil?
 
-          host = reserve_port(entry.host_range)
-          output_mode.status("Publishing port #{host}:#{entry.container}...")
-          SbxCli.publish_port(
+          host = publish_entry(
             output_mode,
             name,
-            host,
-            entry.container
+            entry
           )
           verify_port(
             host,
@@ -77,6 +74,32 @@ module Orn
           )
         end
         mappings
+      end
+
+      # Reserves and publishes a host port for the entry. The reservation is
+      # a probe, not a hold, so another process can grab the port between
+      # probe and publish; when the publish fails and ports remain in the
+      # range, the next free one is tried instead of giving up.
+      def self.publish_entry(output_mode, name, entry)
+        from, finish = entry.host_range
+        loop do
+          host = reserve_port([from, finish])
+          output_mode.status("Publishing port #{host}:#{entry.container}...")
+          begin
+            SbxCli.publish_port(
+              output_mode,
+              name,
+              host,
+              entry.container
+            )
+            return host
+          rescue Orn::Error
+            raise if host >= finish
+
+            output_mode.status("  Publish failed on port #{host}, trying the next free port")
+            from = host + 1
+          end
+        end
       end
 
       # The first bindable host port in `[start, end]`. The port is probed,
@@ -187,6 +210,7 @@ module Orn
       end
 
       private_class_method :read_persisted_ports,
+        :publish_entry,
         :probe_bind,
         :port_open?,
         :monotonic
