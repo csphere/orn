@@ -38,12 +38,9 @@ module Orn
       )
     end
 
-    # Whether `session_path` is the project root or a path inside it. Compares
-    # whole path components, so a sibling like "orn-other" does not match "orn".
+    # Whether `session_path` is the project root or a path inside it.
     def self.session_belongs_to_project?(session_path, project_root)
-      session_parts = path_components(session_path)
-      project_parts = path_components(project_root)
-      session_parts[0, project_parts.length] == project_parts
+      Orn::Fs.within?(session_path, project_root)
     end
 
     # Suggests a replacement session name, "<parent>-<dir>", to disambiguate
@@ -90,10 +87,6 @@ module Orn
       name.gsub(/[^a-zA-Z0-9_-]/, "-")
     end
 
-    def self.path_components(path)
-      Pathname.new(path).each_filename.to_a
-    end
-
     def self.safe_realpath(path)
       File.realpath(path)
     rescue SystemCallError
@@ -103,7 +96,6 @@ module Orn
     private_class_method :resolve_collision,
       :directory_name,
       :sanitize_name,
-      :path_components,
       :safe_realpath
   end
 end

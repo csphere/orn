@@ -80,13 +80,10 @@ module Orn
     # Abbreviates paths under $HOME to ~/... for display.
     def self.display_path(path)
       home = Orn::Fs.home_dir
-      return path if home.nil?
+      return path if home.nil? || !Orn::Fs.within?(path, home)
 
-      path_parts = Pathname.new(path).each_filename.to_a
-      home_parts = Pathname.new(home).each_filename.to_a
-      return path unless path_parts[0, home_parts.length] == home_parts
-
-      File.join("~", *path_parts[home_parts.length..])
+      home_length = Pathname.new(home).each_filename.to_a.length
+      File.join("~", *Pathname.new(path).each_filename.to_a[home_length..])
     end
 
     private_class_method :display_path
