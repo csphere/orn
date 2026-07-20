@@ -25,9 +25,9 @@ module Orn
       # then the remaining worktree windows alphabetically.
       def desired_order(windows, base_branch)
         desired = []
-        desired << TUI::TUI_WINDOW if windows.include?(TUI::TUI_WINDOW)
+        desired << TUI_WINDOW if windows.include?(TUI_WINDOW)
         desired << base_branch if windows.include?(base_branch)
-        rest = windows.reject { |name| name == TUI::TUI_WINDOW || name == base_branch }.sort
+        rest = windows.reject { |name| name == TUI_WINDOW || name == base_branch }.sort
         desired.concat(rest)
       end
 

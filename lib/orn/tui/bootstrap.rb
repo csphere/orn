@@ -9,6 +9,10 @@ module Orn
     # runs directly in the terminal. Entirely interactive: validated by running
     # a real terminal, not by unit tests.
     module Bootstrap
+      # Process name a live TUI pane runs; distinguishes a real orn TUI
+      # window from a stale window that happens to share the name.
+      TUI_PANE_COMMAND = "orn"
+
       module_function
 
       # Bare `orn` entry point. Routes to the global TUI when `global` is set or
@@ -120,16 +124,16 @@ module Orn
       # Select the live `orn` window if one is already running; otherwise kill a
       # stale one. Returns true when an existing live window was selected.
       def reuse_existing_window(client, session, reorder_base)
-        return false unless client.window_exists?(session, TUI_WINDOW)
+        return false unless client.window_exists?(session, Tmux::TUI_WINDOW)
 
-        if client.pane_command(session, TUI_WINDOW) == "orn"
+        if client.pane_command(session, Tmux::TUI_WINDOW) == TUI_PANE_COMMAND
           client.reorder_windows(session, reorder_base)
-          client.select_window(session, TUI_WINDOW)
+          client.select_window(session, Tmux::TUI_WINDOW)
           return true
         end
 
         begin
-          client.kill_window(session, TUI_WINDOW)
+          client.kill_window(session, Tmux::TUI_WINDOW)
         rescue Orn::Error
           nil
         end
@@ -146,12 +150,12 @@ module Orn
         )
         client.new_window_running(
           session,
-          TUI_WINDOW,
+          Tmux::TUI_WINDOW,
           cwd,
           tui_cmd
         )
         client.reorder_windows(session, reorder_base)
-        client.select_window(session, TUI_WINDOW)
+        client.select_window(session, Tmux::TUI_WINDOW)
       end
 
       # From outside tmux: create a new session running the TUI and attach to it
@@ -165,7 +169,7 @@ module Orn
           "-s",
           session,
           "-n",
-          TUI_WINDOW,
+          Tmux::TUI_WINDOW,
           "-c",
           cwd.to_s,
           tui_cmd

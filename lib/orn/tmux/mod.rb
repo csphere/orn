@@ -5,6 +5,10 @@ module Orn
   # Orn::Tmux::Client; this module holds the pure helpers, constants, and Data
   # types shared with it.
   module Tmux
+    # Name of the tmux window hosting a TUI. Lives at the tmux layer because
+    # both the TUI bootstrap and the window-reorder verb need it.
+    TUI_WINDOW = "orn"
+
     # A tmux target string for `window` inside `session` (`session:window`).
     def self.window_target(session, window)
       "#{session}:#{window}"

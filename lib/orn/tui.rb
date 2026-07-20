@@ -21,9 +21,6 @@ module Orn
     FAST_POLL_TIMEOUT = 0.05
     # Cadence of the project TUI's full worktree refresh, in seconds.
     REFRESH_INTERVAL = 3
-    # Name of the tmux window hosting a TUI.
-    TUI_WINDOW = "orn"
-
     # Render the app's error line in red; shared by both TUIs' renderers.
     def self.render_error(frame, app, chunk)
       frame.render_widget(Paragraph.line(Line.styled(" #{app.error}", Style.default.fg(Color::RED))), chunk)

@@ -351,16 +351,16 @@ module Orn
           root,
           base
         )
-        unless client.window_exists?(session_name, TUI_WINDOW)
+        unless client.window_exists?(session_name, Tmux::TUI_WINDOW)
           client.new_window_running(
             session_name,
-            TUI_WINDOW,
+            Tmux::TUI_WINDOW,
             root,
             Orn::TUI.relaunch_command
           )
         end
         client.reorder_windows(session_name, base)
-        client.switch_client(session_name, TUI_WINDOW)
+        client.switch_client(session_name, Tmux::TUI_WINDOW)
       end
 
       private
