@@ -54,7 +54,7 @@ module Orn
       parent_name = File.basename(parent)
       return dir_name if parent == root || parent_name.empty? || parent_name == File::SEPARATOR
 
-      "#{parent_name}-#{dir_name}"
+      "#{sanitize_name(parent_name)}-#{dir_name}"
     end
 
     def self.resolve_collision(project, session, existing_path)
@@ -77,7 +77,17 @@ module Orn
 
     def self.directory_name(root)
       name = File.basename(root)
-      name.empty? || name == File::SEPARATOR ? "default" : name
+      return "default" if name.empty? || name == File::SEPARATOR
+
+      sanitize_name(name)
+    end
+
+    # tmux forbids '.' and ':' in session names (they are target-syntax
+    # separators), so a repo like next.js would produce a session every
+    # tmux target misses. Directory-derived names map anything outside
+    # [a-zA-Z0-9_-] to '-'; configured names are validated instead.
+    def self.sanitize_name(name)
+      name.gsub(/[^a-zA-Z0-9_-]/, "-")
     end
 
     def self.path_components(path)
@@ -92,6 +102,7 @@ module Orn
 
     private_class_method :resolve_collision,
       :directory_name,
+      :sanitize_name,
       :path_components,
       :safe_realpath
   end

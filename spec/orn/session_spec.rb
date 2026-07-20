@@ -33,6 +33,10 @@ RSpec.describe Orn::Session do
       expect(described_class.session_name(project_at("/"))).to eq("default")
     end
 
+    it "sanitizes characters tmux rejects in the derived name" do
+      expect(described_class.session_name(project_at("/home/user/dev/next.js"))).to eq("next-js")
+    end
+
     it "prefers the configured session" do
       project = make_project(make_bare_project, "tmux:\n  session: custom-name\n")
 
@@ -71,6 +75,10 @@ RSpec.describe Orn::Session do
 
     it "uses the directory name alone when there is no parent" do
       expect(described_class.suggest_name("/api")).to eq("api")
+    end
+
+    it "sanitizes both halves of the suggestion" do
+      expect(described_class.suggest_name("/home/user/some.dir/socket.io")).to eq("some-dir-socket-io")
     end
   end
 
