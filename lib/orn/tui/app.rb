@@ -229,7 +229,7 @@ module Orn
         @mode = Mode.normal
 
         @hub.return_borrowed_for_branch(@session, branch)
-        return if window_kill_failed?(branch)
+        return unless kill_window_before_remove(branch)
 
         remove_worktree(branch)
       end
@@ -372,16 +372,16 @@ module Orn
         @error = e.message
       end
 
-      # Kill the branch's window if it exists; true when that kill failed and
-      # the caller should stop (the error is already recorded).
-      def window_kill_failed?(branch)
-        return false unless @client.window_exists?(@session, branch)
+      # Kill the branch's window if it exists. Returns whether the removal
+      # can continue; a failed kill records the error and returns false.
+      def kill_window_before_remove(branch)
+        return true unless @client.window_exists?(@session, branch)
 
         @client.kill_window(@session, branch)
-        false
+        true
       rescue Orn::Error => e
         @error = e.message
-        true
+        false
       end
 
       def remove_worktree(branch)
