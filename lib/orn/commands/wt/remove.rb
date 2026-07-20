@@ -100,7 +100,7 @@ module Orn
           branch_deleted = prune ? worktree.delete_branch(branch) : false
           remote_branch_deleted = prune ? worktree.delete_remote_branch(branch) : false
 
-          Orn::Fs.prune_empty_dirs(project.root)
+          Orn::Fs.prune_branch_dirs(project.root, branch)
 
           Result.new(
             branch: branch,

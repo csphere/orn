@@ -14,17 +14,16 @@ module Orn
       path_parts[0, ancestor_parts.length] == ancestor_parts
     end
 
-    # Removes direct children of `root` whose subtrees contain no files,
-    # skipping dot-directories (.bare, .orn, ...). Cleans up branch-prefix
-    # directories (e.g. feature/) left behind after worktree removal.
-    def self.prune_empty_dirs(root)
-      Dir.children(root).each do |name|
-        next if name.start_with?(".")
-
-        path = File.join(root, name)
-        next unless File.directory?(path)
-
-        remove_empty_dir(path) if prune_subtree(path)
+    # Removes the branch's now-empty prefix directories (feature/ for
+    # feature/x) left behind after worktree removal, deepest first. rmdir
+    # only ever deletes empty directories, so prefixes shared with other
+    # worktrees survive, and nothing outside the branch's own path is
+    # visited: no recursion, no symlink following.
+    def self.prune_branch_dirs(root, branch)
+      prefixes = branch.split("/")[0...-1]
+      until prefixes.empty?
+        remove_empty_dir(File.join(root, *prefixes))
+        prefixes.pop
       end
       nil
     end
@@ -47,29 +46,6 @@ module Orn
 
       File.join(home, home_fallback)
     end
-
-    # Recursively removes empty subdirectories of `dir`; returns whether
-    # `dir` itself is empty afterwards (so the caller may remove it).
-    def self.prune_subtree(dir)
-      return false unless File.directory?(dir)
-
-      empty = true
-      Dir.children(dir).each do |name|
-        path = File.join(dir, name)
-        unless File.directory?(path)
-          empty = false
-          next
-        end
-
-        if prune_subtree(path)
-          remove_empty_dir(path)
-        else
-          empty = false
-        end
-      end
-      empty
-    end
-    private_class_method :prune_subtree
 
     def self.remove_empty_dir(path)
       Dir.rmdir(path)

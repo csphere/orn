@@ -1,47 +1,53 @@
 # frozen_string_literal: true
 
 RSpec.describe Orn::Fs do
-  describe ".prune_empty_dirs" do
-    it "removes empty branch directories" do
+  describe ".prune_branch_dirs" do
+    it "removes the branch's empty prefix directories, deepest first" do
       project = make_bare_project
-      FileUtils.mkdir_p(File.join(project, "feature/old"))
+      FileUtils.mkdir_p(File.join(project, "feature/deep"))
 
-      described_class.prune_empty_dirs(project)
+      described_class.prune_branch_dirs(project, "feature/deep/old")
 
-      expect(File.exist?(File.join(project, "feature/old"))).to be(false)
+      expect(File.exist?(File.join(project, "feature/deep"))).to be(false)
       expect(File.exist?(File.join(project, "feature"))).to be(false)
     end
 
-    it "keeps dot-directories" do
+    it "does nothing for a branch without prefix directories" do
       project = make_bare_project
-      FileUtils.mkdir_p(File.join(project, "feature/old"))
 
-      described_class.prune_empty_dirs(project)
-
-      expect(File.directory?(File.join(project, ".bare"))).to be(true)
-      expect(File.directory?(File.join(project, ".orn"))).to be(true)
+      expect { described_class.prune_branch_dirs(project, "main") }.not_to raise_error
     end
 
-    it "preserves directories that contain files" do
+    it "keeps prefixes still holding another worktree" do
       project = make_bare_project
-      FileUtils.mkdir_p(File.join(project, "feature/ABC-1234"))
-      File.write(File.join(project, "feature/ABC-1234/.git"), "gitdir: ...")
+      FileUtils.mkdir_p(File.join(project, "feature/keep"))
 
-      described_class.prune_empty_dirs(project)
+      described_class.prune_branch_dirs(project, "feature/old")
 
-      expect(File.exist?(File.join(project, "feature/ABC-1234"))).to be(true)
+      expect(File.directory?(File.join(project, "feature/keep"))).to be(true)
     end
 
-    it "leaves directories in place when removal fails" do
+    it "does not follow a symlinked prefix" do
       project = make_bare_project
-      File.write(File.join(project, "README.md"), "top-level file, not a directory")
+      target = File.join(project, "main")
+      FileUtils.mkdir_p(File.join(target, "shared"))
+      File.symlink(target, File.join(project, "feature"))
+
+      expect { described_class.prune_branch_dirs(project, "feature/old") }.not_to raise_error
+
+      expect(File.directory?(File.join(target, "shared"))).to be(true)
+      expect(File.symlink?(File.join(project, "feature"))).to be(true)
+    end
+
+    it "swallows removal failures" do
+      project = make_bare_project
       branch_dir = File.join(project, "feature")
       FileUtils.mkdir_p(File.join(branch_dir, "old"))
-      # Read-only parent: rmdir of the empty child fails, then the parent
-      # itself fails as non-empty; both failures must be swallowed.
+      # Read-only parent: rmdir of the empty child fails; the failure must
+      # be swallowed.
       FileUtils.chmod(0o555, branch_dir)
 
-      expect { described_class.prune_empty_dirs(project) }.not_to raise_error
+      expect { described_class.prune_branch_dirs(project, "feature/old/x") }.not_to raise_error
 
       expect(File.directory?(File.join(branch_dir, "old"))).to be(true)
     ensure
