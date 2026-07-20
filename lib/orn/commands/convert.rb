@@ -14,7 +14,6 @@ module Orn
 
       def initialize(output_mode:)
         @output_mode = output_mode
-        @cmd = Orn::Cmd.new(output_mode: output_mode)
       end
 
       def run(base)
@@ -32,15 +31,16 @@ module Orn
       # Runs every conversion precondition, failing fast on the first violation,
       # and returns the values it discovered.
       def check_guards(dir, base)
+        repo = repo_for(dir)
         check_is_git_repo!(dir)
         check_not_bare_worktree!(dir)
         check_no_submodules!(dir)
-        check_no_extra_worktrees!(dir)
-        check_clean_working_tree!(dir)
-        origin_url = check_origin_remote!(dir)
-        current_branch = check_head_not_detached!(dir, base)
-        check_no_unpushed_commits!(dir)
-        check_no_local_only_branches!(dir)
+        check_no_extra_worktrees!(repo)
+        check_clean_working_tree!(repo)
+        origin_url = check_origin_remote!(repo)
+        current_branch = check_head_not_detached!(repo, base)
+        check_no_unpushed_commits!(repo)
+        check_no_local_only_branches!(repo)
         Guards.new(
           origin_url: origin_url,
           current_branch: current_branch
@@ -55,8 +55,9 @@ module Orn
           return base
         end
 
-        head_branch = current_branch || read_current_branch(dir)
-        remote_default = read_remote_default_branch(dir)
+        repo = repo_for(dir)
+        head_branch = current_branch || read_current_branch(repo)
+        remote_default = read_remote_default_branch(repo)
         return head_branch if remote_default.nil? || remote_default == head_branch
 
         raise Orn::Error,
@@ -65,6 +66,13 @@ module Orn
       end
 
       private
+
+      def repo_for(dir)
+        Orn::Git::Repo.new(
+          dir: dir,
+          output_mode: @output_mode
+        )
+      end
 
       def check_is_git_repo!(dir)
         return if File.exist?(File.join(dir, ".git"))
@@ -84,8 +92,8 @@ module Orn
         raise Orn::Error, "orn does not yet support repos with submodules"
       end
 
-      def check_no_extra_worktrees!(dir)
-        porcelain = git_run(dir, "worktree", "list", "--porcelain").stdout
+      def check_no_extra_worktrees!(repo)
+        porcelain = repo.run("worktree", "list", "--porcelain").stdout
         return unless porcelain.lines.count { |line| line.start_with?("worktree ") } > 1
 
         raise Orn::Error, "Repository has multiple worktrees; remove extra worktrees before converting"
@@ -93,35 +101,33 @@ module Orn
 
       # Rejects staged or unstaged changes to tracked files; untracked files are
       # allowed (the backup preserves them).
-      def check_clean_working_tree!(dir)
-        tracked_changes = git_run(dir, "status", "--porcelain").stdout.lines.any? { |line| !line.start_with?("?") }
+      def check_clean_working_tree!(repo)
+        tracked_changes = repo.run("status", "--porcelain").stdout.lines.any? { |line| !line.start_with?("?") }
         return unless tracked_changes
 
         raise Orn::Error, "Working tree has uncommitted changes; commit or stash them before converting"
       end
 
-      def check_origin_remote!(dir)
-        result = git_output(
-          dir,
+      def check_origin_remote!(repo)
+        origin_url = repo.read(
           "config",
           "--get",
           "remote.origin.url"
         )
-        return result.stdout.strip if result.success?
+        return origin_url.strip if origin_url
 
         raise Orn::Error, "No 'origin' remote configured; add one with: git remote add origin <url>"
       end
 
       # Returns the current branch name, nil when HEAD is detached but `base` was
       # given, and raises when detached without `base`.
-      def check_head_not_detached!(dir, base)
-        result = git_output(
-          dir,
+      def check_head_not_detached!(repo, base)
+        head_branch = repo.read(
           "symbolic-ref",
           "--short",
           "HEAD"
         )
-        return result.stdout.strip if result.success?
+        return head_branch.strip if head_branch
         return nil unless base.nil?
 
         raise Orn::Error, "HEAD is detached; use --base to specify the base branch"
@@ -129,20 +135,19 @@ module Orn
 
       # Fails when HEAD is ahead of its upstream. Passes silently when HEAD has
       # no upstream (that case is caught by check_no_local_only_branches!).
-      def check_no_unpushed_commits!(dir)
-        result = git_output(
-          dir,
+      def check_no_unpushed_commits!(repo)
+        unpushed = repo.read(
           "log",
           "@{upstream}..HEAD",
           "--oneline"
         )
-        return unless result.success? && !result.stdout.strip.empty?
+        return if unpushed.to_s.strip.empty?
 
         raise Orn::Error, "Branch has unpushed commits; push them before converting"
       end
 
-      def check_no_local_only_branches!(dir)
-        result = git_run(dir, "for-each-ref", "--format=%(refname:short) %(upstream)", "refs/heads/")
+      def check_no_local_only_branches!(repo)
+        result = repo.run("for-each-ref", "--format=%(refname:short) %(upstream)", "refs/heads/")
         local_only = result.stdout.lines.filter_map do |line|
           parts = line.split
           parts.first if parts.length == 1
@@ -152,23 +157,22 @@ module Orn
         raise Orn::Error, "Local-only branches with no upstream: #{local_only.join(", ")}"
       end
 
-      def read_current_branch(dir)
-        git_run(dir, "symbolic-ref", "--short", "HEAD").stdout.strip
+      def read_current_branch(repo)
+        repo.run("symbolic-ref", "--short", "HEAD").stdout.strip
       end
 
       # The remote default branch from refs/remotes/origin/HEAD, or nil when the
       # symref is not set locally.
-      def read_remote_default_branch(dir)
-        result = git_output(
-          dir,
+      def read_remote_default_branch(repo)
+        full_ref = repo.read(
           "symbolic-ref",
           "refs/remotes/origin/HEAD"
         )
-        return nil unless result.success?
+        return nil if full_ref.nil?
 
         prefix = "refs/remotes/origin/"
-        full_ref = result.stdout.strip
-        full_ref.start_with?(prefix) ? full_ref.delete_prefix(prefix) : nil
+        stripped_ref = full_ref.strip
+        stripped_ref.start_with?(prefix) ? stripped_ref.delete_prefix(prefix) : nil
       end
 
       # Moves the repo to a sibling <dir>.pre-orn backup, re-clones from origin
@@ -240,19 +244,6 @@ module Orn
         @output_mode.status("\nBackup: ../#{dir_name}.pre-orn/")
         @output_mode.status("  Check backup for gitignored files (.env, credentials, IDE configs)")
         @output_mode.status("  to copy into the new worktree. Delete backup when satisfied.")
-      end
-
-      def git_run(dir, *args)
-        @cmd.run(
-          "git",
-          "-C",
-          dir,
-          *args
-        )
-      end
-
-      def git_output(dir, *args)
-        @cmd.output("git", "-C", dir, *args)
       end
     end
   end

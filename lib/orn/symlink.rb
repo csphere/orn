@@ -57,14 +57,15 @@ module Orn
 
     # Whether `path` is ignored by git in wt_path.
     def self.gitignored?(output_mode, wt_path, path)
-      result = git_output(
-        output_mode,
-        wt_path,
+      repo = Orn::Git::Repo.new(
+        dir: wt_path,
+        output_mode: output_mode
+      )
+      repo.ok?(
         "check-ignore",
         "-q",
         path
       )
-      result ? result.success? : false
     end
 
     # Destination names for symlinks that would actually be created: the source
@@ -102,13 +103,15 @@ module Orn
       paths.each { |path| content += "#{path}\n" }
       File.write(gitignore_path, content)
 
-      result = git_output(
-        output_mode,
-        wt_path,
-        "add",
-        ".gitignore"
+      repo = Orn::Git::Repo.new(
+        dir: wt_path,
+        output_mode: output_mode
       )
-      raise Orn::Error, "Failed to run git add .gitignore" if result.nil?
+      begin
+        result = repo.output("add", ".gitignore")
+      rescue Orn::Error
+        raise Orn::Error, "Failed to run git add .gitignore"
+      end
       raise Orn::Error, "Failed to stage .gitignore: #{result.stderr.strip}" unless result.success?
 
       nil
@@ -236,19 +239,12 @@ module Orn
       raise Orn::Error, "cannot compute relative path from #{from_dir} to #{src}"
     end
 
-    def self.git_output(output_mode, wt_path, *args)
-      Orn::Cmd.new(output_mode: output_mode).output("git", "-C", wt_path, *args)
-    rescue Orn::Error
-      nil
-    end
-
     private_class_method :create_one,
       :resolve_symlink_entries,
       :base_entries,
       :root_entries,
       :create_relative_symlink,
       :same_file?,
-      :relative_path,
-      :git_output
+      :relative_path
   end
 end

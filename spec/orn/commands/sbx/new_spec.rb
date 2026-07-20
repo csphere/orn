@@ -122,8 +122,8 @@ RSpec.describe Orn::Commands::Sbx::New do
       "config"
     )
     [
-      ["git", "config", "--file", config_path, "user.name"],
-      ["git", "config", "--file", config_path, "user.email"]
+      ["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.name"],
+      ["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.email"]
     ]
   end
 

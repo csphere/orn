@@ -68,13 +68,13 @@ module Orn
       end
 
       def build_project(project_dir, project_name, base)
-        cmd = Orn::Cmd.new(output_mode: @output_mode)
+        git = Orn::Git::Repo.new(
+          dir: project_dir,
+          output_mode: @output_mode
+        )
 
         @output_mode.status("  Initializing bare repository")
-        cmd.exec(
-          "git",
-          "-C",
-          project_dir,
+        git.exec(
           "init",
           "--bare",
           ".bare"
@@ -84,21 +84,14 @@ module Orn
         Setup.write_git_pointer(project_dir)
 
         @output_mode.status("  Setting default branch")
-        cmd.exec(
-          "git",
-          "-C",
-          project_dir,
+        git.exec(
           "symbolic-ref",
           "HEAD",
           "refs/heads/#{base}"
         )
 
         @output_mode.status("  Creating initial commit")
-        create_empty_commit(
-          cmd,
-          project_dir,
-          base
-        )
+        create_empty_commit(git, base)
 
         Setup.scaffold_project(
           @output_mode,
@@ -112,29 +105,18 @@ module Orn
       # (mktree, commit-tree, update-ref), which works in a bare repo where
       # `git commit` has no index or working tree. mktree reads its (empty)
       # stdin, which Open3 closes for us.
-      def create_empty_commit(cmd, project_dir, base)
-        tree_hash = cmd.run(
-          "git",
-          "-C",
-          project_dir,
-          "mktree"
-        ).stdout.strip
-        commit = cmd.run(
-          "git",
-          "-C",
-          project_dir,
+      def create_empty_commit(git, base)
+        tree_hash = git.run("mktree").stdout.strip
+        commit_hash = git.run(
           "commit-tree",
           tree_hash,
           "-m",
           "Initial commit"
-        )
-        cmd.exec(
-          "git",
-          "-C",
-          project_dir,
+        ).stdout.strip
+        git.exec(
           "update-ref",
           "refs/heads/#{base}",
-          commit.stdout.strip
+          commit_hash
         )
       end
 

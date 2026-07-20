@@ -245,23 +245,20 @@ module Orn
         false
       end
 
-      # True when `key` is set in the given git config file. Runs from the
+      # True when `key` is set in the given git config file. Runs against the
       # temp dir so a git repo around the current directory cannot interfere.
       def self.git_config_set?(output_mode, config_path, key)
-        cmd = Orn::Cmd.new(
+        repo = Orn::Git::Repo.new(
+          dir: Dir.tmpdir,
           output_mode: output_mode,
-          env: GIT_CONFIG_ISOLATION_ENV,
-          chdir: Dir.tmpdir
+          env: GIT_CONFIG_ISOLATION_ENV
         )
-        cmd.output(
-          "git",
+        repo.ok?(
           "config",
           "--file",
           config_path.to_s,
           key
-        ).success?
-      rescue Orn::Error, SystemCallError
-        false
+        )
       end
 
       private_class_method :sbx_tool_checks,

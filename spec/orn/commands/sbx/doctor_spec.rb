@@ -55,8 +55,8 @@ RSpec.describe Orn::Commands::Sbx::Doctor do
       ".bare",
       "config"
     )
-    fake.script(["git", "config", "--file", config_path, "user.name"], stdout: "T\n")
-    fake.script(["git", "config", "--file", config_path, "user.email"], stdout: "t@t.com\n")
+    fake.script(["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.name"], stdout: "T\n")
+    fake.script(["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.email"], stdout: "t@t.com\n")
   end
 
   # On Linux the template-config doctor runs six checks: sbx, docker,

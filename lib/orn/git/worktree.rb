@@ -7,37 +7,35 @@ module Orn
     class Worktree
       def initialize(root:, output_mode:)
         @root = root
-        @cmd = Orn::Cmd.new(output_mode: output_mode)
+        @repo = Orn::Git::Repo.new(
+          dir: root,
+          output_mode: output_mode
+        )
       end
 
       # Advisory: false on any git failure (missing branch, git error). Not a
       # hard guarantee that the branch is absent.
       def local_branch_exists?(branch)
-        git_output(
+        @repo.ok?(
           "rev-parse",
           "--verify",
           "refs/heads/#{branch}"
-        ).success?
-      rescue Orn::Error
-        false
+        )
       end
 
       # Advisory, like local_branch_exists?, but consults the remote.
       def remote_branch_exists?(remote, branch)
-        result = git_output(
+        !@repo.read(
           "ls-remote",
           "--heads",
           remote,
           branch
-        )
-        result.success? && !result.stdout.strip.empty?
-      rescue Orn::Error
-        false
+        ).to_s.strip.empty?
       end
 
       # Fetches branch from remote so it can be used as a worktree start point.
       def fetch(remote, branch)
-        git_exec(
+        @repo.exec(
           "fetch",
           remote,
           branch
@@ -57,7 +55,7 @@ module Orn
           branch,
           start_point
         ).each_with_index do |args, index|
-          result = git_output(*args)
+          result = @repo.output(*args)
           if result.success?
             succeeded = true
             break
@@ -73,7 +71,7 @@ module Orn
       # Removes the worktree at path with --force, discarding uncommitted
       # changes. The branch itself is left intact.
       def remove(path)
-        git_exec(
+        @repo.exec(
           "worktree",
           "remove",
           "--force",
@@ -81,18 +79,20 @@ module Orn
         )
       end
 
-      # Force-deletes the local branch; returns whether git succeeded.
+      # Force-deletes the local branch; returns whether git succeeded. A
+      # failed spawn (missing git) raises, unlike local_branch_exists?.
       def delete_branch(branch)
-        git_output(
+        @repo.output(
           "branch",
           "-D",
           branch
         ).success?
       end
 
-      # Deletes branch on origin; returns whether git succeeded.
+      # Deletes branch on origin; returns whether git succeeded. Raises on a
+      # failed spawn, like delete_branch.
       def delete_remote_branch(branch)
-        git_output(
+        @repo.output(
           "push",
           "origin",
           "--delete",
@@ -104,7 +104,7 @@ module Orn
       # list --porcelain`. Skips bare/detached entries and the project root
       # itself; a failed git call yields an empty list.
       def entries
-        result = git_output(
+        result = @repo.output(
           "worktree",
           "list",
           "--porcelain"
@@ -126,19 +126,6 @@ module Orn
           ["worktree", "add", "-b", branch, path, local_start_point],
           ["worktree", "add", path, branch]
         ]
-      end
-
-      def git_output(*args)
-        @cmd.output("git", "-C", @root, *args)
-      end
-
-      def git_exec(*args)
-        @cmd.exec(
-          "git",
-          "-C",
-          @root,
-          *args
-        )
       end
 
       def add_failure_message(branch, errors)

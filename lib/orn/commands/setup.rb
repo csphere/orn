@@ -20,13 +20,13 @@ module Orn
       # orn project structure around it. Shared with convert, which prepares the
       # directory itself.
       def self.clone_into(output_mode, project_dir, project_name, url, base)
-        cmd = Orn::Cmd.new(output_mode: output_mode)
+        git = Orn::Git::Repo.new(
+          dir: project_dir,
+          output_mode: output_mode
+        )
 
         output_mode.status("  Cloning repository")
-        cmd.exec(
-          "git",
-          "-C",
-          project_dir,
+        git.exec(
           "clone",
           "--bare",
           url,
@@ -37,20 +37,14 @@ module Orn
         write_git_pointer(project_dir)
 
         output_mode.status("  Configuring remote fetch refspec")
-        cmd.exec(
-          "git",
-          "-C",
-          project_dir,
+        git.exec(
           "config",
           "remote.origin.fetch",
           "+refs/heads/*:refs/remotes/origin/*"
         )
 
         output_mode.status("  Fetching branches")
-        cmd.exec(
-          "git",
-          "-C",
-          project_dir,
+        git.exec(
           "fetch",
           "origin"
         )
@@ -78,10 +72,10 @@ module Orn
         bootstrap_global_config_interactive(output_mode)
 
         output_mode.status("  Creating worktree: #{base}")
-        Orn::Cmd.new(output_mode: output_mode).exec(
-          "git",
-          "-C",
-          project_dir,
+        Orn::Git::Repo.new(
+          dir: project_dir,
+          output_mode: output_mode
+        ).exec(
           "worktree",
           "add",
           base,

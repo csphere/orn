@@ -246,24 +246,30 @@ module Orn
       # True when `git status --porcelain` reports changes; false on any git
       # failure.
       def self.dirty?(output_mode, wt_path)
-        result = Orn::Cmd.new(output_mode: output_mode).output("git", "-C", wt_path.to_s, "status", "--porcelain")
-        result.success? && !result.stdout.strip.empty?
-      rescue Orn::Error
-        false
+        repo = Orn::Git::Repo.new(
+          dir: wt_path,
+          output_mode: output_mode
+        )
+        !repo.read("status", "--porcelain").to_s.strip.empty?
       end
 
       # Commit counts of `branch` ahead of and behind `base`; (0, 0) on any git
       # failure.
       def self.ahead_behind(output_mode, wt_path, branch, base)
-        range = "#{branch}...#{base}"
-        result = Orn::Cmd.new(output_mode: output_mode)
-          .output("git", "-C", wt_path.to_s, "rev-list", "--left-right", "--count", range)
-        return [0, 0] unless result.success?
+        repo = Orn::Git::Repo.new(
+          dir: wt_path,
+          output_mode: output_mode
+        )
+        stdout = repo.read(
+          "rev-list",
+          "--left-right",
+          "--count",
+          "#{branch}...#{base}"
+        )
+        return [0, 0] if stdout.nil?
 
-        parts = result.stdout.split
+        parts = stdout.split
         parts.length == 2 ? [parts[0].to_i, parts[1].to_i] : [0, 0]
-      rescue Orn::Error
-        [0, 0]
       end
 
       private

@@ -229,8 +229,8 @@ RSpec.describe Orn::Sandbox::Doctor do
       )
 
       with_fake_cmd do |fake|
-        fake.script_missing(["git", "config", "--file", config_path, "user.name"])
-        fake.script_missing(["git", "config", "--file", config_path, "user.email"])
+        fake.script_missing(["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.name"])
+        fake.script_missing(["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.email"])
 
         check = described_class.git_identity_check(mode, root)
 
@@ -335,12 +335,12 @@ RSpec.describe Orn::Sandbox::Doctor do
         "config"
       )
       fake.script(
-        ["git", "config", "--file", config_path, "user.name"],
+        ["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.name"],
         stdout: "T\n",
         status: status
       )
       fake.script(
-        ["git", "config", "--file", config_path, "user.email"],
+        ["git", "-C", Dir.tmpdir, "config", "--file", config_path, "user.email"],
         stdout: "t@t.com\n",
         status: status
       )
