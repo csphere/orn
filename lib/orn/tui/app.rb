@@ -235,7 +235,7 @@ module Orn
 
       def status_for(branch, windows)
         wt_path = File.join(@root.to_s, branch)
-        ahead, behind = GitStats.ahead_behind(
+        ahead, behind = Git::Stats.ahead_behind(
           @output,
           wt_path,
           branch,
@@ -243,7 +243,7 @@ module Orn
         )
         WorktreeStatus.new(
           branch: branch,
-          dirty: GitStats.dirty?(@output, wt_path),
+          dirty: Git::Stats.dirty?(@output, wt_path),
           has_window: windows.include?(branch),
           ahead: ahead,
           behind: behind

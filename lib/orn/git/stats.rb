@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module Orn
-  module TUI
-    # Git working-tree stats shared by the project TUI's list and the global
-    # hub's repo tree renderer.
-    module GitStats
+  module Git
+    # Working-tree stats consumed by the TUIs: dirtiness and ahead/behind
+    # counts for a worktree.
+    module Stats
       # True when `git status --porcelain` reports changes; false on any git
       # failure.
       def self.dirty?(output_mode, wt_path)
