@@ -34,4 +34,30 @@ RSpec.describe Orn::Completions do
       expect { described_class.script("powershell") }.to raise_error(Orn::Error, /Unsupported shell/)
     end
   end
+
+  # Like the generated docs/cli.md check in CI, but in-process: the
+  # completion command lists are hand-maintained, so pin them to the Thor
+  # registry to catch a new or renamed command that forgot completion.
+  describe "command list parity" do
+    def visible_commands(cli_class)
+      cli_class.commands.reject { |_, command| command.hidden? }.keys
+    end
+
+    it "keeps TOP_COMMANDS in sync with the root CLI (plus help)" do
+      expect(described_class::TOP_COMMANDS).to match_array(visible_commands(Orn::CLI) + ["help"])
+    end
+
+    it "keeps WT_SUBCOMMANDS in sync with orn wt" do
+      expect(described_class::WT_SUBCOMMANDS).to match_array(visible_commands(Orn::Commands::Wt::CLI) - ["help"])
+    end
+
+    it "keeps SBX_SUBCOMMANDS in sync with orn sbx" do
+      expect(described_class::SBX_SUBCOMMANDS).to match_array(visible_commands(Orn::Commands::Sbx::CLI) - ["help"])
+    end
+
+    it "keeps CONFIG_SUBCOMMANDS in sync with orn config" do
+      expect(described_class::CONFIG_SUBCOMMANDS)
+        .to match_array(visible_commands(Orn::Commands::Config::CLI) - ["help"])
+    end
+  end
 end
