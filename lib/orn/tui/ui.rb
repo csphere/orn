@@ -14,44 +14,27 @@ module Orn
       # Render the project TUI: title, worktree rows, optional error line, the
       # active modal prompt, and mode-specific help.
       def draw(frame, app)
-        chunks = split_chunks(
+        title_area, list_area, error_area, modal_area, help_area = split_chunks(
           frame.area,
           !app.error.nil?,
           !app.mode.normal?
         )
-        render_header(
+        frame.render_widget(Paragraph.line(title_line(app)), title_area)
+        frame.render_widget(Paragraph.new(entry_lines(app)), list_area)
+        render_optional_rows(
           frame,
           app,
-          chunks
+          error_area,
+          modal_area
         )
-        render_body(
-          frame,
-          app,
-          chunks
-        )
+        frame.render_widget(Paragraph.line(help_line(app.mode)), help_area)
       end
 
-      def render_header(frame, app, chunks)
-        frame.render_widget(Paragraph.line(title_line(app)), chunks[0])
-        frame.render_widget(Paragraph.new(entry_lines(app)), chunks[1])
-      end
-
-      def render_body(frame, app, chunks)
-        unless app.error.nil?
-          TUI.render_error(
-            frame,
-            app,
-            chunks[2]
-          )
-        end
-        unless app.mode.normal?
-          render_modal(
-            frame,
-            app,
-            chunks[3]
-          )
-        end
-        frame.render_widget(Paragraph.line(help_line(app.mode)), chunks[4])
+      # The error and modal rows only exist while active; split_chunks gave
+      # them zero height otherwise.
+      def render_optional_rows(frame, app, error_area, modal_area)
+        TUI.render_error(frame, app, error_area) unless app.error.nil?
+        render_modal(frame, app, modal_area) unless app.mode.normal?
       end
 
       # Title (2), worktree list (fills), optional error row, optional modal
