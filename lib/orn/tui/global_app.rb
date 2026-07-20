@@ -62,10 +62,11 @@ module Orn
     class GlobalApp
       include PollTiming
 
-      # Cadence of the tmux-derived refresh (sessions, windows, agent states).
-      TMUX_REFRESH = 3
+      # Cadence of the tmux-derived refresh (sessions, windows, agent
+      # states), in seconds.
+      TMUX_REFRESH_INTERVAL = 3
       # Cadence of full repo re-discovery across the scan roots, in seconds.
-      DISCOVERY_REFRESH = 30
+      DISCOVERY_REFRESH_INTERVAL = 30
       # Minimum interval between agent-focus queries to the tmux server.
       FOCUS_POLL_INTERVAL = 0.25
       attr_accessor :entries,
@@ -153,9 +154,9 @@ module Orn
 
       # Full discovery on the slow cadence; the cheaper tmux refresh otherwise.
       def maybe_refresh
-        if monotonic - @last_discovery >= DISCOVERY_REFRESH
+        if monotonic - @last_discovery >= DISCOVERY_REFRESH_INTERVAL
           full_refresh
-        elsif monotonic - @last_tmux_refresh >= TMUX_REFRESH
+        elsif monotonic - @last_tmux_refresh >= TMUX_REFRESH_INTERVAL
           refresh_tmux_keeping_selection
         end
       end
