@@ -73,7 +73,7 @@ module Orn
         path = result.stdout.strip
         return nil if path.empty?
 
-        safe_realpath(path)
+        Orn::Fs.safe_realpath(path)
       end
 
       # Every live session's name and last-activity time; empty when no server
@@ -326,12 +326,6 @@ module Orn
       # caller's current session.
       def session_target(session)
         "#{session}:"
-      end
-
-      def safe_realpath(path)
-        File.realpath(path)
-      rescue SystemCallError
-        nil
       end
 
       def tmux_exec(*args)

@@ -11,7 +11,7 @@ module Orn
       end
 
       def monotonic
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        Orn::Clock.monotonic
       end
     end
   end

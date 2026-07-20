@@ -28,7 +28,7 @@ module Orn
       existing_path = client.session_path(session)
       return project if existing_path.nil?
 
-      our_path = safe_realpath(project.root)
+      our_path = Orn::Fs.safe_realpath(project.root)
       return project if our_path.nil? || session_belongs_to_project?(existing_path, our_path)
 
       resolve_collision(
@@ -87,15 +87,8 @@ module Orn
       name.gsub(/[^a-zA-Z0-9_-]/, "-")
     end
 
-    def self.safe_realpath(path)
-      File.realpath(path)
-    rescue SystemCallError
-      nil
-    end
-
     private_class_method :resolve_collision,
       :directory_name,
-      :sanitize_name,
-      :safe_realpath
+      :sanitize_name
   end
 end

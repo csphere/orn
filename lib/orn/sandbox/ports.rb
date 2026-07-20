@@ -119,12 +119,12 @@ module Orn
       # Polls the host port with exponential backoff until it accepts a TCP
       # connection or `timeout` seconds elapse.
       def self.verify_port(host_port, timeout, initial_backoff)
-        start = monotonic
+        start = Orn::Clock.monotonic
         backoff = initial_backoff
         loop do
           return if port_open?(host_port)
 
-          elapsed = monotonic - start
+          elapsed = Orn::Clock.monotonic - start
           raise Orn::Error, "Port #{host_port} not reachable after #{timeout.to_i}s" if elapsed >= timeout
 
           remaining = timeout - elapsed
@@ -205,15 +205,10 @@ module Orn
         false
       end
 
-      def self.monotonic
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      end
-
       private_class_method :read_persisted_ports,
         :publish_entry,
         :probe_bind,
-        :port_open?,
-        :monotonic
+        :port_open?
     end
   end
 end

@@ -28,6 +28,14 @@ module Orn
       nil
     end
 
+    # File.realpath that returns nil (instead of raising) for missing or
+    # unresolvable paths.
+    def self.safe_realpath(path)
+      File.realpath(path)
+    rescue SystemCallError
+      nil
+    end
+
     # The user's home directory from $HOME, or nil when unset. Strictly
     # $HOME: Dir.home would fall back to the passwd database, which we do not
     # want.
