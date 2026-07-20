@@ -39,6 +39,8 @@ module Orn
 
       def self.box_region(content, lines, trimmed)
         case trimmed
+        # Despite the name, whole_recent is the entire capture: no recency
+        # window is applied and old scrollback is not excluded.
         when "whole_recent" then content
         when "prompt_box_body" then prompt_box_body(content, lines) || ""
         when "above_prompt_box" then above_prompt_box(content, lines)
