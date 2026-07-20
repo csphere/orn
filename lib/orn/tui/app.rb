@@ -176,7 +176,9 @@ module Orn
 
         branch = entry.branch
         # Closing a worktree whose agent pane is borrowed by the hub first
-        # returns the pane so the kill reaches it.
+        # returns the pane so the kill reaches it. A successful return also
+        # recreates the home window, so the kill proceeds even though
+        # entry.has_window (from the last refresh) still says false.
         returned = @hub.return_borrowed_for_branch(@session, branch)
         return if !entry.has_window && !returned
 
