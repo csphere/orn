@@ -274,8 +274,7 @@ gem install ./orn-<version>.gem
 Or from a checkout:
 
 ```bash
-bundle install
-rake install
+just install
 ```
 
 ## Development
