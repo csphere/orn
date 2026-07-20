@@ -125,5 +125,34 @@ RSpec.describe Orn::Cmd, :real_cmd do
           .not_to output.to_stderr
       end
     end
+
+    context "when arguments carry secret values" do
+      it "masks the value of a --build-arg pair but passes it through unmasked" do
+        result = nil
+
+        expect { result = verbose_cmd.output("echo", "--build-arg", "TOKEN=hunter2") }
+          .to output(a_string_including("[cmd] echo --build-arg TOKEN=***")).to_stderr
+        expect(result.stdout).to include("TOKEN=hunter2")
+      end
+
+      it "masks every KEY=VALUE entry after an env token" do
+        arguments = %w[env API_KEY=secret DB_PASS=hunter2 sh]
+
+        expect { verbose_cmd.output("echo", *arguments) }
+          .to output(a_string_including("[cmd] echo env API_KEY=*** DB_PASS=*** sh")).to_stderr
+      end
+
+      it "stops masking once the env prefix ends" do
+        arguments = %w[env KEY=secret sh -c name=value]
+
+        expect { verbose_cmd.output("echo", *arguments) }
+          .to output(a_string_including("[cmd] echo env KEY=*** sh -c name=value")).to_stderr
+      end
+
+      it "leaves ordinary KEY=VALUE arguments alone" do
+        expect { verbose_cmd.output("echo", "name=value") }
+          .to output(a_string_including("[cmd] echo name=value")).to_stderr
+      end
+    end
   end
 end

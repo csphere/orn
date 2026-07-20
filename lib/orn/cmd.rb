@@ -101,7 +101,31 @@ module Orn
       return unless @output_mode.verbose
 
       program, *arguments = command
-      warn "[cmd] #{program} #{arguments.join(" ")}"
+      warn "[cmd] #{program} #{redact_secret_values(arguments).join(" ")}"
+    end
+
+    # Docker build args and sandbox env vars carry secrets, so the log line
+    # masks the value half of `--build-arg NAME=VALUE` pairs and of
+    # `KEY=VALUE` entries following an `env` token. Only the log is masked;
+    # the spawned process gets the real values.
+    def redact_secret_values(arguments)
+      env_prefix = false
+      arguments.each_with_index.map do |argument, index|
+        if argument == "env"
+          env_prefix = true
+          next argument
+        end
+
+        build_arg_value = index.positive? && arguments[index - 1] == "--build-arg"
+        env_pair = env_prefix && argument.include?("=")
+        env_prefix = env_pair
+        build_arg_value || env_pair ? mask_value(argument) : argument
+      end
+    end
+
+    def mask_value(argument)
+      key, separator, = argument.partition("=")
+      separator.empty? ? argument : "#{key}=***"
     end
 
     def log_result(result)
