@@ -234,40 +234,11 @@ module Orn
         remove_worktree(branch)
       end
 
-      # True when `git status --porcelain` reports changes; false on any git
-      # failure.
-      def self.dirty?(output_mode, wt_path)
-        repo = Orn::Git::Repo.new(
-          dir: wt_path,
-          output_mode: output_mode
-        )
-        !repo.read("status", "--porcelain").to_s.strip.empty?
-      end
-
-      # Commit counts of `branch` ahead of and behind `base`; (0, 0) on any git
-      # failure.
-      def self.ahead_behind(output_mode, wt_path, branch, base)
-        repo = Orn::Git::Repo.new(
-          dir: wt_path,
-          output_mode: output_mode
-        )
-        stdout = repo.read(
-          "rev-list",
-          "--left-right",
-          "--count",
-          "#{branch}...#{base}"
-        )
-        return [0, 0] if stdout.nil?
-
-        parts = stdout.split
-        parts.length == 2 ? [parts[0].to_i, parts[1].to_i] : [0, 0]
-      end
-
       private
 
       def status_for(branch, windows)
         wt_path = File.join(@root.to_s, branch)
-        ahead, behind = self.class.ahead_behind(
+        ahead, behind = GitStats.ahead_behind(
           @output,
           wt_path,
           branch,
@@ -275,7 +246,7 @@ module Orn
         )
         WorktreeStatus.new(
           branch: branch,
-          dirty: self.class.dirty?(@output, wt_path),
+          dirty: GitStats.dirty?(@output, wt_path),
           has_window: windows.include?(branch),
           ahead: ahead,
           behind: behind

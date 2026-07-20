@@ -153,8 +153,8 @@ module Orn
         worktrees = repo.worktrees.map do |wt|
           wt_path = File.join(repo.root.to_s, wt.branch)
           wt.with(
-            dirty: App.dirty?(output, wt_path),
-            ahead_behind: App.ahead_behind(
+            dirty: GitStats.dirty?(output, wt_path),
+            ahead_behind: GitStats.ahead_behind(
               output,
               wt_path,
               wt.branch,

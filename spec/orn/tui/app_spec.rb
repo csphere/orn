@@ -418,7 +418,7 @@ module Orn
         end
       end
 
-      describe ".dirty?" do
+      describe "GitStats.dirty?" do
         def status_argv
           git_argv(
             "/repo/feat",
@@ -428,7 +428,7 @@ module Orn
         end
 
         def query_dirty
-          described_class.dirty?(
+          Orn::TUI::GitStats.dirty?(
             Orn::OutputMode.quiet,
             "/repo/feat"
           )
@@ -467,7 +467,7 @@ module Orn
         end
       end
 
-      describe ".ahead_behind", :real_cmd do
+      describe "GitStats.ahead_behind", :real_cmd do
         def rev_list_argv
           git_argv(
             "/repo/feat",
@@ -479,7 +479,7 @@ module Orn
         end
 
         def query_counts
-          described_class.ahead_behind(
+          Orn::TUI::GitStats.ahead_behind(
             Orn::OutputMode.quiet,
             "/repo/feat",
             "feat",
@@ -520,7 +520,7 @@ module Orn
         end
 
         it "returns zeros for an invalid path" do
-          counts = described_class.ahead_behind(
+          counts = Orn::TUI::GitStats.ahead_behind(
             Orn::OutputMode.quiet,
             "/tmp/nonexistent",
             "feature",
