@@ -205,6 +205,8 @@ module Orn
         )
       end
 
+      # osc_progress is "" here and below: OSC progress capture is not
+      # wired up yet, so only osc_title and screen rules can fire.
       osc_result = Manifest.detect(
         agent,
         Manifest::DetectionInput.new(

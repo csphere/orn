@@ -14,7 +14,11 @@ module Orn
       # a bundled manifest raising it is a build defect.
       class InvalidManifest < StandardError; end
 
-      # Text inputs rules are evaluated against.
+      # Text inputs rules are evaluated against. `osc_progress` is not yet
+      # captured in production: both call sites in detect/mod.rb pass "", so
+      # manifest rules on the osc_progress region only fire in tests until
+      # OSC progress capture is wired up. Do not key new manifest rules off
+      # it expecting a runtime effect.
       DetectionInput = Data.define(
         :screen,
         :osc_title,
