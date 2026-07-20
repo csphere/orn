@@ -104,7 +104,8 @@ module Orn
           value: layout_value,
           source: layout_source
         ),
-        tui: tui_info(global)
+        tui: tui_info(global),
+        sbx_configured: !project&.sbx.nil?
       )
     end
 

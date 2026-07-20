@@ -44,6 +44,18 @@ RSpec.describe Orn::Commands::Config::Show do
       expect(command.render(info)).to match(/^git:\n  base: develop\s+\(project\)/)
     end
 
+    it "notes a configured sbx section instead of omitting it silently" do
+      info = Orn::Config.info_from(project_with("sbx:\n  agent_type: claude\n"), nil)
+
+      expect(command.render(info)).to include("# sbx: configured in .orn/config.yaml (not shown here)")
+    end
+
+    it "prints no sbx notice without an sbx section" do
+      info = Orn::Config.info_from(empty_project, nil)
+
+      expect(command.render(info)).not_to include("sbx:")
+    end
+
     it "annotates the default base as default-sourced" do
       info = Orn::Config.info_from(empty_project, nil)
 

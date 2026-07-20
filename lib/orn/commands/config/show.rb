@@ -38,6 +38,7 @@ module Orn
           append_tmux(lines, info)
           append_symlinks(lines, info.symlinks)
           append_tui(lines, info.tui)
+          append_sbx_notice(lines, info)
           lines.join("\n")
         end
 
@@ -122,6 +123,15 @@ module Orn
           end
         end
 
+        # The sbx section is not resolved into ConfigInfo, so say it exists
+        # rather than silently omitting it.
+        def append_sbx_notice(lines, info)
+          return unless info.sbx_configured
+
+          lines << ""
+          lines << "# sbx: configured in .orn/config.yaml (not shown here)"
+        end
+
         def append_tui(lines, tui)
           lines << ""
           lines << "tui:"
@@ -155,7 +165,8 @@ module Orn
             "session" => info.session && sourced_hash(info.session) { |value| value },
             "symlinks" => sourced_hash(info.symlinks) { |value| symlinks_hash(value) },
             "layout" => sourced_hash(info.layout) { |value| layout_hash(value) },
-            "tui" => tui_hash(info.tui)
+            "tui" => tui_hash(info.tui),
+            "sbx_configured" => info.sbx_configured
           }
         end
 

@@ -141,6 +141,8 @@ module Orn
     )
 
     # Full resolved configuration with per-value sources, for `orn config`.
+    # `sbx_configured` only flags that the project has an sbx section; the
+    # section itself is not resolved here.
     ConfigInfo = Data.define(
       :project_path,
       :project_exists,
@@ -150,7 +152,8 @@ module Orn
       :session,
       :symlinks,
       :layout,
-      :tui
+      :tui,
+      :sbx_configured
     )
 
     # Normalizes a parsed YAML mapping into a RawConfig, raising InvalidConfig
