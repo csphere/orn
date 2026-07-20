@@ -16,9 +16,10 @@ module Orn
       "clear; tmux clear-history; tmux wait-for -S #{channel}"
     end
 
-    # Warn once per process when tmux is older than 2.9, which lacks the
-    # percentage form of `split-window -l` used for pane sizing. Stays
-    # module-level because the guard is per-process while clients are
+    # Warn once per process when tmux is older than 3.2, which lacks
+    # `run-shell -d` (used to bound the shell-ready wait); 2.9 additionally
+    # lacks the percentage form of `split-window -l` used for pane sizing.
+    # Stays module-level because the guard is per-process while clients are
     # constructed freely.
     def self.warn_if_old_tmux
       return if @version_checked
@@ -40,9 +41,9 @@ module Orn
       major = Integer(parts[0].to_s, exception: false)
       minor = Integer(parts[1].to_s[/\A\d+/].to_s, exception: false)
       return if major.nil? || minor.nil?
-      return unless major < 2 || (major == 2 && minor < 9)
+      return unless major < 3 || (major == 3 && minor < 2)
 
-      warn "Warning: tmux 2.9+ required (found #{ver}). Split pane sizing may not work correctly."
+      warn "Warning: tmux 3.2+ required (found #{ver}). Pane sizing and setup may not work correctly."
     end
 
     private_class_method :warn_if_tmux_too_old

@@ -321,6 +321,41 @@ RSpec.describe Orn::Tmux::Client do
       end
     end
 
+    def script_unsupported_run_shell(fake)
+      fake.script(has_session_argv("work"))
+      fake.script(new_window_argv("work", "feat", "/tmp/repo"), stdout: "%7\n")
+      fake.script(
+        ["tmux", "run-shell", "-b", "-d", "10", "tmux wait-for -S orn-ready-7"],
+        stderr: "usage: run-shell [-b] shell-command",
+        status: 1
+      )
+      fake.script(["tmux", "send-keys", "-t", "%7", Orn::Tmux.shell_ready_command("orn-ready-7"), "Enter"])
+      fake.script(["tmux", "send-keys", "-t", "%7", "echo feat", "Enter"])
+      fake.script(["tmux", "select-pane", "-t", "%7"])
+      fake.script(["tmux", "select-window", "-t", "work:feat"])
+    end
+
+    it "skips the shell wait when run-shell -d is unsupported (tmux < 3.2)" do
+      with_fake_cmd do |fake|
+        script_unsupported_run_shell(fake)
+
+        with_version_check_state(true) do
+          client.create_window(
+            "work",
+            "feat",
+            "/tmp/repo",
+            templated_layout,
+            template_vars: { "branch" => "feat" }
+          )
+        end
+
+        aggregate_failures do
+          expect(fake.invocations).to include(["tmux", "send-keys", "-t", "%7", "echo feat", "Enter"])
+          expect(fake.invocations).not_to include(%w[tmux wait-for orn-ready-7])
+        end
+      end
+    end
+
     it "creates the window and selects it without splitting when the layout is empty" do
       with_fake_cmd do |fake|
         fake.script(has_session_argv("work"))

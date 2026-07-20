@@ -304,9 +304,20 @@ module Orn
       # that never comes up cannot deadlock orn.
       def wait_for_shell(pane)
         channel = "orn-ready-#{pane.delete("%")}"
-        tmux_exec("run-shell", "-b", "-d", "10", "tmux wait-for -S #{channel}")
+        timeout_armed = arm_shell_wait_timeout(channel)
         tmux_exec("send-keys", "-t", pane, Tmux.shell_ready_command(channel), "Enter")
-        tmux_exec("wait-for", channel)
+        tmux_exec("wait-for", channel) if timeout_armed
+      end
+
+      # `run-shell -d` needs tmux 3.2+ (Ubuntu 20.04 and Debian 11 ship
+      # older). Without the timeout arm a plain wait-for could hang forever,
+      # so on older tmux the wait is skipped and pane commands are typed
+      # right away.
+      def arm_shell_wait_timeout(channel)
+        tmux_exec("run-shell", "-b", "-d", "10", "tmux wait-for -S #{channel}")
+        true
+      rescue Orn::Error
+        false
       end
 
       # Trailing colon forces session interpretation: a bare name is a

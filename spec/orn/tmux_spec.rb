@@ -141,17 +141,21 @@ RSpec.describe Orn::Tmux do
       ["tmux", "-V"]
     end
 
-    it "warns when tmux is older than 2.9" do
-      with_fake_cmd do |fake|
-        fake.script(version_check_argv, stdout: "tmux 2.8\n")
+    ["tmux 2.8", "tmux 3.1"].each do |version_line|
+      it "warns when the version is #{version_line} (older than 3.2)" do
+        version = version_line.delete_prefix("tmux ")
+        with_fake_cmd do |fake|
+          fake.script(version_check_argv, stdout: "#{version_line}\n")
 
-        with_version_check_state(nil) do
-          expect { described_class.warn_if_old_tmux }.to output(/tmux 2\.9\+ required \(found 2\.8\)/).to_stderr
+          with_version_check_state(nil) do
+            expect { described_class.warn_if_old_tmux }
+              .to output(/tmux 3\.2\+ required \(found #{Regexp.escape(version)}\)/).to_stderr
+          end
         end
       end
     end
 
-    ["tmux 2.9", "tmux 3.4"].each do |version_line|
+    ["tmux 3.2", "tmux 3.4"].each do |version_line|
       it "does not warn for #{version_line}" do
         with_fake_cmd do |fake|
           fake.script(version_check_argv, stdout: "#{version_line}\n")
