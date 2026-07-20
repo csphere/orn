@@ -55,7 +55,8 @@ RSpec.describe Orn::Commands::Output do
           Orn::OutputMode.default,
           [],
           ["a: boom", "b: boom"],
-          3
+          3,
+          action: "remove"
         )
       end
         .to raise_error(Orn::Error, "failed to remove 2 of 3 worktrees")

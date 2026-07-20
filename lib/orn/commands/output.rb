@@ -29,12 +29,13 @@ module Orn
       end
 
       # Prints the JSON array (in json mode) and raises with a failure count
-      # when any branch in the batch errored.
-      def self.finish_multi_branch(output_mode, json_results, errors, total)
+      # when any branch in the batch errored. `action` names the operation in
+      # the failure message ("remove" -> "failed to remove 1 of 2 worktrees").
+      def self.finish_multi_branch(output_mode, json_results, errors, total, action:)
         print_json(json_results) if output_mode.json
         return if errors.empty?
 
-        raise Orn::Error, "failed to remove #{errors.length} of #{total} worktrees"
+        raise Orn::Error, "failed to #{action} #{errors.length} of #{total} worktrees"
       end
 
       # Renders worktree `rows` (each an array of cell strings) as a table

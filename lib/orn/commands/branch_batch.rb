@@ -22,7 +22,8 @@ module Orn
           output_mode,
           results.map(&:to_json_hash),
           errors,
-          branches.length
+          branches.length,
+          action: "remove"
         )
       end
 
