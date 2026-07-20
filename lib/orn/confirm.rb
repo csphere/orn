@@ -9,10 +9,10 @@ module Orn
     # Prompts before deleting the local and remote branches for `branch`;
     # raises "Aborted" if declined. Returns immediately (nil) when neither
     # branch exists.
-    def self.prune_interactive(root, branch)
+    def self.prune_interactive(output_mode, root, branch)
       worktree = Orn::Git::Worktree.new(
         root: root,
-        output_mode: Orn::OutputMode.default
+        output_mode: output_mode
       )
       has_local = worktree.local_branch_exists?(branch)
       has_remote = worktree.remote_branch_exists?("origin", branch)

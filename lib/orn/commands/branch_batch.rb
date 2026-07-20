@@ -11,7 +11,7 @@ module Orn
       def self.run(output_mode, branches, prune:, force:)
         branches.each { |branch| Orn::Git::BranchName.new(branch).validate! }
         project = Orn::Git::Project.discover
-        confirm_prunes(project.root, branches) if prune && !force && !output_mode.json
+        confirm_prunes(output_mode, project.root, branches) if prune && !force && !output_mode.json
 
         results, errors = Output.run_multi_branch(
           output_mode,
@@ -27,8 +27,8 @@ module Orn
         )
       end
 
-      def self.confirm_prunes(project_root, branches)
-        branches.each { |branch| Orn::Confirm.prune_interactive(project_root, branch) }
+      def self.confirm_prunes(output_mode, project_root, branches)
+        branches.each { |branch| Orn::Confirm.prune_interactive(output_mode, project_root, branch) }
       end
       private_class_method :confirm_prunes
     end

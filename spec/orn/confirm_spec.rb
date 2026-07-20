@@ -159,7 +159,7 @@ RSpec.describe Orn::Confirm do
         fake.script(ls_remote_argv, stdout: "")
 
         result, prompt_output = with_prompt("") do
-          described_class.prune_interactive(project_root, branch)
+          described_class.prune_interactive(Orn::OutputMode.quiet, project_root, branch)
         end
 
         expect(result).to be_nil
@@ -174,7 +174,7 @@ RSpec.describe Orn::Confirm do
 
         with_prompt("n\n") do
           expect do
-            described_class.prune_interactive(project_root, branch)
+            described_class.prune_interactive(Orn::OutputMode.quiet, project_root, branch)
           end.to raise_error(Orn::Error, "Aborted")
         end
       end
@@ -186,7 +186,7 @@ RSpec.describe Orn::Confirm do
         fake.script(ls_remote_argv, stdout: "abc123\trefs/heads/#{branch}\n")
 
         result, prompt_output = with_prompt("y\n") do
-          described_class.prune_interactive(project_root, branch)
+          described_class.prune_interactive(Orn::OutputMode.quiet, project_root, branch)
         end
 
         expect(result).to be_nil
@@ -201,7 +201,7 @@ RSpec.describe Orn::Confirm do
         fake.script(ls_remote_argv, stdout: "abc123\trefs/heads/#{branch}\n")
 
         _, prompt_output = with_prompt("y\n") do
-          described_class.prune_interactive(project_root, branch)
+          described_class.prune_interactive(Orn::OutputMode.quiet, project_root, branch)
         end
 
         expect(prompt_output).not_to include("Local branch")

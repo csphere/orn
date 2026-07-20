@@ -185,8 +185,8 @@ RSpec.describe Orn::Commands::Remove do
         end.to output("No worktree found for feature/a\nNo worktree found for feature/b\n").to_stdout
       end
 
-      expect(Orn::Confirm).to have_received(:prune_interactive).with(project.root, "feature/a")
-      expect(Orn::Confirm).to have_received(:prune_interactive).with(project.root, "feature/b")
+      expect(Orn::Confirm).to have_received(:prune_interactive).with(anything, project.root, "feature/a")
+      expect(Orn::Confirm).to have_received(:prune_interactive).with(anything, project.root, "feature/b")
     end
   end
 

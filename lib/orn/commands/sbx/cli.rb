@@ -12,15 +12,7 @@ module Orn
           true
         end
 
-        # Re-declared because Thor does not propagate the root class options
-        # into a subcommand group.
-        class_option :verbose,
-          type: :boolean,
-          aliases: "-v",
-          desc: "Log executed commands to stderr"
-        class_option :json,
-          type: :boolean,
-          desc: "Emit machine-readable JSON output"
+        GlobalOptions.declare(self)
 
         desc "new BRANCH", "Create a sandbox for a branch that already has a worktree"
         def new(branch)

@@ -12,16 +12,7 @@ module Orn
           true
         end
 
-        # Global options are re-declared here: Thor does not propagate the root
-        # class options to a subcommand group, so `orn config show --json` needs
-        # its own `--json` to parse.
-        class_option :verbose,
-          type: :boolean,
-          aliases: "-v",
-          desc: "Log executed commands to stderr"
-        class_option :json,
-          type: :boolean,
-          desc: "Emit machine-readable JSON output"
+        GlobalOptions.declare(self)
 
         desc "show", "Print the effective configuration with per-value sources"
         def show
