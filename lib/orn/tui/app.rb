@@ -40,8 +40,6 @@ module Orn
       def normal? = kind == :normal
       def new_branch? = kind == :new_branch
       def confirm_remove? = kind == :confirm_remove
-      def input = text
-      def branch = text
     end
 
     # State and actions for the per-project TUI: the worktree list with git and
@@ -199,11 +197,11 @@ module Orn
       end
 
       def new_branch_push_char(char)
-        @mode = Mode.new_branch(@mode.input + char) if @mode.new_branch?
+        @mode = Mode.new_branch(@mode.text + char) if @mode.new_branch?
       end
 
       def new_branch_pop_char
-        @mode = Mode.new_branch(@mode.input[0...-1]) if @mode.new_branch?
+        @mode = Mode.new_branch(@mode.text[0...-1]) if @mode.new_branch?
       end
 
       # Create the entered branch's worktree, symlinks, and window, then focus
@@ -212,7 +210,7 @@ module Orn
       def confirm_new_branch
         return unless @mode.new_branch?
 
-        branch = @mode.input.strip
+        branch = @mode.text.strip
         @mode = Mode.normal
         return if branch.empty?
 
@@ -224,7 +222,7 @@ module Orn
       def confirm_remove
         return unless @mode.confirm_remove?
 
-        branch = @mode.branch
+        branch = @mode.text
         @mode = Mode.normal
 
         @hub.return_borrowed_for_branch(@session, branch)

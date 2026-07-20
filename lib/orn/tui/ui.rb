@@ -127,12 +127,12 @@ module Orn
           Line.from(
             [
               Span.styled(" Branch: ", Style.default.fg(Color::CYAN)),
-              Span.raw(mode.input),
+              Span.raw(mode.text),
               Span.styled("_", Style.default.fg(Color::DARK_GRAY))
             ]
           )
         else
-          Line.styled(" Remove #{mode.branch}? y/n", Style.default.fg(Color::YELLOW))
+          Line.styled(" Remove #{mode.text}? y/n", Style.default.fg(Color::YELLOW))
         end
       end
 
