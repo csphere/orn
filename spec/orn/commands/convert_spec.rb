@@ -335,10 +335,10 @@ RSpec.describe Orn::Commands::Convert, :real_cmd do
       FileUtils.rm_rf("#{dir}.pre-orn")
     end
 
-    it "restores the original repo when the re-clone fails" do
+    it "restores the original repo when the re-clone fails, naming the cause" do
       dir = make_standard_repo # origin URL dangles, so clone fails
 
-      expect { command.run_in(dir, nil) }.to raise_error(Orn::Error, /restored/)
+      expect { command.run_in(dir, nil) }.to raise_error(Orn::Error, /restored.*Cause: git failed/m)
 
       expect(File.exist?(File.join(dir, "file.txt"))).to be(true)
       expect(File.directory?(File.join(dir, ".git"))).to be(true)

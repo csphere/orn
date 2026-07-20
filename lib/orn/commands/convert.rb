@@ -215,16 +215,20 @@ module Orn
         )
       # Interrupt is not a StandardError; without it Ctrl-C mid-clone would
       # leave the user's repo moved aside at the backup path.
-      rescue StandardError, Interrupt
+      rescue StandardError, Interrupt => e
         FileUtils.rm_rf(dir)
-        restore_backup!(backup_path, dir)
+        restore_backup!(
+          backup_path,
+          dir,
+          e.message
+        )
       end
 
-      def restore_backup!(backup_path, dir)
+      def restore_backup!(backup_path, dir, cause)
         FileUtils.mv(backup_path, dir)
-        raise Orn::Error, "Conversion failed; repository restored to original location"
+        raise Orn::Error, "Conversion failed; repository restored to original location\n  Cause: #{cause}"
       rescue SystemCallError
-        raise Orn::Error, "Conversion failed; could not restore backup. Backup at: #{backup_path}"
+        raise Orn::Error, "Conversion failed; could not restore backup. Backup at: #{backup_path}\n  Cause: #{cause}"
       end
 
       def reject_existing_backup!(backup_path)
