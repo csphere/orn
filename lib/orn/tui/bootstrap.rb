@@ -178,7 +178,7 @@ module Orn
       def run_loop(terminal, app)
         last_area = nil
         loop do
-          last_area = redraw_on_resize(terminal, last_area)
+          last_area = handle_resize(terminal, last_area)
           terminal.draw { |frame| Ui.draw(frame, app) }
           key = terminal.poll(app.poll_timeout)
           return if key && dispatch_project(app, key) == :quit
@@ -193,7 +193,7 @@ module Orn
       def run_global_loop(terminal, app)
         last_area = nil
         loop do
-          last_area = redraw_on_resize(terminal, last_area) { app.enforce_layout }
+          last_area = handle_resize(terminal, last_area) { app.enforce_layout }
           terminal.draw { |frame| GlobalUi.draw(frame, app) }
           key = terminal.poll(app.poll_timeout)
           return if key && dispatch_global(app, key) == :quit
@@ -212,7 +212,7 @@ module Orn
       # re-apply its sidebar split. Returns the current area for the next
       # comparison. The redraw itself happens in the caller's `draw`, which
       # reads the fresh size.
-      def redraw_on_resize(terminal, last_area)
+      def handle_resize(terminal, last_area)
         area = terminal.area
         if last_area && area != last_area
           terminal.clear
