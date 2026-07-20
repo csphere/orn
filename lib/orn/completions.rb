@@ -13,7 +13,8 @@ module Orn
     WT_SUBCOMMANDS = %w[new open list remove link].freeze
     SBX_SUBCOMMANDS = %w[new remove list build doctor].freeze
     CONFIG_SUBCOMMANDS = %w[show migrate].freeze
-    # Commands whose positional argument is a branch name.
+    # Top-level commands whose positional argument is a branch name. The
+    # deprecated `new`/`open` aliases still run but are not completed.
     BRANCH_COMMANDS = %w[switch remove].freeze
 
     # The completion script for `shell`.
@@ -58,7 +59,7 @@ module Orn
             config)
               [[ "$COMP_CWORD" -eq 2 ]] && COMPREPLY=( $(compgen -W "#{CONFIG_SUBCOMMANDS.join(" ")}" -- "$cur") )
               return ;;
-            switch|remove|new|open)
+            #{BRANCH_COMMANDS.join("|")})
               COMPREPLY=( $(compgen -W "$(orn complete)" -- "$cur") )
               return ;;
           esac
@@ -99,7 +100,7 @@ module Orn
             config)
               (( CURRENT == 3 )) && compadd -- $conf
               ;;
-            switch|remove|new|open)
+            #{BRANCH_COMMANDS.join("|")})
               compadd -- ${(f)"$(orn complete)"}
               ;;
           esac
@@ -123,8 +124,7 @@ module Orn
 
         complete -c orn -f
         complete -c orn -n __orn_needs_command -a "#{TOP_COMMANDS.join(" ")}"
-        complete -c orn -n "__orn_using_command switch" -a "(orn complete)"
-        complete -c orn -n "__orn_using_command remove" -a "(orn complete)"
+        #{BRANCH_COMMANDS.map { |command| branch_completion_line(command) }.join("\n")}
         complete -c orn -n "__orn_using_command wt" -a "#{WT_SUBCOMMANDS.join(" ")}"
         complete -c orn -n "__orn_using_command sbx" -a "#{SBX_SUBCOMMANDS.join(" ")}"
         complete -c orn -n "__orn_using_command config" -a "#{CONFIG_SUBCOMMANDS.join(" ")}"
@@ -133,8 +133,13 @@ module Orn
       FISH
     end
 
+    def self.branch_completion_line(command)
+      %(complete -c orn -n "__orn_using_command #{command}" -a "(orn complete)")
+    end
+
     private_class_method :bash,
       :zsh,
-      :fish
+      :fish,
+      :branch_completion_line
   end
 end
