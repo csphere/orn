@@ -87,14 +87,10 @@ module Orn
       GENERIC_RUNTIMES.include?(normalize_process_name(name))
     end
 
+    # True when a pane's foreground command is a container runtime, meaning
+    # the agent runs inside a sandbox.
     def self.container_runtime?(name)
       CONTAINER_RUNTIMES.include?(normalize_process_name(name))
-    end
-
-    # True when a pane's foreground command is a container runtime, meaning the
-    # agent runs inside a sandbox.
-    def self.container_command?(command)
-      container_runtime?(command)
     end
 
     # Find an agent invoked as a script argument to a generic runtime, e.g.
@@ -258,7 +254,6 @@ module Orn
     private_class_method :normalize_process_name,
       :agent_from_name,
       :generic_runtime?,
-      :container_runtime?,
       :identify_wrapped_agent,
       :match_leader,
       :match_other_process,

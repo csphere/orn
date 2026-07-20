@@ -89,7 +89,7 @@ module Orn
 
       def self.worktree_with_agent(worktree, windows, states, repo_panes)
         sandboxed = repo_panes.any? do |pane|
-          pane.window_name == worktree.branch && Orn::Detect.container_command?(pane.pane_current_command)
+          pane.window_name == worktree.branch && Orn::Detect.container_runtime?(pane.pane_current_command)
         end
         worktree.with(
           has_window: windows.include?(worktree.branch),
@@ -128,7 +128,7 @@ module Orn
 
           wt.with(
             agent: states[branch],
-            sandboxed: Orn::Detect.container_command?(borrowed.pane_current_command)
+            sandboxed: Orn::Detect.container_runtime?(borrowed.pane_current_command)
           )
         end
         repo.with(

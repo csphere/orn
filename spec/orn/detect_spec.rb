@@ -238,16 +238,16 @@ RSpec.describe Orn::Detect do
     end
   end
 
-  describe ".container_command?" do
+  describe ".container_runtime?" do
     it "recognizes container runtimes" do
       aggregate_failures do
-        %w[docker sbx podman nerdctl].each { |name| expect(described_class.container_command?(name)).to be(true) }
+        %w[docker sbx podman nerdctl].each { |name| expect(described_class.container_runtime?(name)).to be(true) }
       end
     end
 
     it "does not recognize non-container commands" do
       aggregate_failures do
-        %w[bash claude node python].each { |name| expect(described_class.container_command?(name)).to be(false) }
+        %w[bash claude node python].each { |name| expect(described_class.container_runtime?(name)).to be(false) }
       end
     end
   end
