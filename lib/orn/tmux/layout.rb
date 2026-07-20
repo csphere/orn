@@ -4,7 +4,8 @@ module Orn
   module Tmux
     # Pure planning of a window's pane splits from a Layout config, decoupled
     # from running tmux. Panes are identified by their creation index (0 is the
-    # window's initial pane). mod.rb walks the resulting Plan to issue the real
+    # window's initial pane). Client#realize_splits (called from
+    # Client#create_window) walks the resulting Plan to issue the real
     # split-window calls.
     module Layout
       # One planned split-window call: split `target`, giving the new pane
