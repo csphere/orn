@@ -85,4 +85,65 @@ RSpec.describe FakeTmuxClient do
 
     expect(fake.count(:select_pane)).to eq(2)
   end
+
+  # The fakes mirror hand-written verb surfaces; these parity checks catch a
+  # renamed or re-signed verb on the real class that would otherwise leave
+  # every fake-backed spec green while production breaks.
+  describe "parity with Orn::Tmux::Client" do
+    # Seed accessors (windows=, panes=, ...) and recording helpers exist only
+    # on the fake.
+    def harness_method?(fake_class, name)
+      name.end_with?("=") || fake_class.method_defined?("#{name}=") || %i[calls count].include?(name)
+    end
+
+    def required_count(params)
+      params.count { |kind, _| kind == :req }
+    end
+
+    def keyword_names(params)
+      params.filter_map { |kind, name| name if %i[key keyreq].include?(kind) }
+    end
+
+    def signature_compatible?(real_params, fake_params)
+      return false unless required_count(real_params) == required_count(fake_params)
+
+      accepts_keyrest = fake_params.any? { |kind, _| kind == :keyrest }
+      accepts_keyrest || (keyword_names(real_params) - keyword_names(fake_params)).empty?
+    end
+
+    it "fakes every real client verb with a compatible signature" do
+      Orn::Tmux::Client.public_instance_methods(false).each do |verb|
+        expect(described_class.method_defined?(verb)).to be(true), "FakeTmuxClient is missing ##{verb}"
+        compatible = signature_compatible?(
+          Orn::Tmux::Client.instance_method(verb).parameters,
+          described_class.instance_method(verb).parameters
+        )
+        expect(compatible).to be(true), "FakeTmuxClient##{verb} signature drifted from the real client"
+      end
+    end
+
+    it "defines no dead verbs the real client lacks" do
+      described_class.public_instance_methods(false).each do |verb|
+        next if harness_method?(described_class, verb)
+
+        expect(Orn::Tmux::Client.method_defined?(verb)).to be(true),
+          "FakeTmuxClient##{verb} has no real counterpart"
+      end
+    end
+  end
+
+  describe "FakeHub parity with Orn::TUI::Hub" do
+    # FakeHub is a partial fake by design (unfaked verbs raise
+    # NoMethodError), so only the fake-to-real direction is checked.
+    it "only fakes verbs the real hub defines, with matching arity" do
+      FakeHub.public_instance_methods(false).each do |verb|
+        next if verb.to_s.end_with?("=") || %i[calls count fail_on].include?(verb)
+
+        expect(Orn::TUI::Hub.method_defined?(verb)).to be(true), "FakeHub##{verb} has no real counterpart"
+        real_arity = Orn::TUI::Hub.instance_method(verb).parameters.length
+        expect(FakeHub.instance_method(verb).parameters.length).to eq(real_arity),
+          "FakeHub##{verb} arity drifted from the real hub"
+      end
+    end
+  end
 end
