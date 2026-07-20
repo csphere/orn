@@ -6,6 +6,9 @@ module Orn
     # status, modal prompts, and the help line. Immediate-mode: the whole view
     # is rebuilt from `app` state each tick.
     module Ui
+      # Fixed width of the branch-name column in the worktree list.
+      BRANCH_COLUMN_WIDTH = 24
+
       module_function
 
       # Render the project TUI: title, worktree rows, optional error line, the
@@ -92,7 +95,7 @@ module Orn
         dirty_indicator = entry.dirty ? "\u{270e}" : "\u{2714}"
         window_indicator = entry.has_window ? "\u{25cf}" : "\u{25cb}"
 
-        text = " #{entry.branch.ljust(24)} #{dirty_indicator}  " \
+        text = " #{entry.branch.ljust(BRANCH_COLUMN_WIDTH)} #{dirty_indicator}  " \
           "#{window_indicator} #{entry.ahead}\u{2191} #{entry.behind}\u{2193}"
         spans = [Span.styled(text, style)]
         append_agent_span(

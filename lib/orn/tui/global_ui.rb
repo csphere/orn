@@ -12,6 +12,13 @@ module Orn
         " M-o:sidebar  M-i:agent  M-n/p:cycle  q:quit"
       ].freeze
 
+      # Fixed name-column widths per row type. The two are independent (repo
+      # rows carry an expand marker, worktree rows a two-space indent); they
+      # are not tuned to align with each other or with the project TUI's
+      # Ui::BRANCH_COLUMN_WIDTH.
+      REPO_NAME_WIDTH = 28
+      WORKTREE_BRANCH_WIDTH = 26
+
       # Render the global TUI: title, repo/worktree tree, optional error line,
       # and the help footer.
       def draw(frame, app)
@@ -100,7 +107,7 @@ module Orn
         expand_marker = entry.expanded ? "\u{25be}" : "\u{25b8}"
         session_indicator = entry.session_alive ? "\u{25cf}" : "\u{25cb}"
 
-        spans = [Span.styled(" #{expand_marker} #{entry.display_name.ljust(28)} ", style)]
+        spans = [Span.styled(" #{expand_marker} #{entry.display_name.ljust(REPO_NAME_WIDTH)} ", style)]
         append_repo_agent(
           spans,
           app,
@@ -155,7 +162,7 @@ module Orn
 
       def worktree_columns(worktree)
         window_indicator = worktree.has_window ? "\u{25cf}" : "\u{25cb}"
-        "  #{worktree.branch.ljust(26)} #{dirty_indicator(worktree)}  " \
+        "  #{worktree.branch.ljust(WORKTREE_BRANCH_WIDTH)} #{dirty_indicator(worktree)}  " \
           "#{window_indicator} #{ahead_behind(worktree).ljust(7)} "
       end
 
