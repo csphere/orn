@@ -48,12 +48,12 @@ module Orn
           sbx_config: sbx_config,
           agent_type: agent_type
         )
-        build(context, wt_result)
+        provision_with_rollback(context, wt_result)
       end
 
       # Everything created after the worktree (sandbox, window, ports, services)
       # is torn down on any failure, then the error is re-raised.
-      def build(context, wt_result)
+      def provision_with_rollback(context, wt_result)
         state = {
           name: nil,
           session: nil,
