@@ -178,24 +178,40 @@ module Orn
       end
 
       # Toggle expansion of the selected repo (or the repo owning the selected
-      # worktree row). Collapsing from a worktree row moves the selection to the
-      # repo row.
+      # worktree row).
       def toggle_expanded
         row = selected_row
         return unless row
 
         repo_idx = row.repo_index
-        entry = @entries[repo_idx].with(expanded: !@entries[repo_idx].expanded)
-        @entries[repo_idx] = entry
-        @mru_state.set_expanded(entry.root, entry.expanded)
-        @mru_state.save
-
-        if entry.expanded
-          @entries[repo_idx] = RepoStatus.with_worktree_git_stats(@output, entry)
-        elsif row.worktree?
-          @selected = visible_rows.index { |candidate| candidate == TreeRow.repo(repo_idx) } || 0
+        if @entries[repo_idx].expanded
+          collapse_repo(repo_idx, row)
+        else
+          expand_repo(repo_idx)
         end
         clamp_selected
+      end
+
+      def expand_repo(repo_idx)
+        entry = persist_expanded(repo_idx, true)
+        @entries[repo_idx] = RepoStatus.with_worktree_git_stats(@output, entry)
+      end
+
+      # Collapsing from a worktree row moves the selection to the repo row,
+      # since the worktree row is about to disappear.
+      def collapse_repo(repo_idx, row)
+        persist_expanded(repo_idx, false)
+        return unless row.worktree?
+
+        @selected = visible_rows.index { |candidate| candidate == TreeRow.repo(repo_idx) } || 0
+      end
+
+      def persist_expanded(repo_idx, expanded)
+        entry = @entries[repo_idx].with(expanded: expanded)
+        @entries[repo_idx] = entry
+        @mru_state.set_expanded(entry.root, expanded)
+        @mru_state.save
+        entry
       end
 
       def any_agent_working?
