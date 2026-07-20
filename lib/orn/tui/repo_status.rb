@@ -2,10 +2,6 @@
 
 module Orn
   module TUI
-    # Name and last-activity time of a live tmux session, as reported by the
-    # client's session listing.
-    SessionInfo = Orn::Tmux::SessionInfo
-
     # Live status for discovered repos: which tmux sessions are alive, their
     # window counts, per-worktree agent state and sandbox flags, and git stats
     # for expanded repos. Entries are immutable; every pass returns updated

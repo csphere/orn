@@ -6,8 +6,9 @@ module Orn
     #
     # Outside the TUI process (`ORN_TUI` unset) this launches an `orn` tmux
     # window that re-execs the binary; inside it (the re-exec), the event loop
-    # runs directly in the terminal. Entirely interactive: validated by running
-    # a real terminal, not by unit tests.
+    # runs directly in the terminal. Routing and the terminal wrappers are
+    # unit tested (spec/orn/tui/bootstrap_spec.rb); the drawn UI itself is
+    # validated interactively.
     module Bootstrap
       # Process name a live TUI pane runs; distinguishes a real orn TUI
       # window from a stale window that happens to share the name.
