@@ -68,7 +68,9 @@ module Orn
           sandbox_name: state[:name],
           host_ports: host_ports
         )
-      rescue StandardError => e
+      # Interrupt is not a StandardError; without it Ctrl-C during the
+      # minutes-long provision would skip the rollback.
+      rescue StandardError, Interrupt => e
         rollback(context, state)
         raise e
       end

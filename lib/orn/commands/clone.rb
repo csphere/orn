@@ -50,7 +50,9 @@ module Orn
           url,
           base
         )
-      rescue StandardError
+      # Interrupt is not a StandardError; without it Ctrl-C during a slow
+      # clone would leave the partial directory behind.
+      rescue StandardError, Interrupt
         FileUtils.rm_rf(project_dir)
         raise
       end

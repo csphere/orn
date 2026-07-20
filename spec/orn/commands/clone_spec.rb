@@ -62,6 +62,18 @@ RSpec.describe Orn::Commands::Clone do
       expect(File.exist?(File.join(work, "my-project"))).to be(false)
     end
 
+    it "removes the project directory when interrupted mid-clone" do
+      work = register_temp_dir(Dir.mktmpdir("orn-clone-work"))
+      allow(Orn::Commands::Setup).to receive(:clone_into).and_raise(Interrupt)
+
+      Dir.chdir(work) do
+        expect { described_class.new(output_mode: Orn::OutputMode.quiet).run("git@host:org/my-project.git", "main") }
+          .to raise_error(Interrupt)
+      end
+
+      expect(File.exist?(File.join(work, "my-project"))).to be(false)
+    end
+
     it "rejects a URL that looks like a git option" do
       with_fake_cmd do |fake|
         expect { described_class.new(output_mode: Orn::OutputMode.quiet).run("--upload-pack=evil", "main") }

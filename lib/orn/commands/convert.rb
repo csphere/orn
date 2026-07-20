@@ -213,7 +213,9 @@ module Orn
           origin_url,
           base_branch
         )
-      rescue StandardError
+      # Interrupt is not a StandardError; without it Ctrl-C mid-clone would
+      # leave the user's repo moved aside at the backup path.
+      rescue StandardError, Interrupt
         FileUtils.rm_rf(dir)
         restore_backup!(backup_path, dir)
       end

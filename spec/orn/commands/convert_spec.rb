@@ -345,6 +345,16 @@ RSpec.describe Orn::Commands::Convert, :real_cmd do
       expect(File.exist?("#{dir}.pre-orn")).to be(false)
     end
 
+    it "restores the original repo when interrupted mid-clone" do
+      dir = make_standard_repo
+      allow(Orn::Commands::Setup).to receive(:clone_into).and_raise(Interrupt)
+
+      expect { command.run_in(dir, nil) }.to raise_error(Orn::Error, /restored/)
+
+      expect(File.exist?(File.join(dir, "file.txt"))).to be(true)
+      expect(File.exist?("#{dir}.pre-orn")).to be(false)
+    end
+
     it "reports the backup location when restoring the backup also fails" do
       dir = make_standard_repo # origin URL dangles, so clone fails
       backup_path = "#{dir}.pre-orn"

@@ -17,4 +17,7 @@ begin
 rescue Orn::Error => e
   warn "orn: #{e.message}"
   exit 1
+rescue Interrupt
+  warn "orn: interrupted"
+  exit 130
 end

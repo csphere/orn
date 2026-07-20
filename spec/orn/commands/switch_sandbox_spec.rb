@@ -441,6 +441,33 @@ RSpec.describe Orn::Commands::SwitchSandbox do
         end
       end
     end
+
+    it "rolls back the worktree when provisioning is interrupted" do
+      project = sbx_project(minimal_sbx_config)
+      approve_sbx_commands(project)
+      allow(Orn::Sandbox::SbxCli).to receive(:create).and_raise(Interrupt)
+      with_fake_cmd do |fake|
+        script_passing_preflight(fake, project)
+        script_worktree_creation(
+          fake,
+          project.root,
+          "main"
+        )
+        fake.script(worktree_remove_argv(project.root))
+
+        expect do
+          described_class.create_with_sandbox(
+            output_mode,
+            project,
+            "feat",
+            nil,
+            client
+          )
+        end.to raise_error(Interrupt)
+
+        expect(fake.invocations).to include(worktree_remove_argv(project.root))
+      end
+    end
   end
 
   describe ".reopen_with_sandbox" do
