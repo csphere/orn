@@ -687,8 +687,8 @@ RSpec.describe Orn::Tmux::Client do
         client.join_pane(
           "%5",
           "hub:tabs",
-          40,
-          true
+          width_pct: 40,
+          focus: true
         )
 
         expect(fake.invocations).to eq([argv])
@@ -703,8 +703,8 @@ RSpec.describe Orn::Tmux::Client do
         client.join_pane(
           "%5",
           "hub:tabs",
-          40,
-          false
+          width_pct: 40,
+          focus: false
         )
 
         expect(fake.invocations).to eq([argv])
@@ -1378,8 +1378,8 @@ RSpec.describe Orn::Tmux::Client do
         client.join_pane(
           borrowed,
           "hub:orn",
-          33,
-          false
+          width_pct: 33,
+          focus: false
         )
         expect(pane_ids("hub")).to include(borrowed)
 

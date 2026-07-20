@@ -14,6 +14,8 @@ module Orn
     class Hub
       SIDEBAR_WIDTH_PCT = 33
       AGENT_WIDTH_PCT = 67
+      # Even split when returning a borrowed pane to its home window.
+      RETURN_SPLIT_PCT = 50
       # Hub binding: refocus the sidebar (TUI) pane.
       KEY_FOCUS_SIDEBAR = "M-o"
       # Hub binding: focus the visible tab's agent pane.
@@ -101,8 +103,8 @@ module Orn
         @client.join_pane(
           tab.pane_id,
           hub_pane,
-          AGENT_WIDTH_PCT,
-          true
+          width_pct: AGENT_WIDTH_PCT,
+          focus: true
         )
         @client.resize_pane_width(hub_pane, SIDEBAR_WIDTH_PCT)
       end
@@ -127,8 +129,8 @@ module Orn
           @client.join_pane(
             borrowed.pane_id,
             target,
-            50,
-            false
+            width_pct: RETURN_SPLIT_PCT,
+            focus: false
           )
         elsif @client.session_exists?(borrowed.home_session)
           @client.break_pane(

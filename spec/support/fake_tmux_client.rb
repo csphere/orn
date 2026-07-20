@@ -157,12 +157,12 @@ class FakeTmuxClient
 
   # -- borrowing --
 
-  def join_pane(src_pane, dst, percentage, focus)
+  def join_pane(src_pane, dst, width_pct:, focus:)
     record(
       :join_pane,
       src_pane,
       dst,
-      percentage,
+      width_pct,
       focus
     )
   end

@@ -12,8 +12,8 @@ RSpec.describe FakeTmuxClient do
     fake.join_pane(
       "%5",
       "%0",
-      67,
-      true
+      width_pct: 67,
+      focus: true
     )
 
     expect(fake.calls).to eq(
@@ -31,8 +31,8 @@ RSpec.describe FakeTmuxClient do
       failing.join_pane(
         "%5",
         "%0",
-        67,
-        true
+        width_pct: 67,
+        focus: true
       )
     end.to raise_error(Orn::Error, /join_pane failed/)
     expect(failing.count(:join_pane)).to eq(1)

@@ -7,10 +7,10 @@ module Orn
     # tui/hub builds the higher-level tab mechanics on top of these.
     class Client
       # Move `src_pane` into a horizontal split of `dst`, giving it
-      # `percentage`% of the width. `dst` is any tmux target (pane id or
+      # `width_pct`% of the width. `dst` is any tmux target (pane id or
       # session:window). When `focus` is false the client's active pane is
       # left unchanged.
-      def join_pane(src_pane, dst, percentage, focus)
+      def join_pane(src_pane, dst, width_pct:, focus:)
         args = ["join-pane", "-h"]
         args << "-d" unless focus
         args.push(
@@ -19,7 +19,7 @@ module Orn
           "-t",
           dst,
           "-l",
-          "#{percentage}%"
+          "#{width_pct}%"
         )
         tmux_exec(*args)
       end
