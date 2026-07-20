@@ -472,14 +472,26 @@ RSpec.describe Orn::Config do
       expect(described_class.load_from(project, nil).session).to eq("fresh-start")
     end
 
-    it "starts over from an empty mapping when the file is malformed" do
-      project = project_with("git: [broken\n")
+    it "refuses to rewrite a file that does not parse, keeping its content" do
+      broken_yaml = "git: [broken\n"
+      project = project_with(broken_yaml)
+      config_path = File.join(
+        project,
+        ".orn",
+        "config.yaml"
+      )
 
-      described_class.write_session(project, "recovered")
+      expect { described_class.write_session(project, "recovered") }
+        .to raise_error(Orn::Error, /does not parse as a YAML mapping/)
 
-      config = described_class.load_from(project, nil)
-      expect(config.session).to eq("recovered")
-      expect(config.base).to eq("main")
+      expect(File.read(config_path)).to eq(broken_yaml)
+    end
+
+    it "refuses to rewrite a file whose content is not a mapping" do
+      project = project_with("just a string\n")
+
+      expect { described_class.write_session(project, "recovered") }
+        .to raise_error(Orn::Error, /does not parse as a YAML mapping/)
     end
   end
 

@@ -109,11 +109,13 @@ module Orn
     end
 
     # Persists `tmux.session = name` into the project config, keeping other
-    # keys. Round-trips through YAML, so comments are lost.
+    # keys. Round-trips through YAML, so comments are lost. Refuses to touch
+    # a file it cannot parse: rewriting from an empty mapping would silently
+    # drop every other setting.
     def self.write_session(project_root, name)
       Validate.session_name!(name)
       config_path = File.join(project_root, PROJECT_CONFIG_RELATIVE_PATH)
-      data = read_yaml_mapping(config_path)
+      data = read_mapping_for_rewrite(config_path)
       tmux = data["tmux"]
       tmux = data["tmux"] = {} unless tmux.is_a?(Hash)
       tmux["session"] = name
@@ -257,6 +259,25 @@ module Orn
       {}
     end
 
+    # Like read_yaml_mapping, but raises instead of degrading to {} when the
+    # file has content that does not parse as a mapping.
+    def self.read_mapping_for_rewrite(path)
+      return {} unless File.exist?(path)
+
+      data = YAML.safe_load_file(path)
+      return {} if data.nil?
+      raise Orn::Error, rewrite_refused_message(path) unless data.is_a?(Hash)
+
+      data
+    rescue Psych::Exception
+      raise Orn::Error, rewrite_refused_message(path)
+    end
+
+    def self.rewrite_refused_message(path)
+      "Cannot update #{path}: file does not parse as a YAML mapping\n  " \
+        "Fix the file or set tmux.session in it manually"
+    end
+
     private_class_method :resolve_layout,
       :default_layout,
       :resolve_session,
@@ -266,6 +287,8 @@ module Orn
       :sourced_symlinks,
       :tui_info,
       :sourced_global,
-      :read_yaml_mapping
+      :read_yaml_mapping,
+      :read_mapping_for_rewrite,
+      :rewrite_refused_message
   end
 end
