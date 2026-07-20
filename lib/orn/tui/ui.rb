@@ -38,7 +38,7 @@ module Orn
 
       def render_body(frame, app, chunks)
         unless app.error.nil?
-          render_error(
+          TUI.render_error(
             frame,
             app,
             chunks[2]
@@ -116,10 +116,6 @@ module Orn
         agent_style = index == app.selected ? Style.default.fg(color).bg(Color::WHITE) : Style.default.fg(color)
         spans.push(Span.styled("  ", style))
         spans.push(Span.styled("#{symbol} #{label}", agent_style))
-      end
-
-      def render_error(frame, app, chunk)
-        frame.render_widget(Paragraph.line(Line.styled(" #{app.error}", Style.default.fg(Color::RED))), chunk)
       end
 
       def render_modal(frame, app, chunk)

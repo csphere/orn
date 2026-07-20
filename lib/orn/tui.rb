@@ -23,6 +23,11 @@ module Orn
     REFRESH_INTERVAL = 3
     # Name of the tmux window hosting a TUI.
     TUI_WINDOW = "orn"
+
+    # Render the app's error line in red; shared by both TUIs' renderers.
+    def self.render_error(frame, app, chunk)
+      frame.render_widget(Paragraph.line(Line.styled(" #{app.error}", Style.default.fg(Color::RED))), chunk)
+    end
     # Braille frames for the working-agent spinner.
     SPINNER_FRAMES = [
       "\u{280b}",

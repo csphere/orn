@@ -48,6 +48,8 @@ module Orn
     # agent status, and branch create/open/close/remove operations. A mutable
     # PORO the event loop drives and the renderer reads.
     class App
+      include PollTiming
+
       # Cadence of agent-state detection, faster than the full worktree refresh.
       AGENT_REFRESH_INTERVAL = 1
 
@@ -138,11 +140,6 @@ module Orn
 
       def any_agent_working?
         @agent_states.values.any? { |state| state.state == :working }
-      end
-
-      # Fast poll while an agent is working so the spinner animates smoothly.
-      def poll_timeout
-        any_agent_working? ? FAST_POLL_TIMEOUT : POLL_TIMEOUT
       end
 
       # Move the selection down, wrapping past the end.
@@ -364,10 +361,6 @@ module Orn
         refresh
       rescue Orn::Error => e
         @error = e.message
-      end
-
-      def monotonic
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     end
   end

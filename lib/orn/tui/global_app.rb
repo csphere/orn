@@ -60,6 +60,8 @@ module Orn
     # this class composes them. A mutable PORO the event loop drives and the
     # renderer reads.
     class GlobalApp
+      include PollTiming
+
       # Cadence of the tmux-derived refresh (sessions, windows, agent states).
       TMUX_REFRESH = 3
       # Cadence of full repo re-discovery across the scan roots, in seconds.
@@ -219,11 +221,6 @@ module Orn
 
       def any_agent_working?
         @entries.any? { |entry| entry.aggregate_agent_state == :working }
-      end
-
-      # Fast poll while an agent is working so the spinner animates smoothly.
-      def poll_timeout
-        any_agent_working? ? FAST_POLL_TIMEOUT : POLL_TIMEOUT
       end
 
       def clear_error
@@ -478,10 +475,6 @@ module Orn
         )
         RepoDiscovery.sort_entries(@entries)
         @last_tmux_refresh = monotonic
-      end
-
-      def monotonic
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     end
   end

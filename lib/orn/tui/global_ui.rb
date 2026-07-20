@@ -30,7 +30,7 @@ module Orn
           chunks[1]
         )
         unless app.error.nil?
-          render_error(
+          TUI.render_error(
             frame,
             app,
             chunks[2]
@@ -89,10 +89,6 @@ module Orn
             is_selected
           )
         end
-      end
-
-      def render_error(frame, app, chunk)
-        frame.render_widget(Paragraph.line(Line.styled(" #{app.error}", Style.default.fg(Color::RED))), chunk)
       end
 
       def help_lines
