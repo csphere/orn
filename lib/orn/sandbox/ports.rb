@@ -138,7 +138,7 @@ module Orn
       def self.persist_ports(orn_dir, name, mappings)
         sandbox_dir = File.join(orn_dir, "sandbox")
         FileUtils.mkdir_p(sandbox_dir)
-        File.write(File.join(sandbox_dir, "#{name}.ports"), JSON.generate(mappings.map(&:to_h)))
+        File.write(File.join(sandbox_dir, "#{name}.ports"), JSON.generate(mappings.map(&:to_json_hash)))
         nil
       rescue SystemCallError => e
         raise Orn::Error, "Failed to write sandbox ports for #{name}: #{e.message}"
@@ -178,7 +178,7 @@ module Orn
             container: entry["container"]
           )
         end
-      rescue Errno::ENOENT
+      rescue SystemCallError
         raise Orn::Error, "Failed to read #{path}"
       rescue JSON::ParserError
         raise Orn::Error, "Invalid port data in #{path}"
