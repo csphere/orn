@@ -66,9 +66,6 @@ module Orn
       DISCOVERY_REFRESH = 30
       # Minimum interval between agent-focus queries to the tmux server.
       FOCUS_POLL_INTERVAL = 0.25
-      # Name of the tmux window hosting a repo's TUI.
-      REPO_TUI_WINDOW = "orn"
-
       attr_accessor :entries,
         :selected,
         :error,
@@ -337,16 +334,16 @@ module Orn
           root,
           base
         )
-        unless client.window_exists?(session_name, REPO_TUI_WINDOW)
+        unless client.window_exists?(session_name, TUI_WINDOW)
           client.new_window_running(
             session_name,
-            REPO_TUI_WINDOW,
+            TUI_WINDOW,
             root,
             Orn::TUI.relaunch_command
           )
         end
         client.reorder_windows(session_name, base)
-        client.switch_client(session_name, REPO_TUI_WINDOW)
+        client.switch_client(session_name, TUI_WINDOW)
       end
 
       private
