@@ -182,7 +182,11 @@ module Orn
           path,
           binary
         )
-      rescue Errno::ENOENT
+      # Any read failure passes, not just a missing file: an unreadable
+      # config (permissions, stale NFS handle) must not kill every orn
+      # invocation before a command even runs. Config loading warns about
+      # unreadable files itself.
+      rescue SystemCallError
         nil
       end
 

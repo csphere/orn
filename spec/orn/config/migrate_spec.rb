@@ -392,6 +392,13 @@ RSpec.describe Orn::Config::Migrate do
       expect { described_class.enforce_file_version(File.join(dir, "missing.yaml"), binary) }.not_to raise_error
     end
 
+    it "passes for an unreadable file" do
+      File.write(path, "git:\n  base: main\n")
+      allow(File).to receive(:read).with(path).and_raise(Errno::EACCES)
+
+      expect { described_class.enforce_file_version(path, binary) }.not_to raise_error
+    end
+
     it "passes for a clean unversioned config" do
       File.write(path, "git:\n  base: main\n")
 
