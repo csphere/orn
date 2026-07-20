@@ -125,8 +125,9 @@ module Orn
     # Real-terminal backend over stdlib `io/console`: raw mode, the alternate
     # screen, and a hidden cursor while running; ANSI diff-free full redraws on
     # flush; and `IO.select`-timed key polling. Restoration is idempotent and
-    # wired to `ensure`/`at_exit`/signals by the caller so a crash never leaves
-    # the terminal wedged. Validated interactively (no unit tests touch a tty).
+    # wired by the caller to `ensure` plus INT/TERM traps (see
+    # Bootstrap.with_terminal) so a crash never leaves the terminal wedged.
+    # Validated interactively (no unit tests touch a tty).
     class TermBackend
       ENTER_ALT = "\e[?1049h"
       LEAVE_ALT = "\e[?1049l"
