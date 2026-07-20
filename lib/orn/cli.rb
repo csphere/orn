@@ -78,7 +78,7 @@ module Orn
       Orn::Commands::Init.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])
     end
 
-    desc "convert", "Convert a standard git repo into a bare-worktree project in place"
+    desc "convert", "Convert the current directory's git repo into a bare-worktree project in place"
     option :base, desc: "Base branch (defaults to the current branch)"
     def convert
       Orn::Commands::Convert.new(output_mode: Orn::OutputMode.from_options(options)).run(options[:base])

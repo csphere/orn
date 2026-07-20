@@ -149,8 +149,10 @@ current by CI.
 # Clone a repo into a new bare-worktree project
 orn clone git@github.com:you/app.git --base main
 
-# Or convert an existing repo in place / init a fresh one
+# Or convert an existing repo in place (run from inside the repo directory)
 orn convert
+
+# Or initialize an empty project in the current directory
 orn init --base main
 
 cd app
@@ -171,8 +173,9 @@ orn remove feature/ABC-1234
   bare-worktree project. `--base` is required.
 - `orn init [--base BRANCH]`: initialize a new project in the current
   directory (base defaults to `main`).
-- `orn convert [--base BRANCH]`: convert a standard git repo into a
-  bare-worktree project in place (base defaults to the current branch).
+- `orn convert [--base BRANCH]`: convert the current directory's git repo
+  into a bare-worktree project in place (base defaults to the current
+  branch).
 - `orn switch BRANCH [--base BRANCH] [--sbx]`: land on a branch. Resolves in
   order: existing tmux window, existing worktree, remote branch, new branch
   from base. `--sbx` also creates a sandbox with port publishing and

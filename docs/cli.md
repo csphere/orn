@@ -46,7 +46,7 @@ Initialize a new bare-worktree project in the current directory
 
 ### `orn convert`
 
-Convert a standard git repo into a bare-worktree project in place
+Convert the current directory's git repo into a bare-worktree project in place
 
 | Option | Description |
 | --- | --- |
