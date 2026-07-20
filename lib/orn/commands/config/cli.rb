@@ -32,9 +32,6 @@ module Orn
         method_option :dry_run,
           type: :boolean,
           desc: "Preview changes without writing"
-        method_option :yes,
-          type: :boolean,
-          desc: "Non-interactive: keep customized values, accept new defaults"
         method_option :global,
           type: :boolean,
           desc: "Migrate only the global config (~/.config/orn/default.yaml)"

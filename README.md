@@ -215,7 +215,7 @@ image, kits, ports, services).
 
 - `orn config show`: print the effective configuration with per-value
   sources (project / global / default).
-- `orn config migrate [--dry-run] [--yes] [--global] [--project]`: upgrade
+- `orn config migrate [--dry-run] [--global] [--project]`: upgrade
   config files to the current schema version. Commands refuse to run when a
   project's config is older than the installed orn; run `orn config migrate`
   to update it. A config newer than the installed orn only prints a warning.

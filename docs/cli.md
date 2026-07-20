@@ -93,7 +93,6 @@ Upgrade config files to the current schema version
 | Option | Description |
 | --- | --- |
 | `--dry-run` | Preview changes without writing |
-| `--yes` | Non-interactive: keep customized values, accept new defaults |
 | `--global` | Migrate only the global config (~/.config/orn/default.yaml) |
 | `--project` | Migrate only the project config (.orn/config.yaml) |
 
