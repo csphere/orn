@@ -10,7 +10,8 @@ module Orn
           :branch,
           :base,
           :worktree_path,
-          :from_remote
+          :from_remote,
+          :reused_branch
         )
 
         # Reusable core: create the worktree (plus symlinks) in an
@@ -26,7 +27,7 @@ module Orn
             root: project.root,
             output_mode: output_mode
           )
-          from_remote = create_worktree(
+          from_remote, reused_branch = create_worktree(
             output_mode,
             project,
             worktree,
@@ -45,14 +46,15 @@ module Orn
             branch: branch,
             base: base,
             worktree_path: wt_path.to_s,
-            from_remote: from_remote
+            from_remote: from_remote,
+            reused_branch: reused_branch
           )
         end
 
         # Fetches base, then creates the worktree from origin/<branch> when the
         # remote branch exists, otherwise from origin/<base>. Projects without
         # an origin remote (orn init) and failed fetches (offline) fall back to
-        # the local base branch. Returns from_remote.
+        # the local base branch. Returns [from_remote, reused_branch].
         def self.create_worktree(output_mode, project, worktree, branch, base)
           wt_path = project.worktree_path(branch)
           has_origin = worktree.remote_configured?("origin")
@@ -67,12 +69,16 @@ module Orn
             has_origin
           )
           output_mode.status("Creating worktree at #{wt_path}...")
-          worktree.add(
+          strategy = worktree.add(
             wt_path,
             branch,
             start_point
           )
-          from_remote
+          reused_branch = strategy == :existing_branch
+          if reused_branch
+            output_mode.status("  Reusing existing local branch '#{branch}' (its tip may be behind #{base})")
+          end
+          [from_remote, reused_branch]
         end
 
         def self.fetch_base(output_mode, worktree, base)
@@ -184,6 +190,8 @@ module Orn
           puts "Created worktree: #{result.worktree_path}"
           if result.from_remote
             puts "Branch: #{result.branch} (from remote)"
+          elsif result.reused_branch
+            puts "Branch: #{result.branch} (reusing existing local branch)"
           else
             puts "Branch: #{result.branch} (based on #{result.base})"
           end

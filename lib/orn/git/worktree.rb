@@ -55,19 +55,22 @@ module Orn
       # Creates a worktree for branch, trying three strategies in order: new
       # branch from start_point, new branch from its local equivalent (with any
       # origin/ prefix stripped), then checkout of an existing local branch.
-      # The raised error collects stderr from every failed attempt.
+      # Returns which strategy succeeded, :new_branch or :existing_branch, so
+      # callers can tell the user when a possibly stale local branch was
+      # reused instead of branching fresh off the start point. The raised
+      # error collects stderr from every failed attempt.
       def add(path, branch, start_point)
         errors = []
-        succeeded = false
+        strategy = nil
 
         add_attempts(
           path,
           branch,
           start_point
-        ).each_with_index do |args, index|
+        ).each_with_index do |(args, attempt_strategy), index|
           result = @repo.output(*args)
           if result.success?
-            succeeded = true
+            strategy = attempt_strategy
             break
           end
 
@@ -75,7 +78,9 @@ module Orn
           errors << "  Attempt #{index + 1}: #{stderr}" unless stderr.empty?
         end
 
-        raise Orn::Error, add_failure_message(branch, errors) unless succeeded
+        raise Orn::Error, add_failure_message(branch, errors) if strategy.nil?
+
+        strategy
       end
 
       # Removes the worktree at path with --force, discarding uncommitted
@@ -133,9 +138,9 @@ module Orn
       def add_attempts(path, branch, start_point)
         local_start_point = start_point.delete_prefix("origin/")
         [
-          ["worktree", "add", "-b", branch, path, start_point],
-          ["worktree", "add", "-b", branch, path, local_start_point],
-          ["worktree", "add", path, branch]
+          [["worktree", "add", "-b", branch, path, start_point], :new_branch],
+          [["worktree", "add", "-b", branch, path, local_start_point], :new_branch],
+          [["worktree", "add", path, branch], :existing_branch]
         ]
       end
 

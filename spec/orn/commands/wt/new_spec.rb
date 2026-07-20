@@ -163,6 +163,39 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
       end
     end
 
+    it "reports reuse when a local branch already exists without a worktree" do
+      root = standard_project("feature/other")
+      worktree = Orn::Git::Worktree.new(
+        root: root,
+        output_mode: Orn::OutputMode.quiet
+      )
+      worktree.fetch("origin", "main")
+      git(
+        "branch",
+        "main",
+        "origin/main",
+        chdir: root
+      )
+      git(
+        "branch",
+        "feature/stale",
+        "origin/main",
+        chdir: root
+      )
+
+      result = nil
+      expect do
+        result = described_class.create(
+          Orn::OutputMode.default,
+          load_project(root),
+          "feature/stale",
+          nil
+        )
+      end.to output(%r{Reusing existing local branch 'feature/stale'}).to_stderr
+
+      expect(result.reused_branch).to be(true)
+    end
+
     it "raises when the worktree already exists" do
       root = standard_project("feature/existing")
       FileUtils.mkdir_p(File.join(root, "feature/existing"))
@@ -354,13 +387,40 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
         .and output(%r{Fetching origin/main}).to_stderr
     end
 
+    it "prints the reuse wording when an existing local branch is checked out" do
+      root = discoverable_project("feature/other")
+      worktree = Orn::Git::Worktree.new(
+        root: root,
+        output_mode: Orn::OutputMode.quiet
+      )
+      worktree.fetch("origin", "main")
+      git(
+        "branch",
+        "main",
+        "origin/main",
+        chdir: root
+      )
+      git(
+        "branch",
+        "feature/stale",
+        "origin/main",
+        chdir: root
+      )
+      wt_path = File.join(root, "feature/stale")
+
+      expect { Dir.chdir(root) { run_command(Orn::OutputMode.default).run("feature/stale") } }
+        .to output("Created worktree: #{wt_path}\nBranch: feature/stale (reusing existing local branch)\n").to_stdout
+        .and output(/Reusing existing local branch/).to_stderr
+    end
+
     it "prints the result as JSON in JSON mode" do
       root = discoverable_project("feature/other")
       expected_json = JSON.pretty_generate(
         branch: "feature/fresh",
         base: "main",
         worktree_path: File.join(root, "feature/fresh"),
-        from_remote: false
+        from_remote: false,
+        reused_branch: false
       )
 
       expect { Dir.chdir(root) { run_command(Orn::OutputMode.quiet).run("feature/fresh") } }
