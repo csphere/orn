@@ -283,6 +283,9 @@ module Orn
       end
 
       def create_branch(branch)
+        # Same rules as the CLI commands: the branch becomes a filesystem
+        # path and a tmux window target.
+        Orn::Git::BranchName.new(branch).validate!
         wt_path = File.join(@root.to_s, branch)
         worktree = Orn::Git::Worktree.new(
           root: @root,

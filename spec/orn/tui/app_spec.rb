@@ -184,6 +184,22 @@ module Orn
             expect(fake.invocations).to be_empty
           end
         end
+
+        it "rejects an invalid branch name without running any command" do
+          app = build_app([])
+          app.start_new_branch
+          "bad.name".each_char { |char| app.new_branch_push_char(char) }
+
+          with_fake_cmd do |fake|
+            app.confirm_new_branch
+
+            aggregate_failures do
+              expect(app.error).to include("Invalid branch name")
+              expect(app.mode).to eq(Mode.normal)
+              expect(fake.invocations).to be_empty
+            end
+          end
+        end
       end
 
       describe "agent state" do
