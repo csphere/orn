@@ -3,8 +3,7 @@
 require "thor"
 
 module Orn
-  # The Thor command dispatcher. Subcommands are added in later phases; for
-  # now it carries the global options and the version command.
+  # The Thor command dispatcher.
   #
   # Thor is a DSL: the class-level calls below (`exit_on_failure?`,
   # `class_option`, `map`, `desc`) configure the CLI declaratively at load

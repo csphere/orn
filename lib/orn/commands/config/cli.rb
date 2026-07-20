@@ -6,7 +6,7 @@ module Orn
   module Commands
     module Config
       # Thor subcommand group for `orn config`. Registered on the root CLI via
-      # `subcommand "config", ...`. `migrate` arrives with the migration layer.
+      # `subcommand "config", ...`.
       class CLI < Thor
         def self.exit_on_failure?
           true

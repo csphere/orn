@@ -6,7 +6,7 @@ module Orn
   module Commands
     module Wt
       # Thor subcommand group for `orn wt` (worktree-only commands). Registered
-      # on the root CLI via `subcommand`. Only `list` is wired so far.
+      # on the root CLI via `subcommand`.
       class CLI < Thor
         def self.exit_on_failure?
           true
