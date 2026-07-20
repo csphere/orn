@@ -17,7 +17,7 @@ module Orn
 
       # Creates a sandbox via `sbx create`.
       def self.create(output_mode, params)
-        sbx_exec(output_mode, *build_create_command(params))
+        run_sbx(output_mode, *build_create_command(params))
       end
 
       def self.build_create_command(params)
@@ -50,7 +50,7 @@ module Orn
       # Runs a single command inside the sandbox via `sbx exec`, blocking
       # until it exits.
       def self.exec_setup(output_mode, name, setup_cmd, env)
-        sbx_exec(
+        run_sbx(
           output_mode,
           *build_exec_command(
             name,
@@ -71,7 +71,7 @@ module Orn
       # Runs a command inside the sandbox detached (`sbx exec -d`); used for
       # long-running services that should outlive the call.
       def self.exec_detached(output_mode, name, detached_cmd, env)
-        sbx_exec(
+        run_sbx(
           output_mode,
           *build_exec_detached_command(
             name,
@@ -92,7 +92,12 @@ module Orn
       # Removes a sandbox via `sbx rm --force`. The flag is required: without
       # it `sbx rm` prompts and fails when stdin is not a terminal.
       def self.remove(output_mode, name)
-        sbx_exec(output_mode, "rm", "--force", name)
+        run_sbx(
+          output_mode,
+          "rm",
+          "--force",
+          name
+        )
       end
 
       # Lists sandboxes via `sbx ls --json`. A non-zero exit is treated as an
@@ -148,7 +153,13 @@ module Orn
       # Publishes a host-to-container port mapping via `sbx ports --publish`.
       def self.publish_port(output_mode, name, host_port, container_port)
         mapping = "#{host_port}:#{container_port}"
-        sbx_exec(output_mode, "ports", name, "--publish", mapping)
+        run_sbx(
+          output_mode,
+          "ports",
+          name,
+          "--publish",
+          mapping
+        )
       end
 
       # --- Templates ---
@@ -248,7 +259,7 @@ module Orn
 
       # --- Internal helpers ---
 
-      def self.sbx_exec(output_mode, *args)
+      def self.run_sbx(output_mode, *args)
         Orn::Cmd.new(output_mode: output_mode).exec("sbx", *args)
       end
 
@@ -303,7 +314,7 @@ module Orn
 
       private_class_method :optional_create_flags,
         :extract_entries,
-        :sbx_exec,
+        :run_sbx,
         :run_sbx_ls,
         :run_template_ls,
         :run_secret_ls,
