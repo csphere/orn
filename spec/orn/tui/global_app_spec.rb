@@ -146,9 +146,24 @@ module Orn
 
           expect(app.visible_rows).to eq(
             [
-              TreeRow.repo(0), TreeRow.worktree(0, 0), TreeRow.worktree(0, 1), TreeRow.repo(1)
+              TreeRow.repo(0), TreeRow.worktree(0, 0), TreeRow.worktree(0, 1), TreeRow.spacer, TreeRow.repo(1)
             ]
           )
+        end
+
+        it "omits the spacer after the last repo" do
+          app = app_with(
+            [
+              entry("b"),
+              entry_with_worktrees(
+                "a",
+                %w[main],
+                true
+              )
+            ]
+          )
+
+          expect(app.visible_rows.last).to eq(TreeRow.worktree(1, 0))
         end
       end
 
@@ -173,6 +188,25 @@ module Orn
             app.move_down
             expect(app.selected_row).to eq(TreeRow.repo(0))
           end
+        end
+
+        it "skips the spacer moving up" do
+          app = app_with(
+            [
+              entry_with_worktrees(
+                "a",
+                %w[main],
+                true
+              ),
+              entry("b")
+            ]
+          )
+          app.selected = 3
+          app.sync_list_state
+
+          app.move_up
+
+          expect(app.selected_row).to eq(TreeRow.worktree(0, 0))
         end
 
         it "wraps up and down over repos" do

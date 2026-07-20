@@ -2,8 +2,9 @@
 
 module Orn
   module TUI
-    # A visible row in the flattened repo/worktree tree: a repo header or a
-    # worktree under it, identified by index into `entries`.
+    # A visible row in the flattened repo/worktree tree: a repo header, a
+    # worktree under it (identified by index into `entries`), or an
+    # unselectable blank spacer closing an expanded repo's worktree block.
     TreeRow = Data.define(
       :kind,
       :repo_index,
@@ -25,8 +26,17 @@ module Orn
         )
       end
 
+      def self.spacer
+        new(
+          kind: :spacer,
+          repo_index: nil,
+          wt_index: nil
+        )
+      end
+
       def repo? = kind == :repo
       def worktree? = kind == :worktree
+      def spacer? = kind == :spacer
     end
 
     # Identifies a row by content (repo root, or root + branch) rather than
@@ -136,14 +146,18 @@ module Orn
       end
 
       # Rows currently visible in the tree: every repo, plus worktrees of
-      # expanded repos.
+      # expanded repos. A blank spacer closes each expanded repo's worktree
+      # block, except at the end of the list where it would only add scroll
+      # length.
       def visible_rows
         rows = []
+        last_index = @entries.length - 1
         @entries.each_with_index do |entry, i|
           rows << TreeRow.repo(i)
           next unless entry.expanded
 
           entry.worktrees.each_index { |j| rows << TreeRow.worktree(i, j) }
+          rows << TreeRow.spacer unless i == last_index
         end
         rows
       end
@@ -163,20 +177,12 @@ module Orn
 
       # Move the selection down the visible rows, wrapping past the end.
       def move_down
-        length = visible_rows.length
-        return if length.zero?
-
-        @selected = (@selected + 1) % length
-        sync_list_state
+        step_selection(1)
       end
 
       # Move the selection up the visible rows, wrapping past the start.
       def move_up
-        length = visible_rows.length
-        return if length.zero?
-
-        @selected = (@selected + length - 1) % length
-        sync_list_state
+        step_selection(-1)
       end
 
       def sync_list_state
@@ -329,9 +335,12 @@ module Orn
         row && row_identity(row)
       end
 
+      # Spacers never sit at index 0 (a repo row always opens the list), so
+      # stepping up off a spacer terminates.
       def clamp_selected
-        length = visible_rows.length
-        @selected = length - 1 if @selected >= length && length.positive?
+        rows = visible_rows
+        @selected = rows.length - 1 if @selected >= rows.length && !rows.empty?
+        @selected -= 1 while @selected.positive? && rows[@selected].spacer?
         sync_list_state
       end
 
@@ -365,7 +374,21 @@ module Orn
 
       private
 
+      # Advance the selection by `delta` rows with wrap-around, then keep
+      # stepping over spacers so they are never selected. Terminates: repo rows
+      # guarantee at least one non-spacer.
+      def step_selection(delta)
+        rows = visible_rows
+        return if rows.empty?
+
+        @selected = (@selected + delta) % rows.length
+        @selected = (@selected + delta) % rows.length while rows[@selected].spacer?
+        sync_list_state
+      end
+
       def row_identity(row)
+        return nil if row.spacer?
+
         entry = @entries[row.repo_index]
         if row.repo?
           RowIdentity.repo(entry.root)

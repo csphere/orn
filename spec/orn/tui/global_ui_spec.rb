@@ -256,6 +256,93 @@ module Orn
         end
       end
 
+      describe "spacer rows" do
+        it "renders a blank row between an expanded repo and the next" do
+          expanded = entry("api").with(
+            expanded: true,
+            worktrees: [WorktreeRow.new(branch: "feat")]
+          )
+
+          buffer = render(app_with([expanded, entry("other")]), width: 80)
+
+          # Rows: repo at y 2, worktree at 3, spacer at 4, next repo at 5.
+          aggregate_failures do
+            expect(row_text(buffer, 4).strip).to eq("")
+            expect(row_text(buffer, 5)).to include("other")
+          end
+        end
+      end
+
+      describe "column sizing" do
+        def repo_with_long_names
+          entry("seaseducation/cas-seas3-web-orn").with(
+            expanded: true,
+            worktrees: [WorktreeRow.new(branch: "feature/ATT-6678-qa-feedback-1")]
+          )
+        end
+
+        it "truncates a repo name past the cap with an ellipsis" do
+          screen = render(app_with([repo_with_long_names]), width: 80).to_s
+
+          aggregate_failures do
+            expect(screen).to include("seaseducation/cas-seas3-we\u{2026}")
+            expect(screen).not_to include("web-orn")
+          end
+        end
+
+        it "truncates a branch past the cap with an ellipsis" do
+          screen = render(app_with([repo_with_long_names]), width: 80).to_s
+
+          aggregate_failures do
+            expect(screen).to include("feature/ATT-6678-qa-feed\u{2026}")
+            expect(screen).not_to include("feedback")
+          end
+        end
+
+        it "ends the repo and branch columns at the same screen column at the cap" do
+          buffer = render(app_with([repo_with_long_names]), width: 80)
+
+          # Repo names span x 3..29 at the cap of 27, branches x 5..29.
+          aggregate_failures do
+            expect(buffer[[29, 2]].symbol).to eq("\u{2026}")
+            expect(buffer[[29, 3]].symbol).to eq("\u{2026}")
+          end
+        end
+
+        it "derives the branch width from the shared column width" do
+          repo = entry("exactly-twenty-chars").with(
+            expanded: true,
+            worktrees: [
+              WorktreeRow.new(
+                branch: "feat",
+                dirty: false
+              )
+            ]
+          )
+
+          buffer = render(app_with([repo]), width: 80)
+
+          # Shared width 20: repo counts start at x 24, and the worktree dirty
+          # indicator lands on the same column.
+          aggregate_failures do
+            expect(buffer[[24, 2]].symbol).to eq("\u{25cb}")
+            expect(buffer[[24, 3]].symbol).to eq("\u{2714}")
+          end
+        end
+
+        it "measures branches of collapsed repos too" do
+          repo = entry("api").with(
+            worktrees: [WorktreeRow.new(branch: "feature/qa-feedback-123")]
+          )
+
+          buffer = render(app_with([repo]), width: 80)
+
+          # The hidden 23-char branch sets the shared width to 25, pushing the
+          # repo row's session indicator out to x 29.
+          expect(buffer[[29, 2]].symbol).to eq("\u{25cb}")
+        end
+      end
+
       describe "tab gutter states" do
         def repo_with_feat
           entry("api").with(

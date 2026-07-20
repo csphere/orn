@@ -57,6 +57,32 @@ module Orn
       end
     end
 
+    describe ".fit" do
+      it "pads a short value with spaces" do
+        expect(described_class.fit("main", 8)).to eq("main    ")
+      end
+
+      it "returns an exact-width value untouched" do
+        expect(described_class.fit("abcde", 5)).to eq("abcde")
+      end
+
+      it "truncates a long value to width with a trailing ellipsis" do
+        expect(described_class.fit("abcdef", 5)).to eq("abcd\u{2026}")
+      end
+
+      it "reduces to a lone ellipsis at width 1" do
+        expect(described_class.fit("abc", 1)).to eq("\u{2026}")
+      end
+
+      it "returns an empty string at width 0" do
+        expect(described_class.fit("abc", 0)).to eq("")
+      end
+
+      it "pads an empty string to width" do
+        expect(described_class.fit("", 3)).to eq("   ")
+      end
+    end
+
     describe ".relaunch_command" do
       around do |example|
         original_program_name = $PROGRAM_NAME

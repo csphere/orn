@@ -6,8 +6,10 @@ module Orn
     # status, modal prompts, and the help line. Immediate-mode: the whole view
     # is rebuilt from `app` state each tick.
     module Ui
-      # Fixed width of the branch-name column in the worktree list.
-      BRANCH_COLUMN_WIDTH = 24
+      # The branch-name column stretches to the widest branch, within these
+      # bounds; longer names are truncated with an ellipsis.
+      BRANCH_COLUMN_MIN = 10
+      BRANCH_COLUMN_MAX = 25
 
       module_function
 
@@ -62,23 +64,30 @@ module Orn
       end
 
       def entry_lines(app)
+        branch_width = branch_column_width(app.entries)
         app.entries.each_with_index.map do |entry, index|
           entry_line(
             app,
             entry,
-            index
+            index,
+            branch_width
           )
         end
       end
 
+      def branch_column_width(entries)
+        widest = entries.map { |entry| entry.branch.length }.max || 0
+        widest.clamp(BRANCH_COLUMN_MIN, BRANCH_COLUMN_MAX)
+      end
+
       # One worktree row: branch, dirty/window indicators, ahead/behind counts,
       # and, when present, the agent status indicator.
-      def entry_line(app, entry, index)
+      def entry_line(app, entry, index, branch_width)
         style = index == app.selected ? Style.default.fg(Color::BLACK).bg(Color::WHITE) : Style.default
         dirty_indicator = entry.dirty ? "\u{270e}" : "\u{2714}"
         window_indicator = entry.has_window ? "\u{25cf}" : "\u{25cb}"
 
-        text = " #{entry.branch.ljust(BRANCH_COLUMN_WIDTH)} #{dirty_indicator}  " \
+        text = " #{TUI.fit(entry.branch, branch_width)} #{dirty_indicator}  " \
           "#{window_indicator} #{entry.ahead}\u{2191} #{entry.behind}\u{2193}"
         spans = [Span.styled(text, style)]
         append_agent_span(

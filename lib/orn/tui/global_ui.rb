@@ -12,12 +12,13 @@ module Orn
         " M-o:sidebar  M-i:agent  M-n/p:cycle  q:quit"
       ].freeze
 
-      # Fixed name-column widths per row type. The two are independent (repo
-      # rows carry an expand marker, worktree rows a two-space indent); they
-      # are not tuned to align with each other or with the project TUI's
-      # Ui::BRANCH_COLUMN_WIDTH.
-      REPO_NAME_WIDTH = 28
-      WORKTREE_BRANCH_WIDTH = 26
+      # The name column stretches to the widest repo name or branch, within
+      # these bounds; longer names are truncated with an ellipsis. Repo names
+      # get the full width W and branches W - 2: branches are indented two
+      # columns further than repo names, so both columns end at the same
+      # screen column.
+      NAME_COLUMN_MIN = 12
+      NAME_COLUMN_MAX = 27
 
       # Render the global TUI: title, repo/worktree tree, optional error line,
       # and the help footer.
@@ -58,12 +59,14 @@ module Orn
         end
 
         selected = app.list_state.selected
+        name_width = name_column_width(app.entries)
         items = rows.each_with_index.map do |row, i|
           ListItem.new(
             row_line(
               app,
               row,
-              selected == i
+              selected == i,
+              name_width
             )
           )
         end
@@ -74,21 +77,34 @@ module Orn
         )
       end
 
-      def row_line(app, row, is_selected)
+      def row_line(app, row, is_selected, name_width)
+        return Line.from([]) if row.spacer?
+
         if row.repo?
           repo_line(
             app,
             app.entries[row.repo_index],
-            is_selected
+            is_selected,
+            name_width
           )
         else
           worktree_line(
             app,
             row.repo_index,
             row.wt_index,
-            is_selected
+            is_selected,
+            name_width
           )
         end
+      end
+
+      # Widest name across every repo and worktree, expanded or not, so the
+      # layout stays put when repos expand and collapse.
+      def name_column_width(entries)
+        name_lengths = entries.map { |entry| entry.display_name.length }
+        branch_lengths = entries.flat_map { |entry| entry.worktrees.map { |worktree| worktree.branch.length + 2 } }
+        widest = (name_lengths + branch_lengths).max || 0
+        widest.clamp(NAME_COLUMN_MIN, NAME_COLUMN_MAX)
       end
 
       def help_lines
@@ -97,13 +113,13 @@ module Orn
 
       # A repo row: expand marker, name, aggregate agent indicator, and
       # session/worktree counts. Unhealthy repos are grayed out.
-      def repo_line(app, entry, is_selected)
+      def repo_line(app, entry, is_selected, name_width)
         style = row_style(is_selected)
         style = style.fg(Color::DARK_GRAY) unless entry.healthy
         expand_marker = entry.expanded ? "\u{25be}" : "\u{25b8}"
         session_indicator = entry.session_alive ? "\u{25cf}" : "\u{25cb}"
 
-        spans = [Span.styled(" #{expand_marker} #{entry.display_name.ljust(REPO_NAME_WIDTH)} ", style)]
+        spans = [Span.styled(" #{expand_marker} #{TUI.fit(entry.display_name, name_width)} ", style)]
         append_repo_agent(
           spans,
           app,
@@ -127,7 +143,7 @@ module Orn
 
       # A worktree row: tab gutter, branch, dirty and window indicators,
       # ahead/behind counts, sandbox badge, and agent indicator.
-      def worktree_line(app, repo_idx, wt_idx, is_selected)
+      def worktree_line(app, repo_idx, wt_idx, is_selected, name_width)
         entry = app.entries[repo_idx]
         worktree = entry.worktrees[wt_idx]
         style = row_style(is_selected)
@@ -140,7 +156,7 @@ module Orn
         )
         spans = [
           Span.styled(" #{gutter} ", gutter_style),
-          Span.styled(worktree_columns(worktree), style)
+          Span.styled(worktree_columns(worktree, name_width - 2), style)
         ]
         append_sandbox_badge(
           spans,
@@ -156,9 +172,9 @@ module Orn
         Line.from(spans)
       end
 
-      def worktree_columns(worktree)
+      def worktree_columns(worktree, branch_width)
         window_indicator = worktree.has_window ? "\u{25cf}" : "\u{25cb}"
-        "  #{worktree.branch.ljust(WORKTREE_BRANCH_WIDTH)} #{dirty_indicator(worktree)}  " \
+        "  #{TUI.fit(worktree.branch, branch_width)} #{dirty_indicator(worktree)}  " \
           "#{window_indicator} #{ahead_behind(worktree).ljust(7)} "
       end
 

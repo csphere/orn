@@ -53,6 +53,16 @@ module Orn
       end
     end
 
+    # Fit `text` into a `width`-cell column: pad short values with spaces,
+    # truncate long ones to `width - 1` characters plus an ellipsis. Shared by
+    # the project and global list renderers.
+    def self.fit(text, width)
+      return "" if width <= 0
+      return text.ljust(width) if text.length <= width
+
+      "#{text[0, width - 1]}\u{2026}"
+    end
+
     # The shell command a tmux window runs to re-exec orn as a TUI process,
     # guarded by the `ORN_TUI` env var so the re-exec runs the event loop
     # directly instead of bootstrapping another window. `suffix` appends flags

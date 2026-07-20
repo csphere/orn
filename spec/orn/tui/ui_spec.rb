@@ -130,6 +130,45 @@ module Orn
         end
       end
 
+      describe "column sizing" do
+        def row_text(buffer, row_y)
+          (0...buffer.area.width).map { |x| buffer[[x, row_y]].symbol }.join
+        end
+
+        it "shrinks the branch column to the floor for short names" do
+          buffer = render(app_with([entry("main"), entry("fix/tui")]))
+
+          expect(row_text(buffer, 2)).to start_with(" main       \u{2714}")
+        end
+
+        it "stretches the branch column to the widest branch" do
+          buffer = render(app_with([entry("main"), entry("feature/wider")]))
+
+          expect(row_text(buffer, 2)).to start_with(" main          \u{2714}")
+        end
+
+        it "renders a branch at the cap in full" do
+          branch_at_cap = "feature/exactly-25-chars!"
+
+          screen = render(app_with([entry(branch_at_cap)])).to_s
+
+          aggregate_failures do
+            expect(branch_at_cap.length).to eq(Ui::BRANCH_COLUMN_MAX)
+            expect(screen).to include(branch_at_cap)
+            expect(screen).not_to include("\u{2026}")
+          end
+        end
+
+        it "truncates a branch past the cap with an ellipsis" do
+          screen = render(app_with([entry("feature/ATT-6678-qa-feedback-1")])).to_s
+
+          aggregate_failures do
+            expect(screen).to include("feature/ATT-6678-qa-feed\u{2026}")
+            expect(screen).not_to include("feedback")
+          end
+        end
+      end
+
       describe "agent indicators" do
         def app_with_agent(state)
           app = app_with([entry("main", has_window: true)])
