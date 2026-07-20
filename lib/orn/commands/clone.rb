@@ -62,7 +62,7 @@ module Orn
         @output_mode.status("Base worktree: #{project_name}/#{base}/")
         @output_mode.status("\nNext steps:")
         @output_mode.status("  cd #{project_name}/#{base}")
-        @output_mode.status("  orn wt new feature/your-branch")
+        @output_mode.status("  orn switch feature/your-branch")
       end
     end
   end
