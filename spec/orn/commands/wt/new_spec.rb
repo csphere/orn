@@ -270,7 +270,7 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
           .to raise_error(
             Orn::Error,
             "symlink destination not in .gitignore: 'shared.txt'\n" \
-              "Add it to .gitignore before running 'orn new'"
+              "Add it to .gitignore before running 'orn wt new'"
           )
       end
 
@@ -300,7 +300,7 @@ RSpec.describe Orn::Commands::Wt::New, :real_cmd do
         .to raise_error(
           Orn::Error,
           "symlink destinations not in .gitignore: 'shared_one.txt', 'shared_two.txt'\n" \
-            "Add them to .gitignore before running 'orn new'"
+            "Add them to .gitignore before running 'orn wt new'"
         )
       expect(File).not_to exist(wt_path)
     end

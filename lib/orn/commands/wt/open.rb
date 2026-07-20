@@ -48,7 +48,7 @@ module Orn
           raise Orn::Error,
             "No worktree found for '#{branch}'\n  " \
               "Branch does not exist on the remote either\n  " \
-              "Use 'orn new #{branch}' to create it"
+              "Use 'orn switch #{branch}' to create it"
         end
 
         def initialize(output_mode:)

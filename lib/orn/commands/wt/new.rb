@@ -20,7 +20,7 @@ module Orn
           base = base_override || project.config.base
           wt_path = project.worktree_path(branch)
           if File.exist?(wt_path)
-            raise Orn::Error, "Worktree already exists at #{wt_path}\n  Use 'orn open #{branch}' to open it"
+            raise Orn::Error, "Worktree already exists at #{wt_path}\n  Use 'orn switch #{branch}' to open it"
           end
 
           worktree = Orn::Git::Worktree.new(
@@ -155,7 +155,7 @@ module Orn
           noun = unignored.length > 1 ? "destinations" : "destination"
           pronoun = unignored.length > 1 ? "them" : "it"
           "symlink #{noun} not in .gitignore: #{paths}\n" \
-            "Add #{pronoun} to .gitignore before running 'orn new'"
+            "Add #{pronoun} to .gitignore before running 'orn wt new'"
         end
 
         def self.safe_remove(worktree, wt_path)

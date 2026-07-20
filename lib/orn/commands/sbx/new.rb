@@ -40,7 +40,7 @@ module Orn
 
           wt_path = project.worktree_path(branch)
           unless File.exist?(wt_path)
-            raise Orn::Error, "Worktree does not exist at #{wt_path}\n  Use 'orn new #{branch}' to create it first"
+            raise Orn::Error, "Worktree does not exist at #{wt_path}\n  Use 'orn wt new #{branch}' to create it first"
           end
 
           Orn::Trust.check_sbx_trust(project.root, sbx_config)

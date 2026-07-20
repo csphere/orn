@@ -73,7 +73,7 @@ module Orn
         header: "Project config contains pane commands that will be executed:",
         prompt: "Trust these commands? [y/N] ",
         non_interactive_msg: "Project config contains untrusted pane commands\n  " \
-          "Run 'orn open <branch>' interactively to review and approve them",
+          "Run 'orn switch <branch>' interactively to review and approve them",
         interactive: interactive
       )
       return layout if approved
