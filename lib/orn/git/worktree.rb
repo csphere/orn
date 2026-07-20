@@ -89,25 +89,26 @@ module Orn
         )
       end
 
-      # Force-deletes the local branch; returns whether git succeeded. A
-      # failed spawn (missing git) raises, unlike local_branch_exists?.
+      # Force-deletes the local branch; returns the command result so
+      # callers can report git's stderr on failure. A failed spawn (missing
+      # git) raises, unlike local_branch_exists?.
       def delete_branch(branch)
         @repo.output(
           "branch",
           "-D",
           branch
-        ).success?
+        )
       end
 
-      # Deletes branch on origin; returns whether git succeeded. Raises on a
-      # failed spawn, like delete_branch.
+      # Deletes branch on origin; returns the command result, like
+      # delete_branch. Raises on a failed spawn.
       def delete_remote_branch(branch)
         @repo.output(
           "push",
           "origin",
           "--delete",
           branch
-        ).success?
+        )
       end
 
       # The sorted branch names of all worktrees, parsed from `git worktree

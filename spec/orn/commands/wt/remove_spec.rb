@@ -159,6 +159,40 @@ RSpec.describe Orn::Commands::Wt::Remove, :real_cmd do
     end
 
     context "with --prune" do
+      it "warns with git's stderr when a deletion fails" do
+        project = project_on
+        human_command = described_class.new(output_mode: Orn::OutputMode.default)
+
+        with_fake_cmd do |fake|
+          fake.script(
+            ["git", "-C", project.root, "branch", "-D", "feature/x"],
+            stderr: "error: branch 'feature/x' not found",
+            status: 1
+          )
+          fake.script(
+            ["git", "-C", project.root, "push", "origin", "--delete", "feature/x"],
+            stderr: "fatal: could not read from remote repository",
+            status: 1
+          )
+
+          result = nil
+          expect do
+            result = human_command.run_inner(
+              project,
+              "feature/x",
+              true
+            )
+          end.to output(
+            %r{could not delete local branch 'feature/x': error.*could not delete remote branch 'feature/x': fatal}m
+          ).to_stderr
+
+          aggregate_failures do
+            expect(result.branch_deleted).to be(false)
+            expect(result.remote_branch_deleted).to be(false)
+          end
+        end
+      end
+
       it "removes the worktree and deletes the local and remote branch" do
         project = project_on
         add_worktree(

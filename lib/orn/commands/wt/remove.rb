@@ -97,8 +97,8 @@ module Orn
             output_mode: @output_mode
           )
           worktree_removed = remove_worktree(worktree, project.worktree_path(branch))
-          branch_deleted = prune ? worktree.delete_branch(branch) : false
-          remote_branch_deleted = prune ? worktree.delete_remote_branch(branch) : false
+          branch_deleted = prune ? prune_branch(worktree, branch) : false
+          remote_branch_deleted = prune ? prune_remote_branch(worktree, branch) : false
 
           Orn::Fs.prune_branch_dirs(project.root, branch)
 
@@ -132,6 +132,25 @@ module Orn
 
           worktree.remove(wt_path)
           true
+        end
+
+        # Failed deletions warn instead of raising (the batch keeps going),
+        # because a missing "Deleted branch" line alone reads as success.
+        def prune_branch(worktree, branch)
+          report_prune_failure("local branch", branch, worktree.delete_branch(branch))
+        end
+
+        def prune_remote_branch(worktree, branch)
+          report_prune_failure("remote branch", branch, worktree.delete_remote_branch(branch))
+        end
+
+        def report_prune_failure(kind, branch, result)
+          return true if result.success?
+
+          stderr = result.stderr.strip
+          detail = stderr.empty? ? "" : ": #{stderr}"
+          @output_mode.status("warning: could not delete #{kind} '#{branch}'#{detail}")
+          false
         end
 
         def current_directory
