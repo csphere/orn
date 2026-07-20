@@ -322,6 +322,7 @@ RSpec.describe Orn::Commands::SwitchSandbox do
 
     it "raises before touching git when a preflight check fails" do
       project = sbx_project(minimal_sbx_config)
+      approve_sbx_commands(project)
 
       with_fake_cmd do |fake|
         fake.script(%w[which sbx])
@@ -389,6 +390,7 @@ RSpec.describe Orn::Commands::SwitchSandbox do
 
     it "rolls back only the worktree when sandbox creation itself fails" do
       project = sbx_project(minimal_sbx_config)
+      approve_sbx_commands(project)
       with_fake_cmd do |fake|
         script_passing_preflight(fake, project)
         script_worktree_creation(

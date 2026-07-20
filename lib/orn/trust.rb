@@ -182,12 +182,24 @@ module Orn
       nil
     end
 
-    # Whether the sbx config contains anything that needs approval.
+    # Whether the sbx config contains anything that needs approval. Beyond
+    # the commands themselves, every field that shapes the `sbx create`
+    # invocation counts: a repo config must not steer create args without
+    # the user seeing them.
     def self.sbx_commands?(sbx)
       !sbx.setup.empty? ||
         !sbx.start.nil? ||
         (!sbx.build.nil? && !sbx.build.build_args.empty?) ||
-        !sbx.env.empty?
+        !sbx.env.empty? ||
+        sbx_create_args?(sbx)
+    end
+
+    def self.sbx_create_args?(sbx)
+      !sbx.template.nil? ||
+        !sbx.agent_type.nil? ||
+        !sbx.all_kits.empty? ||
+        !sbx.cpus.nil? ||
+        !sbx.memory.nil?
     end
 
     # SHA256 hex digest over the trust-relevant sbx fields, each prefixed with
@@ -198,6 +210,7 @@ module Orn
       hash_sbx_start(digest, sbx.start)
       hash_sbx_build_args(digest, sbx.build)
       hash_sbx_env(digest, sbx.env)
+      hash_sbx_create_args(digest, sbx)
       digest.hexdigest
     end
 
@@ -209,7 +222,17 @@ module Orn
       items << "[start]     #{sbx.start}" unless sbx.start.nil?
       sbx.build&.build_args&.each { |arg| items << "[build arg] reads #{arg} from environment" }
       sbx.env.each { |key, value| items << "[env]       #{key} = #{value}" }
+      format_sbx_create_args(items, sbx)
       items
+    end
+
+    def self.format_sbx_create_args(items, sbx)
+      items << "[template]  #{sbx.template}" unless sbx.template.nil?
+      items << "[agent]     #{sbx.agent_type}" unless sbx.agent_type.nil?
+      sbx.all_kits.each { |kit| items << "[kit]       #{kit}" }
+      items << "[cpus]      #{sbx.cpus}" unless sbx.cpus.nil?
+      items << "[memory]    #{sbx.memory}" unless sbx.memory.nil?
+      nil
     end
 
     def self.interactive?
@@ -326,11 +349,32 @@ module Orn
     end
 
     def self.hash_sbx_start(digest, start)
-      return if start.nil?
+      hash_sbx_scalar(digest, "start", start)
+    end
 
-      digest.update("start\xff".b)
-      digest.update(start.b)
+    # Fields absent from the config hash nothing at all, so fingerprints from
+    # before a field existed stay valid until a config actually sets it.
+    def self.hash_sbx_create_args(digest, sbx)
+      hash_sbx_scalar(digest, "template", sbx.template)
+      hash_sbx_scalar(digest, "agent_type", sbx.agent_type)
+      hash_sbx_kits(digest, sbx.all_kits)
+      hash_sbx_scalar(digest, "cpus", sbx.cpus&.to_s)
+      hash_sbx_scalar(digest, "memory", sbx.memory)
+    end
+
+    def self.hash_sbx_scalar(digest, label, value)
+      return if value.nil?
+
+      digest.update("#{label}\xff".b)
+      digest.update(value.b)
       digest.update("\xff".b)
+    end
+
+    def self.hash_sbx_kits(digest, kits)
+      return if kits.empty?
+
+      digest.update("kits\xff".b)
+      hash_list(digest, kits)
     end
 
     def self.hash_sbx_build_args(digest, build)
@@ -375,6 +419,11 @@ module Orn
       :hash_sbx_start,
       :hash_sbx_build_args,
       :hash_sbx_env,
-      :format_sbx_setup
+      :hash_sbx_create_args,
+      :hash_sbx_scalar,
+      :hash_sbx_kits,
+      :sbx_create_args?,
+      :format_sbx_setup,
+      :format_sbx_create_args
   end
 end

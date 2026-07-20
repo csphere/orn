@@ -31,7 +31,8 @@ RSpec.describe Orn::Trust do
     Orn::Config::Layout.of_rows(rows)
   end
 
-  def make_sbx(setup: [], start: nil, build_args: [], env: {}, build: :auto)
+  def make_sbx(setup: [], start: nil, build_args: [], env: {}, build: :auto,
+    template: nil, kits: [], cpus: nil, memory: nil, agent_type: nil)
     if build == :auto
       build = if build_args.empty?
         nil
@@ -43,12 +44,12 @@ RSpec.describe Orn::Trust do
       end
     end
     Orn::Config::SbxConfig.new(
-      template: nil,
+      template: template,
       kit: nil,
-      kits: [],
-      cpus: nil,
-      memory: nil,
-      agent_type: nil,
+      kits: kits,
+      cpus: cpus,
+      memory: memory,
+      agent_type: agent_type,
       setup: setup,
       start: start,
       build: build,
@@ -556,6 +557,16 @@ RSpec.describe Orn::Trust do
 
       expect(described_class.sbx_commands?(sbx)).to be(false)
     end
+
+    it "is true with any field that shapes sbx create" do
+      aggregate_failures do
+        expect(described_class.sbx_commands?(make_sbx(template: "img:1"))).to be(true)
+        expect(described_class.sbx_commands?(make_sbx(agent_type: "claude"))).to be(true)
+        expect(described_class.sbx_commands?(make_sbx(kits: ["/kit/a"]))).to be(true)
+        expect(described_class.sbx_commands?(make_sbx(cpus: 4))).to be(true)
+        expect(described_class.sbx_commands?(make_sbx(memory: "8g"))).to be(true)
+      end
+    end
   end
 
   describe ".format_sbx_items" do
@@ -605,6 +616,26 @@ RSpec.describe Orn::Trust do
     it "is empty when nothing needs approval" do
       expect(described_class.format_sbx_items(make_sbx)).to be_empty
     end
+
+    it "labels the fields that shape sbx create" do
+      items = described_class.format_sbx_items(
+        make_sbx(
+          template: "img:1",
+          agent_type: "claude",
+          kits: ["/kit/a"],
+          cpus: 4,
+          memory: "8g"
+        )
+      )
+
+      aggregate_failures do
+        expect(items).to include(a_string_including("[template]", "img:1"))
+        expect(items).to include(a_string_including("[agent]", "claude"))
+        expect(items).to include(a_string_including("[kit]", "/kit/a"))
+        expect(items).to include(a_string_including("[cpus]", "4"))
+        expect(items).to include(a_string_including("[memory]", "8g"))
+      end
+    end
   end
 
   describe ".sbx_fingerprint" do
@@ -634,6 +665,18 @@ RSpec.describe Orn::Trust do
     it "distinguishes the same command in setup vs start" do
       expect(described_class.sbx_fingerprint(make_sbx(setup: ["cmd"])))
         .not_to eq(described_class.sbx_fingerprint(make_sbx(start: "cmd")))
+    end
+
+    it "differs when any field that shapes sbx create changes" do
+      base = described_class.sbx_fingerprint(make_sbx)
+
+      aggregate_failures do
+        expect(described_class.sbx_fingerprint(make_sbx(template: "img:1"))).not_to eq(base)
+        expect(described_class.sbx_fingerprint(make_sbx(agent_type: "claude"))).not_to eq(base)
+        expect(described_class.sbx_fingerprint(make_sbx(kits: ["/kit/a"]))).not_to eq(base)
+        expect(described_class.sbx_fingerprint(make_sbx(cpus: 4))).not_to eq(base)
+        expect(described_class.sbx_fingerprint(make_sbx(memory: "8g"))).not_to eq(base)
+      end
     end
 
     it "is sensitive to setup and build-arg order" do

@@ -289,6 +289,7 @@ RSpec.describe Orn::Commands::Sbx::New do
 
     it "prints no template or port lines when neither is configured" do
       project = sandbox_ready_project(minimal_config)
+      approve_sbx_commands(project)
       with_fake_cmd do |fake|
         script_passing_preflight(fake, project)
         fake.script(inspect_argv, status: 1)
@@ -302,6 +303,7 @@ RSpec.describe Orn::Commands::Sbx::New do
 
     it "prints json that omits template and host_ports when neither is configured" do
       project = sandbox_ready_project(minimal_config)
+      approve_sbx_commands(project)
       json_command = described_class.new(output_mode: Orn::OutputMode.quiet)
       with_fake_cmd do |fake|
         script_passing_preflight(fake, project)
@@ -346,6 +348,7 @@ RSpec.describe Orn::Commands::Sbx::New do
 
     it "suggests doctor when preflight fails", :real_cmd do
       project = project_with("sbx:\n  agent_type: claude\n  template: img:1\n")
+      approve_sbx_commands(project)
       FileUtils.mkdir_p(File.join(project.root, "feature/x"))
 
       expect { command.run_inner(project, "feature/x") }
@@ -355,6 +358,7 @@ RSpec.describe Orn::Commands::Sbx::New do
     it "fails when the sandbox already exists" do
       stub_host_os("linux")
       project = sandbox_ready_project(minimal_config)
+      approve_sbx_commands(project)
       with_fake_cmd do |fake|
         script_passing_preflight(fake, project)
         fake.script(inspect_argv)

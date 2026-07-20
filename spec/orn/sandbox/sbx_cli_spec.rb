@@ -83,6 +83,11 @@ RSpec.describe Orn::Sandbox::SbxCli do
 
       expect(args).to eq(["create", "--name", "sbx", "agent", "/wt", "/bare"])
     end
+
+    it "rejects an agent type that looks like a flag" do
+      expect { described_class.build_create_command(create_params(agent_type: "--privileged")) }
+        .to raise_error(Orn::Error, /agent_type '--privileged'/)
+    end
   end
 
   describe ".create" do

@@ -21,6 +21,12 @@ module Orn
       end
 
       def self.build_create_command(params)
+        # agent_type is a bare positional arg, so a config value starting
+        # with "-" would be parsed by sbx as a flag.
+        if params.agent_type.to_s.start_with?("-")
+          raise Orn::Error, "Invalid sbx agent_type '#{params.agent_type}': cannot start with '-'"
+        end
+
         [
           "create",
           "--name",

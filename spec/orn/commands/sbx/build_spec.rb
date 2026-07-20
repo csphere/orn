@@ -154,6 +154,7 @@ RSpec.describe Orn::Commands::Sbx::Build do
 
     it "defaults the dockerfile, announces without build args, and removes the template tar" do
       project = buildable_project(plain_build_config)
+      approve_sbx_commands(project)
       write_dockerfile(project, "Dockerfile")
       with_fake_cmd do |fake|
         script_successful_build(fake, docker_build_argv("Dockerfile"))
@@ -169,6 +170,7 @@ RSpec.describe Orn::Commands::Sbx::Build do
 
     it "prints json and keeps stderr free of status text" do
       project = buildable_project(plain_build_config)
+      approve_sbx_commands(project)
       json_command = described_class.new(output_mode: Orn::OutputMode.quiet)
       write_dockerfile(project, "Dockerfile")
       expected_payload = {
@@ -202,6 +204,7 @@ RSpec.describe Orn::Commands::Sbx::Build do
 
     it "removes the partial tar and raises when docker save fails" do
       project = buildable_project(plain_build_config)
+      approve_sbx_commands(project)
       write_dockerfile(project, "Dockerfile")
       with_fake_cmd do |fake|
         script_prerequisites(fake)
